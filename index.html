@@ -198,6 +198,7 @@ a{color:inherit;text-decoration:none}img{max-width:100%;display:block}
 
 /* PROGRAMS */
 .prog-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;max-width:1100px;margin:0 auto}
+.prog-grid-5{grid-template-columns:repeat(3,1fr)}
 .prog-card{background:var(--glass);backdrop-filter:blur(16px);border:1px solid var(--glass-b);border-radius:var(--r);overflow:hidden;transition:all .35s;display:flex;flex-direction:column}
 .prog-card:hover{border-color:rgba(139,26,43,.3);transform:translateY(-4px);box-shadow:0 16px 48px rgba(139,26,43,.08)}
 .prog-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--mrn),var(--pink));opacity:0;transition:opacity .3s}
@@ -309,7 +310,7 @@ details[open] .faq-q{color:var(--pink)}
 @media(max-width:1024px){
   .nav{padding:0 24px}.section{padding:60px 24px}
   .hero-inner{padding:0 24px}
-  .prog-grid{grid-template-columns:1fr}.test-grid{grid-template-columns:1fr}
+  .prog-grid{grid-template-columns:1fr}.prog-grid-5{grid-template-columns:repeat(2,1fr)}.test-grid{grid-template-columns:1fr}
   .speakers-grid{grid-template-columns:1fr 1fr}
   .why-grid{grid-template-columns:1fr 1fr}
   .coach{grid-template-columns:1fr}.coach-img img{min-height:300px}.coach-content{padding:48px 28px}
@@ -331,6 +332,7 @@ details[open] .faq-q{color:var(--pink)}
   .nav-right{display:none !important}
   .burger{position:absolute;right:16px;display:flex}
   .stats{grid-template-columns:repeat(2,1fr)}.stat:nth-child(5){grid-column:span 2}
+  .prog-grid-5{grid-template-columns:1fr}
   .footer{grid-template-columns:1fr}
   .speakers-grid{grid-template-columns:1fr}
   .why-grid{grid-template-columns:1fr}
@@ -339,7 +341,7 @@ details[open] .faq-q{color:var(--pink)}
 </head>
 <body>
 
-<div class="announce">🏀 Downer Basketball Academy 2026 Summer Camps — 5 Camps, 3 Locations! <a href="#programs">View All Camps & Register →</a></div>
+<div class="announce">🏀 Downer Basketball Academy 2026 Summer Camps — 5 Camps + Spring Clinics — 3 Locations! <a href="#programs">View All Camps & Register →</a></div>
 
 <nav class="nav">
   <a href="#" class="nav-brand"><div class="logo-mark"><div class="logo-main">DOWNER</div><div class="logo-line"></div><div class="logo-sub">BASKETBALL ACADEMY</div></div></a>
@@ -384,7 +386,7 @@ details[open] .faq-q{color:var(--pink)}
 <!-- REGISTER CTA -->
 <div style="text-align:center;padding:48px 24px;background:var(--bg2);border-top:1px solid var(--glass-b);border-bottom:1px solid var(--glass-b)">
   <p style="font-family:'DM Serif Display',serif;font-size:1.4rem;color:var(--txt);margin-bottom:8px">Summer 2026 Spots Are Filling Fast</p>
-  <p style="font-size:1rem;color:var(--txt-m);margin-bottom:20px">5 camps available across 3 locations. Don't wait.</p>
+  <p style="font-size:1rem;color:var(--txt-m);margin-bottom:20px">5 camps + spring clinics across 3 locations. Don't wait.</p>
   <a href="#programs" class="btn btn-m btn-lg">View All Camps & Register →</a>
 </div>
 
@@ -402,7 +404,7 @@ details[open] .faq-q{color:var(--pink)}
     <div class="stag sr">Programs</div>
     <h2 class="stitle sr">Camps, Clinics & Training</h2>
   </div>
-  <div class="prog-grid" style="grid-template-columns:repeat(3,1fr)">
+  <div class="prog-grid prog-grid-5">>
     <div class="prog-card sr">
       <div class="prog-img"><img src="img/daycamp-lm1.jpg" alt="DBA Day Camp at Lower Merion" style="object-position:center center"></div>
       <div class="prog-body">
@@ -456,6 +458,16 @@ details[open] .faq-q{color:var(--pink)}
           +$100 each way for van transport
         </div>
         <a href="https://register.ryzer.com/camp.cfm?sport=4&id=312417" target="_blank" class="prog-cta">Register Overnight →</a>
+      </div>
+    </div>
+    <div class="prog-card sr">
+      <div class="prog-img"><img src="img/coach-player.jpg" alt="Coach Downer working with player" style="object-position:center center"></div>
+      <div class="prog-body">
+        <div class="prog-badge">Spring · Clinics</div>
+        <div class="prog-name">Spring Clinics 2026</div>
+        <p class="prog-desc">Sundays: April 12, 19, 26 & May 3, 10, 17. 11:00 AM – 12:15 PM. Kobe Bryant Gymnasium, LMHS, 315 E. Montgomery Ave, Ardmore, PA 19003.</p>
+        <p style="font-family:'Outfit',sans-serif;font-size:1.1rem;font-weight:300;color:var(--pink);margin-bottom:16px">Coming Soon</p>
+        <a href="#" class="prog-cta" style="opacity:0.6;pointer-events:none">Registration Opening Soon</a>
       </div>
     </div>
   </div>
@@ -605,14 +617,14 @@ details[open] .faq-q{color:var(--pink)}
   </div>
   <div class="cta-grid">
     <div class="sr">
-      <form class="cta-form" onsubmit="event.preventDefault();alert('Thank you! We\'ll be in touch.')">
+      <form class="cta-form" id="contactForm" action="https://formspree.io/f/xgoneplj" method="POST">
         <div class="form-row">
-          <div class="form-group"><label class="form-label">First Name</label><input class="form-input" placeholder="First name" required></div>
-          <div class="form-group"><label class="form-label">Last Name</label><input class="form-input" placeholder="Last name" required></div>
+          <div class="form-group"><label class="form-label">First Name</label><input class="form-input" id="cf-first" name="First Name" placeholder="First name" required></div>
+          <div class="form-group"><label class="form-label">Last Name</label><input class="form-input" id="cf-last" name="Last Name" placeholder="Last name" required></div>
         </div>
-        <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" placeholder="your@email.com" required></div>
-        <div class="form-group"><label class="form-label">Interested In</label><select class="form-input"><option value="" disabled selected>Select a program ▾</option><option>Downer Basketball Academy Week 1 (June 22–25)</option><option>Downer Basketball Academy Week 2 (July 13–16)</option><option>Downer Basketball Academy — West Chester Week 1 (July 27–31)</option><option>Downer Basketball Academy — West Chester Week 2 (Aug 3–7)</option><option>2026 Overnight Camp (Aug 9–13)</option><option>Fall Clinics</option><option>Spring Clinics</option><option>General Inquiry</option></select></div>
-        <div class="form-group"><label class="form-label">Message</label><textarea class="form-input" placeholder="Tell us about your player..."></textarea></div>
+        <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="cf-email" name="Email" placeholder="your@email.com" required></div>
+        <div class="form-group"><label class="form-label">Interested In</label><select class="form-input" id="cf-program" name="Program"><option value="" disabled selected>Select a program ▾</option><option>Downer Basketball Academy Week 1 (June 22–25)</option><option>Downer Basketball Academy Week 2 (July 13–16)</option><option>Downer Basketball Academy — West Chester Week 1 (July 27–31)</option><option>Downer Basketball Academy — West Chester Week 2 (Aug 3–7)</option><option>2026 Overnight Camp (Aug 9–13)</option><option>Spring Clinics 2026</option><option>Fall Clinics</option><option>General Inquiry</option></select></div>
+        <div class="form-group"><label class="form-label">Message</label><textarea class="form-input" id="cf-msg" name="Message" placeholder="Tell us about your player..."></textarea></div>
         <button type="submit" class="btn btn-m btn-lg" style="align-self:flex-start">Send Message →</button>
       </form>
     </div>
@@ -674,6 +686,18 @@ document.querySelectorAll('#navMenu a').forEach(a=>a.addEventListener('click',()
 const obs=new IntersectionObserver(e=>{e.forEach((el,i)=>{if(el.isIntersecting){setTimeout(()=>el.target.classList.add('v'),i*50);obs.unobserve(el.target)}})},{threshold:.08,rootMargin:'0px 0px -30px 0px'});
 document.querySelectorAll('.sr').forEach(el=>obs.observe(el));
 document.querySelectorAll('a[href^="#"]').forEach(a=>{a.addEventListener('click',function(e){e.preventDefault();const t=document.querySelector(this.getAttribute('href'));if(t)t.scrollIntoView({behavior:'smooth',block:'start'})})});
+document.getElementById('contactForm').addEventListener('submit',function(e){
+  e.preventDefault();
+  var form=this;
+  var btn=form.querySelector('button[type="submit"]');
+  btn.textContent='Sending...';
+  btn.style.opacity='0.6';
+  fetch(form.action,{method:'POST',body:new FormData(form),headers:{'Accept':'application/json'}})
+  .then(function(r){
+    if(r.ok){form.reset();btn.textContent='Message Sent ✓';btn.style.background='#2a7a3a';setTimeout(function(){btn.textContent='Send Message →';btn.style.background='';btn.style.opacity=''},3000)}
+    else{btn.textContent='Error — Try Again';btn.style.opacity='1';setTimeout(function(){btn.textContent='Send Message →'},3000)}
+  }).catch(function(){btn.textContent='Error — Try Again';btn.style.opacity='1';setTimeout(function(){btn.textContent='Send Message →'},3000)});
+});
 </script>
 </body>
 </html>
