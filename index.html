@@ -640,7 +640,7 @@ details[open] .faq-q{color:var(--pink)}
       </form>
     </div>
     <div class="sr">
-      <div class="info-item"><div class="info-label">Email</div><div class="info-value"><a href="/cdn-cgi/l/email-protection#accdcfc9dfc4c3c3dcdfeccbc1cdc5c082cfc3c1"><span class="__cf_email__" data-cfemail="fb9a989e889394948b88bb9c969a9297d5989496">[email&#160;protected]</span></a></div></div>
+      <div class="info-item"><div class="info-label">Email</div><div class="info-value"><a href="/cdn-cgi/l/email-protection#07666462746f6868777447606a666e6b2964686a"><span class="__cf_email__" data-cfemail="57363432243f3838272417303a363e3b7934383a">[email&#160;protected]</span></a></div></div>
       <div class="info-item"><div class="info-label">Address</div><div class="info-value">PO Box 292, Narberth, PA 19072</div></div>
       <div class="info-item"><div class="info-label">Locations</div><div class="info-value">Kobe Bryant Gymnasium<br>Lower Merion HS<br>315 E. Montgomery Ave, Ardmore, PA 19003<br><br>Westtown School<br>975 Westtown Rd, West Chester, PA</div></div>
       <div class="info-item"><div class="info-label">Overnight</div><div class="info-value">Berkshire Trails Camp<br>25 Deerwood Park Dr, Great Barrington, MA</div></div>
@@ -678,7 +678,7 @@ details[open] .faq-q{color:var(--pink)}
     </details>
     <details class="faq-item">
       <summary class="faq-q">Do clinics sell out?</summary>
-      <p class="faq-a">Yes — both our fall and spring clinic series sell out every year. The 2026 Spring Clinics run Sundays from April 12 through May 17, 11:00 AM – 12:15 PM at the Kobe Bryant Gymnasium, LMHS. Register at the Spring Clinics card above or contact <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="57363432243f3838272417303a363e3b7934383a">[email&#160;protected]</a>. Financial aid available if needed. We recommend registering as early as possible to secure your spot.</p>
+      <p class="faq-a">Yes — both our fall and spring clinic series sell out every year. The 2026 Spring Clinics run Sundays from April 12 through May 17, 11:00 AM – 12:15 PM at the Kobe Bryant Gymnasium, LMHS. Register at the Spring Clinics card above or contact <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="97f6f4f2e4fff8f8e7e4d7f0faf6fefbb9f4f8fa">[email&#160;protected]</a>. Financial aid available if needed. We recommend registering as early as possible to secure your spot.</p>
     </details>
   </div>
 </section>
@@ -687,7 +687,7 @@ details[open] .faq-q{color:var(--pink)}
   <div><div class="footer-logo" style="text-align:center;display:inline-block"><div style="font-family:'Saira Condensed',sans-serif;font-weight:800;font-size:42px;color:#fff;letter-spacing:7px;line-height:.9;text-transform:uppercase;text-align:center">DOWNER</div><div style="width:100%;height:2px;background:linear-gradient(90deg,transparent,#c8102e,transparent);margin:6px auto"></div><div style="font-family:'Saira Condensed',sans-serif;font-weight:600;font-size:16px;letter-spacing:7.5px;color:#888;text-transform:uppercase;text-align:center">BASKETBALL ACADEMY</div></div><p class="footer-tagline" style="margin-top:16px">Championship coaching at the Kobe Bryant Gymnasium. 315 E. Montgomery Ave, Ardmore, PA 19003.</p></div>
   <div class="footer-col"><div class="footer-col-title">Programs</div><a href="#programs">Summer Camps</a><a href="#programs">Overnight Camp</a><a href="#programs">Clinics</a></div>
   <div class="footer-col"><div class="footer-col-title">About</div><a href="#coach">Coach Downer</a><a href="#testimonials">Testimonials</a><a href="#contact">Contact</a></div>
-  <div class="footer-col"><div class="footer-col-title">Register</div><a href="https://register.ryzer.com" target="_blank">Ryzer</a><a href="/cdn-cgi/l/email-protection#18797b7d6b707777686b587f75797174367b7775">Email Us</a></div>
+  <div class="footer-col"><div class="footer-col-title">Register</div><a href="https://register.ryzer.com" target="_blank">Ryzer</a><a href="/cdn-cgi/l/email-protection#a3c2c0c6d0cbccccd3d0e3c4cec2cacf8dc0ccce">Email Us</a></div>
 </footer>
 <div class="footer-bottom"><div class="footer-copy" style="text-align:center;width:100%">© 2026 Downer Basketball Academy. All rights reserved.</div></div>
 
@@ -706,4 +706,10 @@ document.getElementById('contactForm').addEventListener('submit',function(e){
   btn.style.opacity='0.6';
   fetch(form.action,{method:'POST',body:new FormData(form),headers:{'Accept':'application/json'}})
   .then(function(r){
-    if(r.ok){form.reset();btn.textContent='Message Sent ✓';btn.style.background='#2a7a3a';setTimeout(funct
+    if(r.ok){form.reset();btn.textContent='Message Sent ✓';btn.style.background='#2a7a3a';setTimeout(function(){btn.textContent='Send Message →';btn.style.background='';btn.style.opacity=''},3000)}
+    else{btn.textContent='Error — Try Again';btn.style.opacity='1';setTimeout(function(){btn.textContent='Send Message →'},3000)}
+  }).catch(function(){btn.textContent='Error — Try Again';btn.style.opacity='1';setTimeout(function(){btn.textContent='Send Message →'},3000)});
+});
+</script>
+</body>
+</html>
