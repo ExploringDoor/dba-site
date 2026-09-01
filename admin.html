@@ -238,7 +238,8 @@ function rowHtml(r){
   var hasPay=!!(r.stripe_payment_intent||r.square_payment_id||r.paid_via);
   var canRefund=hasPay&&(r.amount_refunded_cents||0)<(r.amount_cents||0);
   var amtCell=money(r.amount_cents)+(r.amount_mismatch?' <span title="Amount charged differs from expected — review" style="color:#e06b5e">⚠</span>':'');
-  var acts='<button class="btn sm" data-act="waiver" data-rid="'+r.id+'">Waiver</button>'+
+  var acts='<button class="btn sm" data-act="manage" data-rid="'+r.id+'" style="background:var(--mrn);border-color:var(--mrn);color:#fff">Manage</button>'+
+           '<button class="btn sm" data-act="waiver" data-rid="'+r.id+'">Waiver</button>'+
            '<button class="btn sm" data-act="receipt" data-rid="'+r.id+'">Receipt</button>'+
            (canRefund?'<button class="btn sm danger" data-act="refund" data-rid="'+r.id+'">Refund</button>':'')+
            (r.status!=='canceled'?'<button class="btn sm danger" data-act="cancel" data-rid="'+r.id+'">Cancel</button>':'');
