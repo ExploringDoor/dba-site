@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-KT0BL96HRZ"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());gtag("config","G-KT0BL96HRZ");</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Register — Fall Clinics | Downer Basketball Academy</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Outfit:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&family=Saira+Condensed:wght@600;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --mrn:#8B1A2B;--mrn-h:#A82E42;--pink:#D4506A;
+  --bg:#0A0A0C;--bg2:#101014;--bg3:#16161A;
+  --glass:rgba(255,255,255,.035);--glass-b:rgba(255,255,255,.07);--glass-h:rgba(255,255,255,.1);
+  --txt:#F0ECE8;--txt-m:rgba(240,236,232,.82);--dim:#9B95A0;--dim2:#7A7580;
+  --ok:#2a7a3a;--err:#c0392b;--r:16px;
+}
+html{scroll-behavior:smooth}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased;line-height:1.5}
+a{color:inherit}img{max-width:100%;display:block}
+
+/* NAV (slim) */
+.nav{position:sticky;top:0;z-index:100;background:rgba(10,10,12,.9);backdrop-filter:blur(24px);border-bottom:1px solid var(--glass-b);padding:0 32px;display:flex;justify-content:space-between;align-items:center;height:64px}
+.nav-brand{display:flex;align-items:center;text-decoration:none}
+.logo-main{font-family:'Saira Condensed',sans-serif;font-weight:800;font-size:22px;color:#fff;letter-spacing:4px;line-height:.9;text-transform:uppercase}
+.logo-sub{font-family:'Saira Condensed',sans-serif;font-weight:600;font-size:10px;letter-spacing:7px;color:#888;text-transform:uppercase;text-align:center}
+.nav a.back{font-size:.82rem;color:var(--dim);text-decoration:none}.nav a.back:hover{color:var(--txt)}
+
+/* LAYOUT */
+.wrap{max-width:1040px;margin:0 auto;padding:40px 24px 80px;display:grid;grid-template-columns:1fr 340px;gap:32px;align-items:start}
+.head{grid-column:1/-1;margin-bottom:8px}
+.head .tag{font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:3px;text-transform:uppercase;color:var(--pink);margin-bottom:8px}
+.head h1{font-family:'DM Serif Display',serif;font-size:clamp(1.9rem,4vw,2.6rem);font-weight:400;line-height:1.1}
+.head p{color:var(--txt-m);margin-top:8px;max-width:560px}
+
+/* NOTICE BANNER (test mode) */
+.notice{grid-column:1/-1;background:rgba(212,80,106,.12);border:1px solid rgba(212,80,106,.35);border-radius:12px;padding:14px 18px;font-size:.86rem;color:var(--txt-m)}
+.notice strong{color:var(--pink)}
+
+/* CARD / FIELDSETS */
+.card{background:var(--glass);border:1px solid var(--glass-b);border-radius:var(--r);padding:26px 24px;margin-bottom:20px}
+.card h2{font-family:'DM Serif Display',serif;font-size:1.3rem;font-weight:400;margin-bottom:4px}
+.card .hint{font-size:.82rem;color:var(--dim);margin-bottom:18px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fg{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.fg label{font-size:.72rem;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--txt-m)}
+.fg label .req{color:var(--pink)}
+.inp{background:var(--bg);border:1px solid var(--glass-b);border-radius:10px;padding:12px 14px;color:var(--txt);font-family:'Outfit',sans-serif;font-size:.95rem;outline:none;transition:border .25s;width:100%}
+.inp:focus{border-color:var(--mrn)}
+.inp::placeholder{color:var(--dim2)}
+textarea.inp{resize:vertical;min-height:72px}
+select.inp{appearance:none;cursor:pointer}
+
+/* SESSION PICKER */
+.sessions{display:flex;flex-direction:column;gap:10px}
+.sess{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--glass-b);border-radius:12px;cursor:pointer;transition:all .2s;background:var(--bg)}
+.sess:hover{border-color:var(--glass-h)}
+.sess.on{border-color:var(--mrn);background:rgba(139,26,43,.1)}
+.sess input{width:18px;height:18px;accent-color:var(--mrn);cursor:pointer;flex-shrink:0}
+.sess .s-label{flex:1;font-size:.95rem}
+.sess .s-price{font-family:'IBM Plex Mono',monospace;font-size:.82rem;color:var(--dim)}
+.all6{display:flex;align-items:center;gap:12px;padding:16px;border:1px dashed rgba(212,80,106,.5);border-radius:12px;background:rgba(212,80,106,.08);cursor:pointer;margin-bottom:14px}
+.all6 input{width:18px;height:18px;accent-color:var(--pink)}
+.all6 .a-label{flex:1;font-weight:600}
+.all6 .a-save{font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--pink);letter-spacing:1px}
+.tbd{background:rgba(212,80,106,.14);border-bottom:1px dashed rgba(212,80,106,.5);padding:0 3px;border-radius:3px}
+.hp{position:absolute!important;left:-9999px!important;width:1px;height:1px;overflow:hidden}
+
+/* PLAYERS repeater */
+.player{border:1px solid var(--glass-b);border-radius:12px;padding:18px;margin-bottom:12px;position:relative}
+.player .p-num{font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--pink);margin-bottom:12px}
+.player .rm{position:absolute;top:14px;right:14px;background:none;border:none;color:var(--dim);font-size:.78rem;cursor:pointer;text-decoration:underline}
+.player .rm:hover{color:var(--err)}
+.add-player{background:var(--glass);border:1px dashed var(--glass-h);color:var(--txt-m);padding:12px;border-radius:10px;width:100%;cursor:pointer;font-family:inherit;font-size:.88rem;transition:all .2s}
+.add-player:hover{border-color:var(--mrn);color:var(--txt)}
+
+/* WAIVER */
+.waiver-box{background:var(--bg);border:1px solid var(--glass-b);border-radius:10px;padding:16px 18px;max-height:180px;overflow-y:auto;font-size:.84rem;color:var(--txt-m);line-height:1.6;margin-bottom:14px}
+.check{display:flex;align-items:flex-start;gap:10px;font-size:.88rem;color:var(--txt-m);cursor:pointer;margin-bottom:14px}
+.check input{width:18px;height:18px;accent-color:var(--mrn);margin-top:2px;flex-shrink:0}
+
+/* SUMMARY sidebar */
+.summary{position:sticky;top:88px;background:var(--bg2);border:1px solid var(--glass-b);border-radius:var(--r);padding:24px}
+.summary h3{font-family:'IBM Plex Mono',monospace;font-size:.62rem;letter-spacing:3px;text-transform:uppercase;color:var(--pink);margin-bottom:16px}
+.sum-row{display:flex;justify-content:space-between;font-size:.9rem;color:var(--txt-m);padding:8px 0;border-bottom:1px solid var(--glass-b)}
+.sum-row.total{border-bottom:none;border-top:2px solid var(--glass-b);margin-top:6px;padding-top:14px;font-size:1.1rem;color:var(--txt);font-weight:600}
+.sum-row .amt{font-family:'IBM Plex Mono',monospace}
+.sum-empty{font-size:.84rem;color:var(--dim);padding:8px 0}
+.btn-pay{width:100%;justify-content:center;margin-top:18px;background:var(--mrn);color:#fff;padding:15px;border-radius:12px;font-weight:600;font-size:.95rem;border:none;cursor:pointer;transition:all .3s;font-family:inherit}
+.btn-pay:hover:not(:disabled){background:var(--mrn-h);transform:translateY(-1px)}
+.btn-pay:disabled{opacity:.5;cursor:not-allowed}
+.pay-note{font-size:.72rem;color:var(--dim);text-align:center;margin-top:12px;line-height:1.5}
+.err-msg{color:var(--err);font-size:.84rem;margin-top:12px;display:none}
+
+@media(max-width:880px){
+  .wrap{grid-template-columns:1fr}
+  .summary{position:static;order:2}
+}
+@media(max-width:520px){.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="index.html" class="nav-brand"><div><div class="logo-main">DOWNER</div><div class="logo-sub">Basketball Academy</div></div></a>
+  <a href="clinics.html" class="back">← Back to Clinics</a>
+</nav>
+
+<form class="wrap" id="regForm" novalidate>
+  <div class="hp" aria-hidden="true"><label>Company (leave blank)<input type="text" name="company" tabindex="-1" autocomplete="off"></label></div>
+  <div class="head">
+    <div class="tag">Fall Clinic Registration</div>
+    <h1>Sign Up for Fall Clinics</h1>
+    <p>Pick your Sundays, add your player(s), sign the waiver, and check out securely. A receipt is emailed automatically.</p>
+  </div>
+
+  <!-- This banner auto-hides once PAYMENT_PROVIDER + keys are configured (server says ready). -->
+  <div class="notice" id="testNotice">
+    <strong>Registration opens soon.</strong> We're putting the final touches on secure checkout. You can explore the form now — the payment step goes live the moment our card processing is switched on.
+  </div>
+
+  <!-- LEFT COLUMN -->
+  <div>
+    <!-- SESSIONS -->
+    <div class="card">
+      <h2>1. Choose Sessions</h2>
+      <p class="hint">Six Sundays, 11:00 AM – 12:15 PM at the Kobe Bryant Gym. Pick individual dates or save with all six.</p>
+      <label class="all6" id="all6row">
+        <input type="checkbox" id="all6"><span class="a-label">All 6 Sessions</span><span class="a-save">SAVE $64 · $164</span>
+      </label>
+      <div class="sessions" id="sessionList"><!-- injected by JS --></div>
+    </div>
+
+    <!-- PLAYERS -->
+    <div class="card">
+      <h2>2. Player(s)</h2>
+      <p class="hint">Add each child you're registering. Siblings can share the same sessions above.</p>
+      <div id="playerList"></div>
+      <button type="button" class="add-player" id="addPlayer">+ Add another player</button>
+    </div>
+
+    <!-- PARENT / GUARDIAN -->
+    <div class="card">
+      <h2>3. Parent / Guardian</h2>
+      <p class="hint">Where we send the receipt and any clinic updates.</p>
+      <div class="grid2">
+        <div class="fg"><label>Full name <span class="req">*</span></label><input class="inp" name="parent_name" placeholder="Parent / guardian name" required></div>
+        <div class="fg"><label>Relationship</label><input class="inp" name="parent_rel" placeholder="Mother, Father, Guardian…"></div>
+        <div class="fg"><label>Email <span class="req">*</span></label><input class="inp" type="email" name="parent_email" placeholder="you@email.com" required></div>
+        <div class="fg"><label>Phone <span class="req">*</span></label><input class="inp" type="tel" name="parent_phone" placeholder="(610) 555-0123" required></div>
+      </div>
+      <div class="grid2">
+        <div class="fg"><label>Emergency contact name <span class="req">*</span></label><input class="inp" name="emerg_name" placeholder="If different from above" required></div>
+        <div class="fg"><label>Emergency contact phone <span class="req">*</span></label><input class="inp" type="tel" name="emerg_phone" placeholder="(610) 555-0199" required></div>
+      </div>
+      <div class="grid2">
+        <div class="fg"><label>Authorized pickup — name (optional)</label><input class="inp" name="pickup_name" placeholder="Anyone besides you allowed to pick up"></div>
+        <div class="fg"><label>Authorized pickup — phone (optional)</label><input class="inp" type="tel" name="pickup_phone" placeholder="(610) 555-0150"></div>
+      </div>
+      <div class="fg"><label>Allergies / medical notes (optional)</label><textarea class="inp" name="medical" placeholder="Anything our staff should know?"></textarea></div>
+      <label class="check"><input type="checkbox" name="photo" value="1"><span>I consent to photos/video of my player for DBA promotional use (optional).</span></label>
+    </div>
+
+    <!-- WAIVER -->
+    <div class="card">
+      <h2>4. Waiver &amp; Signature</h2>
+      <p class="hint">Required to participate.</p>
+      <div class="waiver-box">
+        <p><strong>Liability Waiver &amp; Code of Conduct.</strong> I understand that participation in basketball activities involves inherent risks, including the risk of injury. On behalf of my player(s), I release Downer Basketball Academy, Lower Merion School District, the Kobe Bryant Gymnasium, and their respective staff and volunteers from liability for injuries sustained during clinic activities, except in cases of gross negligence. I certify that my player is physically able to participate. I authorize DBA staff to seek emergency medical treatment if needed and I agree my player will follow the code of conduct.</p>
+      </div>
+      <label class="check"><input type="checkbox" id="waiverAgree" required><span>I have read and agree to the liability waiver &amp; code of conduct on behalf of my player(s). <span class="req">*</span></span></label>
+      <div class="fg"><label>Type your full name to sign <span class="req">*</span></label><input class="inp" name="waiver_name" placeholder="Your legal name" required></div>
+    </div>
+  </div>
+
+  <!-- SUMMARY -->
+  <aside class="summary">
+    <h3>Order Summary</h3>
+    <div id="sumBody"><div class="sum-empty">Choose sessions and add a player to see your total.</div></div>
+    <button type="submit" class="btn-pay" id="payBtn" disabled>Continue to Payment →</button>
+    <p class="pay-note" id="payNote">Secure checkout · card receipt emailed instantly</p>
+    <p class="err-msg" id="errMsg"></p>
+  </aside>
+</form>
+
+<script>
+/* ── Clinic config (front-end display only; the server recomputes the authoritative price) ── */
+var PRICE_SESSION = 38;      // all-in per single session ($30 + $8 processing)
+var PRICE_ALL6    = 164;     // all-in for all six ($150 + $14 processing)
+var SESSIONS = [
+  { id:'s1', label:'Session 1 — Sun, Sep 27' },
+  { id:'s2', label:'Session 2 — Sun, Oct 4' },
+  { id:'s3', label:'Session 3 — Sun, Oct 11' },
+  { id:'s4', label:'Session 4 — Sun, Oct 18' },
+  { id:'s5', label:'Session 5 — Sun, Oct 25' },
+  { id:'s6', label:'Session 6 — Sun, Nov 1' }
+];
+
+/* ── Build session checkboxes ── */
+var sessionList = document.getElementById('sessionList');
+SESSIONS.forEach(function(s){
+  var l = document.createElement('label');
+  l.className = 'sess'; l.dataset.id = s.id;
+  l.innerHTML = '<input type="checkbox" class="sessChk" value="'+s.id+'"><span class="s-label">'+s.label+'</span><span class="s-price">$'+PRICE_SESSION+'</span>';
+  sessionList.appendChild(l);
+});
+var sessChks = Array.prototype.slice.call(document.querySelectorAll('.sessChk'));
+var all6 = document.getElementById('all6');
+
+function selectedSessions(){ return sessChks.filter(function(c){return c.checked;}).map(function(c){return c.value;}); }
+function syncSessRows(){ sessChks.forEach(function(c){ c.closest('.sess').classList.toggle('on', c.checked); }); }
+
+all6.addEventListener('change', function(){
+  sessChks.forEach(function(c){ c.checked = all6.checked; });
+  syncSessRows(); recalc();
+});
+sessChks.forEach(function(c){ c.addEventListener('change', function(){
+  if(!c.checked) all6.checked = false;
+  if(selectedSessions().length === SESSIONS.length) all6.checked = true;
+  syncSessRows(); recalc();
+});});
+
+/* ── Players repeater ── */
+var playerList = document.getElementById('playerList');
+var pCount = 0;
+function addPlayer(){
+  pCount++;
+  var d = document.createElement('div');
+  d.className = 'player';
+  d.innerHTML =
+    '<div class="p-num">Player '+pCount+'</div>' +
+    (pCount>1 ? '<button type="button" class="rm">remove</button>' : '') +
+    '<div class="grid2">' +
+      '<div class="fg"><label>First name <span class="req">*</span></label><input class="inp p-first" placeholder="First"></div>' +
+      '<div class="fg"><label>Last name <span class="req">*</span></label><input class="inp p-last" placeholder="Last"></div>' +
+      '<div class="fg"><label>Date of birth <span class="req">*</span></label><input class="inp p-dob" type="date"></div>' +
+      '<div class="fg"><label>Grade (fall 2026)</label><input class="inp p-grade" placeholder="e.g. 4th"></div>' +
+    '</div>';
+  playerList.appendChild(d);
+  var rm = d.querySelector('.rm');
+  if(rm) rm.addEventListener('click', function(){ d.remove(); renumber(); recalc(); });
+  recalc();
+}
+function renumber(){
+  Array.prototype.slice.call(playerList.children).forEach(function(p,i){ p.querySelector('.p-num').textContent = 'Player '+(i+1); });
+  pCount = playerList.children.length;
+}
+document.getElementById('addPlayer').addEventListener('click', addPlayer);
+addPlayer(); // start with one
+
+/* ── Live total ── */
+function playerCount(){ return playerList.children.length; }
+function perPlayer(){
+  var n = selectedSessions().length;
+  if(n === 0) return 0;
+  return (n === SESSIONS.length) ? PRICE_ALL6 : n * PRICE_SESSION;
+}
+function recalc(){
+  var pp = perPlayer(), players = playerCount(), total = pp * players;
+  var sum = document.getElementById('sumBody');
+  var n = selectedSessions().length;
+  if(n === 0 || players === 0){
+    sum.innerHTML = '<div class="sum-empty">Choose sessions and add a player to see your total.</div>';
+  } else {
+    var line = (n === SESSIONS.length) ? 'All 6 sessions' : (n + ' session' + (n>1?'s':''));
+    sum.innerHTML =
+      '<div class="sum-row"><span>'+line+' × '+players+' player'+(players>1?'s':'')+'</span><span class="amt">$'+pp+' ea</span></div>' +
+      '<div class="sum-row total"><span>Total</span><span class="amt">$'+total+'</span></div>';
+  }
+  updatePayState();
+}
+
+/* ── Enable pay only when valid ── */
+var payBtn = document.getElementById('payBtn');
+function updatePayState(){
+  var ok = selectedSessions().length>0 && playerCount()>0;
+  var b = document.getElementById('payBtn');
+  if(b) b.disabled = !ok;
+}
+
+/* ── Submit ── */
+var TEST_MODE = true; // flipped off automatically below if server reports ready
+document.getElementById('regForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  var err = document.getElementById('errMsg'); err.style.display='none';
+  // gather players
+  var players = Array.prototype.slice.call(playerList.children).map(function(p){
+    return {
+      first: p.querySelector('.p-first').value.trim(),
+      last:  p.querySelector('.p-last').value.trim(),
+      dob:   p.querySelector('.p-dob').value,
+      grade: p.querySelector('.p-grade').value.trim()
+    };
+  });
+  var missing = players.some(function(p){ return !p.first || !p.last || !p.dob; });
+  var f = e.target;
+  if(selectedSessions().length===0){ return showErr('Please choose at least one session.'); }
+  if(missing){ return showErr('Please fill in each player\'s first name, last name, and date of birth.'); }
+  if(!f.parent_name.value.trim()||!f.parent_email.value.trim()||!f.parent_phone.value.trim()||!f.emerg_name.value.trim()||!f.emerg_phone.value.trim()){ return showErr('Please complete the required parent and emergency contact fields.'); }
+  if(!document.getElementById('waiverAgree').checked || !f.waiver_name.value.trim()){ return showErr('Please agree to the waiver and type your name to sign.'); }
+
+  var payload = {
+    company: (f.company && f.company.value || '').trim(), // honeypot — real users never fill this
+    sessions: selectedSessions(),
+    players: players,
+    parent_name: f.parent_name.value.trim(), parent_rel: f.parent_rel.value.trim(),
+    parent_email: f.parent_email.value.trim(), parent_phone: f.parent_phone.value.trim(),
+    emerg_name: f.emerg_name.value.trim(), emerg_phone: f.emerg_phone.value.trim(),
+    pickup_name: f.pickup_name.value.trim(), pickup_phone: f.pickup_phone.value.trim(),
+    medical: f.medical.value.trim(), photo: f.photo.checked ? 1 : 0,
+    waiver_name: f.waiver_name.value.trim(), waiver_agree: true
+  };
+
+  payBtn.disabled = true; payBtn.textContent = 'Starting checkout…';
+  fetch('/api/checkout', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+    .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, status:r.status, d:d}; }); })
+    .then(function(res){
+      if(res.ok && res.d && res.d.url){ window.location = res.d.url; return; } // Stripe/Square hosted checkout
+      if(res.status===503 || (res.d && (res.d.error==='not_configured'||res.d.error==='stripe_not_configured'||res.d.error==='payments_not_configured'))){
+        showErr('Online payment isn\'t switched on yet. Please email aceshoops@gmail.com to hold your spot — checkout goes live shortly.');
+      } else {
+        showErr((res.d && res.d.error) ? ('Something went wrong: '+res.d.error) : 'Something went wrong. Please try again or email aceshoops@gmail.com.');
+      }
+      payBtn.disabled=false; payBtn.textContent='Continue to Payment →';
+    })
+    .catch(function(){ showErr('Could not reach the server. Please try again or email aceshoops@gmail.com.'); payBtn.disabled=false; payBtn.textContent='Continue to Payment →'; });
+});
+function showErr(m){ var e=document.getElementById('errMsg'); e.textContent=m; e.style.display='block'; }
+
+/* ── Ask the server if payments are ready; hide the test banner if so ── */
+fetch('/api/checkout').then(function(r){ return r.json(); }).then(function(d){
+  if(d && d.ready){ document.getElementById('testNotice').style.display='none'; TEST_MODE=false; }
+}).catch(function(){});
+
+recalc();
+</script>
+</body>
+</html>

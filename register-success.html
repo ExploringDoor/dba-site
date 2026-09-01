@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>/* capture rid, then scrub it from the URL BEFORE analytics/referrer see it */window.__RID__=(new URLSearchParams(location.search).get('rid'))||'';try{if(location.search&&history.replaceState)history.replaceState(null,'',location.pathname);}catch(e){}</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-KT0BL96HRZ"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());gtag("config","G-KT0BL96HRZ");</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🏀%3C/text%3E%3C/svg%3E">
+<title>You're Registered — Downer Basketball Academy</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Outfit:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&family=Saira+Condensed:wght@600;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--mrn:#8B1A2B;--mrn-h:#A82E42;--pink:#D4506A;--bg:#0A0A0C;--bg2:#101014;--glass:rgba(255,255,255,.035);--glass-b:rgba(255,255,255,.07);--txt:#F0ECE8;--txt-m:rgba(240,236,232,.82);--dim:#9B95A0;--ok:#3fae5a;--r:16px}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased;line-height:1.55;min-height:100vh}
+a{color:inherit}
+.nav{border-bottom:1px solid var(--glass-b);padding:0 32px;display:flex;justify-content:space-between;align-items:center;height:64px}
+.logo-main{font-family:'Saira Condensed',sans-serif;font-weight:800;font-size:22px;color:#fff;letter-spacing:4px;text-transform:uppercase;line-height:.9}
+.logo-sub{font-family:'Saira Condensed',sans-serif;font-weight:600;font-size:10px;letter-spacing:7px;color:#888;text-transform:uppercase;text-align:center}
+.nav a.back{font-size:.82rem;color:var(--dim);text-decoration:none}
+.wrap{max-width:600px;margin:0 auto;padding:64px 24px}
+.card{background:var(--glass);border:1px solid var(--glass-b);border-radius:var(--r);padding:40px 34px;text-align:center}
+.badge{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.8rem;margin:0 auto 20px}
+.badge.ok{background:rgba(63,174,90,.15);border:1px solid rgba(63,174,90,.4)}
+.badge.wait{background:rgba(212,80,106,.12);border:1px solid rgba(212,80,106,.4)}
+h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:2rem;margin-bottom:10px}
+.lead{color:var(--txt-m);margin-bottom:24px}
+.recap{text-align:left;background:var(--bg);border:1px solid var(--glass-b);border-radius:12px;padding:18px 20px;margin:22px 0}
+.recap .row{display:flex;justify-content:space-between;gap:16px;padding:7px 0;border-bottom:1px solid var(--glass-b);font-size:.9rem}
+.recap .row:last-child{border-bottom:none}
+.recap .k{color:var(--dim)}
+.recap .v{color:var(--txt);text-align:right}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:13px 26px;border-radius:12px;font-weight:600;font-size:.9rem;text-decoration:none;background:var(--mrn);color:#fff;transition:all .3s;border:none;cursor:pointer}
+.btn:hover{background:var(--mrn-h)}
+.muted{font-size:.82rem;color:var(--dim);margin-top:18px}
+.spinner{width:34px;height:34px;border:3px solid var(--glass-b);border-top-color:var(--pink);border-radius:50%;margin:8px auto 0;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="index.html" style="text-decoration:none"><div><div class="logo-main">DOWNER</div><div class="logo-sub">Basketball Academy</div></div></a>
+  <a href="clinics.html" class="back">← Clinics</a>
+</nav>
+
+<div class="wrap">
+  <!-- LOADING -->
+  <div class="card" id="loading">
+    <div class="badge wait">⏳</div>
+    <h1>Confirming your payment…</h1>
+    <p class="lead">One moment while we finalize your registration.</p>
+    <div class="spinner"></div>
+  </div>
+
+  <!-- SUCCESS -->
+  <div class="card hidden" id="paid">
+    <div class="badge ok">🏀</div>
+    <h1>You're registered!</h1>
+    <p class="lead" id="paidLead">Your spot is locked in. A receipt has been emailed to you.</p>
+    <div class="recap" id="recap"></div>
+    <a href="clinics.html" class="btn">Back to Clinics →</a>
+    <p class="muted">Questions? Email <a href="mailto:aceshoops@gmail.com" style="color:var(--txt-m);text-decoration:underline">aceshoops@gmail.com</a></p>
+  </div>
+
+  <!-- PENDING / UNCONFIRMED -->
+  <div class="card hidden" id="pending">
+    <div class="badge wait">📩</div>
+    <h1>Almost there</h1>
+    <p class="lead">If you completed checkout, your payment is processing and a receipt will arrive by email shortly. You can safely close this page.</p>
+    <button class="btn" id="retryBtn">Check again</button>
+    <p class="muted">If you were charged but don't get a receipt, email <a href="mailto:aceshoops@gmail.com" style="color:var(--txt-m);text-decoration:underline">aceshoops@gmail.com</a> and we'll sort it out.</p>
+  </div>
+
+  <!-- ERROR / NO RID -->
+  <div class="card hidden" id="error">
+    <div class="badge wait">🤔</div>
+    <h1>We couldn't find that registration</h1>
+    <p class="lead">If you just paid, check your email for a receipt. Otherwise, head back and try again.</p>
+    <a href="register.html" class="btn">Back to Registration →</a>
+    <p class="muted">Need help? Email <a href="mailto:aceshoops@gmail.com" style="color:var(--txt-m);text-decoration:underline">aceshoops@gmail.com</a></p>
+  </div>
+</div>
+
+<script>
+function qs(k){ return new URLSearchParams(location.search).get(k); }
+function show(id){ ['loading','paid','pending','error'].forEach(function(x){ document.getElementById(x).classList.toggle('hidden', x!==id); }); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];}); }
+var rid = window.__RID__ || qs('rid');
+
+function renderRecap(d){
+  var rows = [];
+  rows.push(['Clinic', esc(d.title)]);
+  if(d.players && d.players.length) rows.push([d.players.length>1?'Players':'Player', d.players.map(esc).join(', ')]);
+  rows.push(['Sessions', d.all_six ? 'All 6 sessions' : (parseInt(d.session_count,10)||0) + ' session' + (d.session_count>1?'s':'')]);
+  rows.push(['Total paid', '$' + esc(d.amount)]);
+  document.getElementById('recap').innerHTML = rows.map(function(r){
+    return '<div class="row"><span class="k">'+r[0]+'</span><span class="v">'+r[1]+'</span></div>';
+  }).join('');
+  if(d.email) document.getElementById('paidLead').textContent = 'Your spot is locked in. A receipt has been emailed to ' + d.email + '.';
+}
+
+function check(){
+  if(!rid){ show('error'); return; }
+  show('loading');
+  fetch('/api/confirm?rid=' + encodeURIComponent(rid))
+    .then(function(r){ return r.json().then(function(d){ return {status:r.status, d:d}; }); })
+    .then(function(res){
+      var d = res.d || {};
+      if(res.status === 404){ show('error'); return; }
+      if(d.ok && d.status === 'paid'){ renderRecap(d); show('paid'); return; }
+      show('pending');
+    })
+    .catch(function(){ show('pending'); });
+}
+document.getElementById('retryBtn').addEventListener('click', check);
+check();
+</script>
+</body>
+</html>

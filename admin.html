@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clinic Admin — Downer Basketball Academy</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Outfit:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Saira+Condensed:wght@600;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--mrn:#8B1A2B;--mrn-h:#A82E42;--pink:#D4506A;--bg:#0A0A0C;--bg2:#101014;--bg3:#16161A;--glass:rgba(255,255,255,.035);--glass-b:rgba(255,255,255,.08);--txt:#F0ECE8;--txt-m:rgba(240,236,232,.82);--dim:#9B95A0;--ok:#3fae5a;--amber:#d9a441;--r:14px}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased;line-height:1.5;min-height:100vh}
+a{color:inherit}
+.topbar{border-bottom:1px solid var(--glass-b);padding:0 28px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:rgba(10,10,12,.9);backdrop-filter:blur(20px);z-index:50}
+.brand{font-family:'Saira Condensed',sans-serif;font-weight:800;letter-spacing:3px;font-size:18px;text-transform:uppercase}
+.brand span{color:var(--pink)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:9px;font-family:inherit;font-weight:600;font-size:.82rem;border:1px solid var(--glass-b);background:var(--glass);color:var(--txt);cursor:pointer;transition:all .2s;text-decoration:none}
+.btn:hover{border-color:var(--pink)}
+.btn.primary{background:var(--mrn);border-color:var(--mrn)}.btn.primary:hover{background:var(--mrn-h)}
+.btn.sm{padding:5px 10px;font-size:.72rem;border-radius:7px}
+.btn.danger:hover{border-color:#c0392b;color:#e06b5e}
+
+/* LOGIN */
+.login-wrap{max-width:380px;margin:12vh auto;padding:0 20px}
+.login-card{background:var(--glass);border:1px solid var(--glass-b);border-radius:var(--r);padding:32px}
+.login-card h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:1.5rem;margin-bottom:6px}
+.login-card p{color:var(--dim);font-size:.86rem;margin-bottom:20px}
+.inp{width:100%;background:var(--bg);border:1px solid var(--glass-b);border-radius:9px;padding:12px 14px;color:var(--txt);font-family:inherit;font-size:.95rem;outline:none}
+.inp:focus{border-color:var(--mrn)}
+.login-err{color:#e06b5e;font-size:.82rem;margin-top:10px;min-height:1em}
+
+/* DASHBOARD */
+.dash{max-width:1200px;margin:0 auto;padding:26px 24px 80px;display:none}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.tile{background:var(--glass);border:1px solid var(--glass-b);border-radius:var(--r);padding:18px}
+.tile .n{font-family:'DM Serif Display',serif;font-size:1.9rem;color:var(--pink);line-height:1}
+.tile .l{font-size:.72rem;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-top:6px}
+.sessbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.sesschip{font-family:'IBM Plex Mono',monospace;font-size:.72rem;background:var(--glass);border:1px solid var(--glass-b);border-radius:8px;padding:6px 10px;color:var(--txt-m)}
+.sesschip b{color:var(--txt)}
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.toolbar .inp{width:auto;flex:1;min-width:180px;padding:9px 12px}
+.filters{display:flex;gap:4px}
+.filters .f{padding:7px 12px;border-radius:8px;font-size:.78rem;border:1px solid var(--glass-b);background:var(--glass);cursor:pointer;color:var(--dim)}
+.filters .f.on{background:var(--mrn);border-color:var(--mrn);color:#fff}
+.tbl-wrap{border:1px solid var(--glass-b);border-radius:var(--r);overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.86rem;min-width:900px}
+th{text-align:left;padding:12px 14px;background:var(--bg3);color:var(--dim);font-size:.68rem;text-transform:uppercase;letter-spacing:1px;font-weight:600;border-bottom:1px solid var(--glass-b);white-space:nowrap}
+td{padding:12px 14px;border-bottom:1px solid var(--glass-b);vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.who .nm{font-weight:600}
+.who .sub{font-size:.76rem;color:var(--dim)}
+.players-cell{font-size:.82rem}
+.badge{display:inline-block;padding:3px 9px;border-radius:100px;font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.badge.paid{background:rgba(63,174,90,.15);color:#6fce86;border:1px solid rgba(63,174,90,.35)}
+.badge.pending{background:rgba(217,164,65,.15);color:var(--amber);border:1px solid rgba(217,164,65,.35)}
+.badge.canceled{background:rgba(255,255,255,.06);color:var(--dim);border:1px solid var(--glass-b)}
+.badge.refunded{background:rgba(212,80,106,.15);color:var(--pink);border:1px solid rgba(212,80,106,.35)}
+.badge.error{background:rgba(192,57,43,.15);color:#e06b5e;border:1px solid rgba(192,57,43,.35)}
+.badge.abandoned{background:rgba(122,117,128,.14);color:var(--dim);border:1px solid var(--glass-b)}
+.acts{display:flex;gap:5px;flex-wrap:wrap}
+.medflag{display:inline-block;margin-top:6px;font-size:.68rem;font-weight:800;letter-spacing:.6px;color:#fff;background:#c0392b;border:1px solid #ff6b5e;border-radius:6px;padding:3px 10px;cursor:pointer;text-transform:uppercase;box-shadow:0 0 12px rgba(192,57,43,.5);animation:medpulse 1.8s ease-in-out infinite}
+@keyframes medpulse{0%,100%{box-shadow:0 0 8px rgba(192,57,43,.4)}50%{box-shadow:0 0 16px rgba(192,57,43,.85)}}
+.med-alert{background:rgba(192,57,43,.16);border:1px solid #c0392b;border-left:4px solid #ff6b5e;border-radius:8px;padding:12px 14px;margin:8px 0 4px;color:#ffd9d4}
+.med-alert .lbl{font-size:.62rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#ff8a7e;margin-bottom:3px}
+.med-alert .txt{font-size:.95rem;color:#fff;line-height:1.4}
+.empty{padding:40px;text-align:center;color:var(--dim)}
+.mono{font-family:'IBM Plex Mono',monospace}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:100;padding:20px}
+.modal-bg.on{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--glass-b);border-radius:var(--r);max-width:460px;width:100%;padding:26px;max-height:85vh;overflow-y:auto}
+.modal h3{font-family:'DM Serif Display',serif;font-weight:400;font-size:1.3rem;margin-bottom:14px}
+.modal .kv{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--glass-b);font-size:.86rem}
+.modal .kv .k{color:var(--dim)}
+.modal .kv .v{text-align:right}
+.modal .waivertext{font-size:.82rem;color:var(--txt-m);line-height:1.6;background:var(--bg);border:1px solid var(--glass-b);border-radius:10px;padding:14px;margin:14px 0}
+.modal .foot{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+@media(max-width:720px){.tiles{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">DOWNER <span>· Clinic Admin</span></div>
+  <button class="btn sm" id="logoutBtn" style="display:none">Log out</button>
+</div>
+<div id="demoBanner" style="display:none;background:rgba(212,80,106,.14);border-bottom:1px solid rgba(212,80,106,.4);color:#F0ECE8;text-align:center;padding:9px 16px;font-size:.82rem">👀 <b>Demo preview</b> — sample data, not real registrations. Refund &amp; Cancel are disabled here.</div>
+
+<!-- LOGIN -->
+<div class="login-wrap" id="loginWrap">
+  <div class="login-card">
+    <h1>Clinic Admin</h1>
+    <p>Enter the admin passcode to view registrations.</p>
+    <form id="loginForm">
+      <input class="inp" id="pw" type="password" placeholder="Admin passcode" autocomplete="current-password">
+      <button class="btn primary" style="width:100%;margin-top:12px;justify-content:center" type="submit">Sign in →</button>
+      <div class="login-err" id="loginErr"></div>
+    </form>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="dash" id="dash">
+  <div class="tiles" id="tiles"></div>
+  <div class="sessbar" id="sessbar"></div>
+  <div class="toolbar">
+    <input class="inp" id="search" placeholder="Search name, email, player…">
+    <div class="filters" id="filters">
+      <span class="f on" data-s="all">All</span>
+      <span class="f" data-s="paid">Paid</span>
+      <span class="f" data-s="pending">Pending</span>
+      <span class="f" data-s="refunded">Refunded</span>
+      <span class="f" data-s="canceled">Canceled</span>
+      <span class="f" data-s="abandoned">Abandoned</span>
+    </div>
+    <button class="btn sm" id="refreshBtn">↻ Refresh</button>
+    <button class="btn sm" id="csvBtn">⬇ Export CSV</button>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th>Registrant</th><th>Player(s)</th><th>Date</th><th>Sessions</th><th>Amount</th><th>Refunded</th><th>Status</th><th>Actions</th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div class="empty" id="empty" style="display:none">No registrations match.</div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-bg" id="modalBg"><div class="modal" id="modal"></div></div>
+
+<script>
+var KEY_STORE='dba_admin_key';
+var SESSION_LABELS={s1:'Sep 27',s2:'Oct 4',s3:'Oct 11',s4:'Oct 18',s5:'Oct 25',s6:'Nov 1'};
+var state={ key:'', data:[], summary:{}, filter:'all', q:'' };
+
+function money(c){ return '$'+((c||0)/100).toFixed(2); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];}); }
+function fmtDate(iso){ if(!iso) return '—'; var d=new Date(iso); return isNaN(d)?'—':(d.getMonth()+1)+'/'+d.getDate()+'/'+String(d.getFullYear()).slice(2); }
+
+/* ── Auth + load ── */
+function api(path, opts){
+  opts=opts||{}; opts.headers=Object.assign({'x-admin-key':state.key}, opts.headers||{});
+  return fetch(path, opts);
+}
+function load(){
+  return api('/api/registrations').then(function(r){
+    if(r.status===401){ throw {code:'auth'}; }
+    if(r.status===503){ throw {code:'config'}; }
+    return r.json();
+  }).then(function(d){
+    state.data=d.registrations||[]; state.summary=d.summary||{};
+    render();
+  });
+}
+
+document.getElementById('loginForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  state.key=document.getElementById('pw').value.trim();
+  var err=document.getElementById('loginErr'); err.textContent='';
+  if(!state.key){ err.textContent='Enter the passcode.'; return; }
+  load().then(function(){
+    try{ sessionStorage.setItem(KEY_STORE, state.key); }catch(e){}
+    document.getElementById('loginWrap').style.display='none';
+    document.getElementById('dash').style.display='block';
+    document.getElementById('logoutBtn').style.display='inline-flex';
+  }).catch(function(e){
+    if(e && e.code==='config') err.textContent='Admin isn\'t configured yet (ADMIN_PASSWORD / database not set).';
+    else err.textContent='Wrong passcode — try again.';
+    state.key='';
+  });
+});
+document.getElementById('logoutBtn').addEventListener('click', function(){
+  state.key=''; try{ sessionStorage.removeItem(KEY_STORE); }catch(e){}
+  document.getElementById('dash').style.display='none';
+  document.getElementById('logoutBtn').style.display='none';
+  document.getElementById('loginWrap').style.display='block';
+  document.getElementById('pw').value='';
+});
+
+/* ── Render ── */
+function render(){
+  var s=state.summary;
+  document.getElementById('tiles').innerHTML=
+    tile(s.paid||0,'Paid registrations')+tile(s.players||0,'Players')+tile('$'+(s.collected||'0.00'),'Collected (net)')+tile(s.pending||0,'Pending');
+  var ps=s.perSession||{};
+  document.getElementById('sessbar').innerHTML=Object.keys(SESSION_LABELS).map(function(id){
+    return '<span class="sesschip">'+SESSION_LABELS[id]+' <b>'+(ps[id]||0)+'</b></span>';
+  }).join('');
+
+  var rows=state.data.filter(function(r){
+    if(state.filter!=='all' && r.status!==state.filter) return false;
+    if(state.q){
+      var hay=(r.parent_name+' '+r.parent_email+' '+(r.players||[]).map(function(p){return p.first+' '+p.last;}).join(' ')).toLowerCase();
+      if(hay.indexOf(state.q)<0) return false;
+    }
+    return true;
+  });
+  var tb=document.getElementById('rows');
+  document.getElementById('empty').style.display=rows.length?'none':'block';
+  tb.innerHTML=rows.map(rowHtml).join('');
+  Array.prototype.forEach.call(tb.querySelectorAll('[data-act]'), function(el){
+    el.addEventListener('click', function(){ act(el.dataset.act, el.dataset.rid); });
+  });
+}
+function tile(n,l){ return '<div class="tile"><div class="n">'+n+'</div><div class="l">'+l+'</div></div>'; }
+function byId(rid){ return state.data.filter(function(r){return r.id===rid;})[0]; }
+function hasMedical(r){ var m=String(r&&r.medical||'').trim(); return !!m && !/^(none|n\/?a|no|no\.|nope|n)$/i.test(m); }
+
+function rowHtml(r){
+  var players=(r.players||[]).map(function(p){return esc(p.first+' '+p.last);}).join('<br>')||'—';
+  var medChip=hasMedical(r)?'<div><span class="medflag" data-act="waiver" data-rid="'+r.id+'" title="'+esc(r.medical)+'">⚠ Medical</span></div>':'';
+  var sess=r.all_six?'All 6':((r.sessions||[]).map(function(x){return SESSION_LABELS[x]||x;}).join(', ')||'—');
+  var refunded=(r.amount_refunded_cents||0)>0?money(r.amount_refunded_cents):'—';
+  // Refundable is about MONEY, not status: a captured payment with a remaining balance —
+  // even if the registration was later canceled/abandoned.
+  var hasPay=!!(r.stripe_payment_intent||r.square_payment_id||r.paid_via);
+  var canRefund=hasPay&&(r.amount_refunded_cents||0)<(r.amount_cents||0);
+  var amtCell=money(r.amount_cents)+(r.amount_mismatch?' <span title="Amount charged differs from expected — review" style="color:#e06b5e">⚠</span>':'');
+  var acts='<button class="btn sm" data-act="waiver" data-rid="'+r.id+'">Waiver</button>'+
+           '<button class="btn sm" data-act="receipt" data-rid="'+r.id+'">Receipt</button>'+
+           (canRefund?'<button class="btn sm danger" data-act="refund" data-rid="'+r.id+'">Refund</button>':'')+
+           (r.status!=='canceled'?'<button class="btn sm danger" data-act="cancel" data-rid="'+r.id+'">Cancel</button>':'');
+  return '<tr>'+
+    '<td class="who"><div class="nm">'+esc(r.parent_name||'—')+'</div><div class="sub">'+esc(r.parent_email||'')+'</div><div class="sub">'+esc(r.parent_phone||'')+'</div></td>'+
+    '<td class="players-cell">'+players+medChip+'</td>'+
+    '<td class="mono">'+fmtDate(r.created)+'</td>'+
+    '<td>'+sess+'</td>'+
+    '<td class="mono">'+amtCell+'</td>'+
+    '<td class="mono">'+refunded+'</td>'+
+    '<td><span class="badge '+(r.status||'pending')+'">'+(r.status||'pending')+'</span></td>'+
+    '<td><div class="acts">'+acts+'</div></td>'+
+  '</tr>';
+}
+
+/* ── Row actions ── */
+function act(kind, rid){
+  var r=byId(rid); if(!r) return;
+  if(state.demo && (kind==='refund'||kind==='cancel')){
+    modal('<h3>Demo preview</h3><p style="color:var(--dim);font-size:.9rem;line-height:1.5">Refunds and cancellations work once the site is live with your payment keys connected. This preview is just sample data so you can see the layout.</p><div class="foot"><button class="btn" onclick="closeModal()">Got it</button></div>');
+    return;
+  }
+  if(kind==='waiver') return showWaiver(r);
+  if(kind==='receipt') return showReceipt(r);
+  if(kind==='refund') return doRefund(r);
+  if(kind==='cancel') return doCancel(r);
+}
+function modal(html){ document.getElementById('modal').innerHTML=html; document.getElementById('modalBg').classList.add('on'); }
+function closeModal(){ document.getElementById('modalBg').classList.remove('on'); }
+document.getElementById('modalBg').addEventListener('click', function(e){ if(e.target.id==='modalBg') closeModal(); });
+
+function showWaiver(r){
+  modal('<h3>Waiver &amp; Safety — '+esc(r.parent_name)+'</h3>'+
+    kv('Signed by', esc(r.waiver_name||'—'))+
+    kv('Signed at', fmtDateTime(r.waiver_at))+
+    kv('IP', esc(r.waiver_ip||'—'))+
+    kv('Player(s)', (r.players||[]).map(function(p){return esc(p.first+' '+p.last);}).join(', ')||'—')+
+    kv('Emergency contact', esc((r.emerg_name||'—')+(r.emerg_phone?(' · '+r.emerg_phone):'')))+
+    kv('Authorized pickup', r.pickup_name?esc(r.pickup_name+(r.pickup_phone?(' · '+r.pickup_phone):'')):'—')+
+    (hasMedical(r)
+      ? '<div class="med-alert"><div class="lbl">⚠ Medical / Allergy — please read</div><div class="txt">'+esc(r.medical)+'</div></div>'
+      : kv('Medical notes', esc(r.medical||'None')))+
+    '<div class="waivertext">Liability Waiver &amp; Code of Conduct — the signer agreed on behalf of their player(s) to the DBA liability release, certified physical fitness to participate, authorized emergency medical treatment, and accepted the code of conduct.</div>'+
+    '<div class="foot"><button class="btn" onclick="closeModal()">Close</button></div>');
+}
+function showReceipt(r){
+  var net=(r.amount_cents||0)-(r.amount_refunded_cents||0);
+  modal('<h3>Payment — '+esc(r.parent_name)+'</h3>'+
+    kv('Status', r.status||'pending')+
+    kv('Provider', esc(r.paid_via||r.payment_provider||'—'))+
+    kv('Card', r.card_last4?('•••• '+esc(r.card_last4)):'—')+
+    kv('Amount', money(r.amount_cents))+
+    kv('Refunded', money(r.amount_refunded_cents))+
+    kv('Net', money(net))+
+    kv('Paid at', fmtDateTime(r.paid_at))+
+    kv('Payment ID', '<span class="mono" style="font-size:.72rem">'+esc(r.stripe_payment_intent||r.square_payment_id||'—')+'</span>')+
+    '<p style="font-size:.76rem;color:var(--dim);margin-top:12px">The official card receipt is emailed to the parent automatically by '+(esc(r.paid_via||'the processor'))+'.</p>'+
+    '<div class="foot"><button class="btn" onclick="closeModal()">Close</button></div>');
+}
+function doRefund(r){
+  var max=((r.amount_cents||0)-(r.amount_refunded_cents||0));
+  modal('<h3>Refund — '+esc(r.parent_name)+'</h3>'+
+    '<p style="color:var(--dim);font-size:.86rem;margin-bottom:12px">Refundable: <b>'+money(max)+'</b>. Enter an amount or leave blank for a full refund.</p>'+
+    '<input class="inp" id="refundAmt" placeholder="Full refund ('+money(max)+')" inputmode="decimal">'+
+    '<div class="login-err" id="refundErr"></div>'+
+    '<div class="foot"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary danger" id="refundGo">Issue refund</button></div>');
+  document.getElementById('refundGo').addEventListener('click', function(){
+    var v=document.getElementById('refundAmt').value.trim();
+    var body={ rid:r.id };
+    if(v){ var n=parseFloat(v); if(isNaN(n)||n<=0){ document.getElementById('refundErr').textContent='Enter a valid amount.'; return; } body.amount_cents=Math.round(n*100); }
+    this.textContent='Refunding…'; this.disabled=true;
+    api('/api/refund',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+      .then(function(x){return x.json();}).then(function(d){
+        if(d.ok){ closeModal(); load(); } else { document.getElementById('refundErr').textContent='Failed: '+(d.error||'error'); }
+      }).catch(function(){ document.getElementById('refundErr').textContent='Network error.'; });
+  });
+}
+function doCancel(r){
+  modal('<h3>Cancel registration?</h3>'+
+    '<p style="color:var(--dim);font-size:.88rem;margin-bottom:6px">This marks <b>'+esc(r.parent_name)+'</b>\'s registration canceled. It does <b>not</b> refund money — issue a refund separately if needed.</p>'+
+    (r.status==='paid'?'<p style="color:var(--pink);font-size:.82rem">Paid '+money((r.amount_cents||0)-(r.amount_refunded_cents||0))+' — refund separately if owed.</p>':'')+
+    '<div class="foot"><button class="btn" onclick="closeModal()">Keep it</button><button class="btn primary danger" id="cancelGo">Cancel registration</button></div>');
+  document.getElementById('cancelGo').addEventListener('click', function(){
+    this.textContent='Canceling…'; this.disabled=true;
+    api('/api/cancel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rid:r.id})})
+      .then(function(x){return x.json();}).then(function(d){ if(d.ok){ closeModal(); load(); } });
+  });
+}
+function kv(k,v){ return '<div class="kv"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>'; }
+function fmtDateTime(iso){ if(!iso) return '—'; var d=new Date(iso); return isNaN(d)?'—':d.toLocaleString(); }
+
+/* ── CSV export ── */
+document.getElementById('csvBtn').addEventListener('click', function(){
+  var cols=['Parent','Email','Phone','Emergency','EmergPhone','Pickup','PickupPhone','Medical','Players','Sessions','Amount','Refunded','Status','Provider','Last4','Created','WaiverSignedBy'];
+  var lines=[cols.join(',')];
+  state.data.forEach(function(r){
+    var row=[r.parent_name, r.parent_email, r.parent_phone, r.emerg_name, r.emerg_phone, r.pickup_name||'', r.pickup_phone||'', r.medical||'',
+      (r.players||[]).map(function(p){return p.first+' '+p.last;}).join('; '),
+      r.all_six?'All 6':(r.sessions||[]).join(' '),
+      ((r.amount_cents||0)/100).toFixed(2), ((r.amount_refunded_cents||0)/100).toFixed(2),
+      r.status, r.paid_via||r.payment_provider||'', r.card_last4||'', r.created||'', r.waiver_name||''];
+    lines.push(row.map(function(c){ return '"'+String(c==null?'':c).replace(/"/g,'""')+'"'; }).join(','));
+  });
+  var blob=new Blob([lines.join('\n')],{type:'text/csv'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dba-clinic-registrations.csv'; a.click();
+});
+
+/* ── Wire filters/search/refresh ── */
+document.getElementById('filters').addEventListener('click', function(e){
+  if(!e.target.dataset.s) return;
+  state.filter=e.target.dataset.s;
+  Array.prototype.forEach.call(this.children, function(c){ c.classList.toggle('on', c===e.target); });
+  render();
+});
+document.getElementById('search').addEventListener('input', function(){ state.q=this.value.trim().toLowerCase(); render(); });
+document.getElementById('refreshBtn').addEventListener('click', function(){ load(); });
+
+/* ── Demo preview (?demo=1) — sample data, no login, no backend ── */
+var SAMPLE_DATA=[
+  {id:'a1',status:'paid',payment_provider:'stripe',paid_via:'Stripe',card_last4:'4242',players:[{first:'Kobe',last:'Bryant'},{first:'Gigi',last:'Bryant'}],sessions:['s1','s2','s3','s4','s5','s6'],all_six:true,session_count:6,amount_cents:32800,amount_refunded_cents:0,parent_name:'Vanessa Bryant',parent_email:'vanessa@example.com',parent_phone:'(610) 555-0100',emerg_name:'Pam Bryant',emerg_phone:'(610) 555-0101',pickup_name:'Grandpa Joe',pickup_phone:'(610) 555-0102',medical:'None',created:'2026-08-30T14:02:00Z',paid_at:'2026-08-30T14:03:00Z',waiver_name:'Vanessa Bryant',waiver_at:'2026-08-30T14:02:00Z',waiver_ip:'71.x.x.10',stripe_payment_intent:'pi_3abc'},
+  {id:'a2',status:'paid',payment_provider:'stripe',paid_via:'Stripe',card_last4:'1881',stripe_payment_intent:'pi_2',players:[{first:'Noah',last:'Tinker'}],sessions:['s1','s3'],all_six:false,session_count:2,amount_cents:7600,amount_refunded_cents:3800,parent_name:'Sam Tinker',parent_email:'sam@example.com',parent_phone:'(610) 555-0139',emerg_name:'Jo Tinker',emerg_phone:'(610) 555-0140',medical:'Peanut allergy',amount_mismatch:true,created:'2026-08-29T09:00:00Z',paid_at:'2026-08-29T09:01:00Z',waiver_name:'Sam Tinker'},
+  {id:'a3',status:'pending',payment_provider:'square',players:[{first:'Leo',last:'Blitz'}],sessions:['s2'],session_count:1,amount_cents:3800,amount_refunded_cents:0,parent_name:'Dana Blitz',parent_email:'dana@example.com',parent_phone:'(610) 555-0170',created:'2026-08-31T18:20:00Z'},
+  {id:'a4',status:'refunded',payment_provider:'square',paid_via:'Square',card_last4:'0002',square_payment_id:'sq_4',players:[{first:'Maggie',last:'Joyce'}],sessions:['s4','s5'],session_count:2,amount_cents:7600,amount_refunded_cents:7600,parent_name:'Erin Joyce',parent_email:'erin@example.com',parent_phone:'(610) 555-0188',emerg_name:'Ed Joyce',emerg_phone:'(610) 555-0189',created:'2026-08-25T12:00:00Z',paid_at:'2026-08-25T12:01:00Z',waiver_name:'Erin Joyce'},
+  {id:'a5',status:'canceled',payment_provider:'stripe',paid_via:'Stripe',card_last4:'3333',stripe_payment_intent:'pi_5',players:[{first:'Ivy',last:'Nguyen'}],sessions:['s2','s3'],session_count:2,amount_cents:7600,amount_refunded_cents:0,parent_name:'Minh Nguyen',parent_email:'minh@example.com',parent_phone:'(610) 555-0200',emerg_name:'Lan Nguyen',emerg_phone:'(610) 555-0201',created:'2026-08-22T10:00:00Z',paid_at:'2026-08-22T10:01:00Z',canceled_at:'2026-08-23T08:00:00Z',waiver_name:'Minh Nguyen'},
+  {id:'a6',status:'abandoned',payment_provider:'square',players:[{first:'Sky',last:'Watts'}],sessions:['s4'],session_count:1,amount_cents:3800,amount_refunded_cents:0,parent_name:'Rae Watts',parent_email:'rae@example.com',parent_phone:'(610) 555-0210',created:'2026-08-15T10:00:00Z',abandoned_at:'2026-08-17T10:05:00Z'}
+];
+var SAMPLE_SUMMARY={paid:2,pending:1,canceled:1,refunded:1,abandoned:1,players:3,collected:'365.00',perSession:{s1:2,s2:2,s3:2,s4:1,s5:1,s6:1}};
+function enterDemo(){
+  state.demo=true; state.data=SAMPLE_DATA; state.summary=SAMPLE_SUMMARY;
+  document.getElementById('loginWrap').style.display='none';
+  document.getElementById('dash').style.display='block';
+  document.getElementById('demoBanner').style.display='block';
+  document.getElementById('logoutBtn').style.display='none';
+  render();
+}
+
+/* ── Auto-login if we have a stored key ── */
+(function(){
+  if(new URLSearchParams(location.search).get('demo')==='1'){ enterDemo(); return; }
+  var k=''; try{ k=sessionStorage.getItem(KEY_STORE)||''; }catch(e){}
+  if(k){ state.key=k; load().then(function(){
+    document.getElementById('loginWrap').style.display='none';
+    document.getElementById('dash').style.display='block';
+    document.getElementById('logoutBtn').style.display='inline-flex';
+  }).catch(function(){ state.key=''; try{sessionStorage.removeItem(KEY_STORE);}catch(e){} }); }
+})();
+</script>
+</body>
+</html>
