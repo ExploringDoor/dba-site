@@ -77,6 +77,9 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:100;padding:20px}
 .modal-bg.on{display:flex}
 .modal{background:var(--bg2);border:1px solid var(--glass-b);border-radius:var(--r);max-width:460px;width:100%;padding:26px;max-height:85vh;overflow-y:auto}
+.modal.wide{max-width:640px}
+.who .nm[data-act]{cursor:pointer}
+.who .nm[data-act]:hover{color:var(--pink);text-decoration:underline}
 .modal h3{font-family:'DM Serif Display',serif;font-weight:400;font-size:1.3rem;margin-bottom:14px}
 .modal .kv{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--glass-b);font-size:.86rem}
 .modal .kv .k{color:var(--dim)}
@@ -231,7 +234,7 @@ function rowHtml(r){
            (canRefund?'<button class="btn sm danger" data-act="refund" data-rid="'+r.id+'">Refund</button>':'')+
            (r.status!=='canceled'?'<button class="btn sm danger" data-act="cancel" data-rid="'+r.id+'">Cancel</button>':'');
   return '<tr>'+
-    '<td class="who"><div class="nm">'+esc(r.parent_name||'—')+'</div><div class="sub">'+esc(r.parent_email||'')+'</div><div class="sub">'+esc(r.parent_phone||'')+'</div></td>'+
+    '<td class="who"><div class="nm" data-act="manage" data-rid="'+r.id+'" title="View full details">'+esc(r.parent_name||'—')+'</div><div class="sub">'+esc(r.parent_email||'')+'</div><div class="sub">'+esc(r.parent_phone||'')+'</div></td>'+
     '<td class="players-cell">'+players+medChip+'</td>'+
     '<td class="mono">'+fmtDate(r.created)+'</td>'+
     '<td>'+sess+'</td>'+
@@ -249,28 +252,42 @@ function act(kind, rid){
     modal('<h3>Demo preview</h3><p style="color:var(--dim);font-size:.9rem;line-height:1.5">Refunds and cancellations work once the site is live with your payment keys connected. This preview is just sample data so you can see the layout.</p><div class="foot"><button class="btn" onclick="closeModal()">Got it</button></div>');
     return;
   }
+  if(kind==='manage') return showManage(r);
   if(kind==='waiver') return showWaiver(r);
   if(kind==='receipt') return showReceipt(r);
   if(kind==='refund') return doRefund(r);
   if(kind==='cancel') return doCancel(r);
 }
-function modal(html){ document.getElementById('modal').innerHTML=html; document.getElementById('modalBg').classList.add('on'); }
+function modal(html, wide){ var m=document.getElementById('modal'); m.innerHTML=html; m.classList.toggle('wide', !!wide); document.getElementById('modalBg').classList.add('on'); }
 function closeModal(){ document.getElementById('modalBg').classList.remove('on'); }
 document.getElementById('modalBg').addEventListener('click', function(e){ if(e.target.id==='modalBg') closeModal(); });
 
+// Formal, printable waiver agreement document (mirrors the RYZER waiver PDF).
+function waiverCard(r){
+  var players = (r.players || []).map(function(p){ return esc((p.first + ' ' + p.last).trim()); }).join(', ') || '—';
+  return '<div style="background:#fff;color:#111;font-family:Arial,Helvetica,sans-serif;border-radius:10px;overflow:hidden">'+
+    '<div style="background:#8B1A2B;color:#fff;padding:14px 16px"><div style="font-weight:800;font-size:15px;letter-spacing:.3px">'+esc(r.clinic_title||'DBA Fall Clinics')+' &ndash; Refund/Waiver Agreement</div></div>'+
+    '<div style="padding:16px;font-size:13px;line-height:1.6;color:#222">'+
+      '<p style="margin:0 0 12px"><strong>Participant:</strong> '+players+'</p>'+
+      '<p style="margin:0 0 4px;font-weight:700">Waiver / Consent</p>'+
+      '<p style="margin:0 0 8px;color:#333">I understand that participation in basketball activities involves inherent risks, including the risk of injury. On behalf of my player(s), I release Downer Basketball Academy, Lower Merion School District, the Kobe Bryant Gymnasium, and their respective staff and volunteers from liability for injuries sustained during clinic activities, except in cases of gross negligence. I certify that my player is physically able to participate. I authorize DBA staff to seek emergency medical treatment if needed and I agree my player will follow the code of conduct.</p>'+
+      '<p style="margin:0 0 14px"><strong>I agree to the above statement:</strong> Yes</p>'+
+      '<p style="margin:0 0 4px;font-weight:700">Refund Policy</p>'+
+      '<p style="margin:0 0 8px;color:#333">Refunds are issued as credit toward a future clinic for injury or withdrawal.</p>'+
+      '<p style="margin:0 0 14px"><strong>I agree to the above statement:</strong> Yes</p>'+
+      '<hr style="border:none;border-top:1px solid #e5e5e5;margin:14px 0">'+
+      '<table style="font-size:12px;color:#555;border-collapse:collapse">'+
+        '<tr><td style="padding:2px 16px 2px 0;font-weight:700">Signed by</td><td>'+esc(r.waiver_name||'—')+'</td></tr>'+
+        '<tr><td style="padding:2px 16px 2px 0;font-weight:700">Date</td><td>'+fmtDateTime(r.waiver_at)+'</td></tr>'+
+        '<tr><td style="padding:2px 16px 2px 0;font-weight:700">IP address</td><td>'+esc(r.waiver_ip||'—')+'</td></tr>'+
+      '</table>'+
+    '</div>'+
+  '</div>';
+}
 function showWaiver(r){
-  modal('<h3>Waiver &amp; Safety — '+esc(r.parent_name)+'</h3>'+
-    kv('Signed by', esc(r.waiver_name||'—'))+
-    kv('Signed at', fmtDateTime(r.waiver_at))+
-    kv('IP', esc(r.waiver_ip||'—'))+
-    kv('Player(s)', (r.players||[]).map(function(p){return esc(p.first+' '+p.last);}).join(', ')||'—')+
-    kv('Emergency contact', esc((r.emerg_name||'—')+(r.emerg_phone?(' · '+r.emerg_phone):'')))+
-    kv('Authorized pickup', r.pickup_name?esc(r.pickup_name+(r.pickup_phone?(' · '+r.pickup_phone):'')):'—')+
-    (hasMedical(r)
-      ? '<div class="med-alert"><div class="lbl">⚠ Medical / Allergy — please read</div><div class="txt">'+esc(r.medical)+'</div></div>'
-      : kv('Medical notes', esc(r.medical||'None')))+
-    '<div class="waivertext">Liability Waiver &amp; Code of Conduct — the signer agreed on behalf of their player(s) to the DBA liability release, certified physical fitness to participate, authorized emergency medical treatment, and accepted the code of conduct.</div>'+
-    '<div class="foot"><button class="btn" onclick="closeModal()">Close</button></div>');
+  modal('<h3>Waiver Agreement</h3>'+ waiverCard(r) +
+    '<div class="foot"><button class="btn" id="wvPrint">🖨 Print</button><button class="btn primary" onclick="closeModal()">Close</button></div>');
+  var pb=document.getElementById('wvPrint'); if(pb) pb.addEventListener('click', function(){ printWaiver(r.id); });
 }
 function regBreakdown(r){
   var n=(r.sessions||[]).length;
@@ -303,17 +320,60 @@ function receiptCard(r){
     '</div>'+
   '</div>';
 }
-function printReceipt(rid){
-  var r=byId(rid); if(!r) return;
+function printDoc(title, inner){
   var w=window.open('','_blank'); if(!w) return;
-  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Receipt '+esc(r.id||'')+'</title></head><body style="margin:24px;background:#fff">'+receiptCard(r)+'<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},150);}<\/scr'+'ipt></body></html>');
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+title+'</title></head><body style="margin:24px;background:#fff">'+inner+'<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},150);}<\/scr'+'ipt></body></html>');
   w.document.close();
 }
+function printReceipt(rid){ var r=byId(rid); if(r) printDoc('Receipt '+esc(r.id||''), receiptCard(r)); }
+function printWaiver(rid){ var r=byId(rid); if(r) printDoc('Waiver '+esc(r.id||''), waiverCard(r)); }
 function showReceipt(r){
   modal('<h3>Receipt</h3>'+ receiptCard(r) +
     '<p style="font-size:.72rem;color:var(--dim);margin-top:10px">The official card receipt is also emailed to the parent by '+(esc(r.paid_via||'the processor'))+'.</p>'+
     '<div class="foot"><button class="btn" id="rcPrint">🖨 Print</button><button class="btn primary" onclick="closeModal()">Close</button></div>');
   var pb=document.getElementById('rcPrint'); if(pb) pb.addEventListener('click', function(){ printReceipt(r.id); });
+}
+function ageAsOf(dob, refISO){
+  if(!dob) return ''; var b=new Date(dob), ref=refISO?new Date(refISO):new Date();
+  if(isNaN(b)||isNaN(ref)) return '';
+  var a=ref.getFullYear()-b.getFullYear();
+  if(ref.getMonth()<b.getMonth()||(ref.getMonth()===b.getMonth()&&ref.getDate()<b.getDate())) a--;
+  return a;
+}
+function canRefundReg(r){ var hasPay=!!(r.stripe_payment_intent||r.square_payment_id||r.paid_via); return hasPay&&(r.amount_refunded_cents||0)<(r.amount_cents||0); }
+// Full participant/registration detail — the "Manage" view (mirrors RYZER's participant page).
+function showManage(r){
+  var b=regBreakdown(r);
+  var sess=r.all_six?'All 6 Sundays':((r.sessions||[]).map(function(x){return SESSION_LABELS[x]||x;}).join(', ')||'—');
+  function sec(t){ return '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.58rem;letter-spacing:2px;text-transform:uppercase;color:var(--pink);margin:18px 0 4px">'+t+'</div>'; }
+  var playersHtml=(r.players||[]).map(function(p){
+    var age=ageAsOf(p.dob,'2026-09-27');
+    return '<div style="padding:7px 0;border-bottom:1px solid var(--glass-b)"><strong>'+esc((p.first+' '+p.last).trim())+'</strong>'+
+      '<div style="font-size:.78rem;color:var(--dim)">DOB '+esc(p.dob||'—')+(age!==''?(' &middot; age '+age):'')+(p.grade?(' &middot; grade '+esc(p.grade)):'')+'</div></div>';
+  }).join('')||'—';
+  var medHtml=hasMedical(r)?'<div class="med-alert"><div class="lbl">⚠ Medical / Allergy — please read</div><div class="txt">'+esc(r.medical)+'</div></div>':kv('Medical notes', esc(r.medical||'None'));
+  var body=
+    '<h3 style="margin-bottom:4px">'+esc(r.parent_name||'Registration')+'</h3>'+
+    '<div style="font-size:.8rem;color:var(--dim);margin-bottom:2px"><span class="badge '+(r.status||'pending')+'">'+(r.status||'pending')+'</span> &middot; Receipt #<span class="mono">'+esc(r.id||'')+'</span>'+(r.amount_mismatch?' &middot; <span style="color:#e06b5e">⚠ amount mismatch</span>':'')+'</div>'+
+    sec('Player(s)')+playersHtml+
+    sec('Registration')+kv('Registered', fmtDateTime(r.created))+kv('Sessions', sess)+
+    sec('Parent / Guardian')+kv('Name', esc(r.parent_name||'—'))+(r.parent_rel?kv('Relationship', esc(r.parent_rel)):'')+kv('Email', esc(r.parent_email||'—'))+kv('Phone', esc(r.parent_phone||'—'))+
+    sec('Emergency contact')+kv('Name', esc(r.emerg_name||'—'))+kv('Phone', esc(r.emerg_phone||'—'))+
+    (r.pickup_name?(sec('Authorized pickup')+kv('Name', esc(r.pickup_name))+(r.pickup_phone?kv('Phone', esc(r.pickup_phone)):'')):'')+
+    sec('Health')+medHtml+
+    sec('Payment')+kv('Base', money(b.base))+kv('Processing', money(b.fee))+kv('Total', money(r.amount_cents))+((r.amount_refunded_cents||0)>0?kv('Refunded', '-'+money(r.amount_refunded_cents)):'')+kv('Card', r.card_last4?(esc(r.paid_via||'')+' ending '+esc(r.card_last4)):'—')+
+    sec('Waiver')+kv('Agreed', r.waiver_name?('Yes &middot; '+esc(r.waiver_name)):'—')+(r.waiver_at?kv('Signed', fmtDateTime(r.waiver_at)):'')+
+    '<div class="foot" style="flex-wrap:wrap;gap:6px">'+
+      '<button class="btn sm" data-mact="receipt">Receipt</button>'+
+      '<button class="btn sm" data-mact="waiver">Waiver</button>'+
+      (canRefundReg(r)?'<button class="btn sm danger" data-mact="refund">Refund</button>':'')+
+      (r.status!=='canceled'?'<button class="btn sm danger" data-mact="cancel">Cancel</button>':'')+
+      '<button class="btn primary" onclick="closeModal()">Close</button>'+
+    '</div>';
+  modal(body, true);
+  Array.prototype.forEach.call(document.querySelectorAll('#modal [data-mact]'), function(el){
+    el.addEventListener('click', function(){ act(el.dataset.mact, r.id); });
+  });
 }
 function doRefund(r){
   var max=((r.amount_cents||0)-(r.amount_refunded_cents||0));
