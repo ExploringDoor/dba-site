@@ -12,15 +12,15 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Outfit:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Saira+Condensed:wght@600;800&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{--mrn:#8B1A2B;--mrn-h:#A82E42;--pink:#D4506A;--bg:#0A0A0C;--bg2:#101014;--bg3:#16161A;--glass:rgba(255,255,255,.035);--glass-b:rgba(255,255,255,.08);--txt:#F0ECE8;--txt-m:rgba(240,236,232,.82);--dim:#9B95A0;--ok:#3fae5a;--amber:#d9a441;--r:14px}
+:root{--mrn:#8B1A2B;--mrn-h:#A82E42;--pink:#A82E52;--bg:#eef1f5;--bg2:#ffffff;--bg3:#f3f4f6;--glass:#ffffff;--glass-b:#e2e6ea;--glass-h:#d3d8de;--txt:#1b2027;--txt-m:#454b54;--dim:#6b7280;--ok:#2f9e4f;--amber:#a9780c;--r:14px}
 body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased;line-height:1.5;min-height:100vh}
 a{color:inherit}
-.topbar{border-bottom:1px solid var(--glass-b);padding:0 28px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:rgba(10,10,12,.9);backdrop-filter:blur(20px);z-index:50}
+.topbar{border-bottom:1px solid var(--glass-b);padding:0 28px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:rgba(255,255,255,.92);backdrop-filter:blur(20px);z-index:50}
 .brand{font-family:'Saira Condensed',sans-serif;font-weight:800;letter-spacing:3px;font-size:18px;text-transform:uppercase}
 .brand span{color:var(--pink)}
 .btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:9px;font-family:inherit;font-weight:600;font-size:.82rem;border:1px solid var(--glass-b);background:var(--glass);color:var(--txt);cursor:pointer;transition:all .2s;text-decoration:none}
 .btn:hover{border-color:var(--pink)}
-.btn.primary{background:var(--mrn);border-color:var(--mrn)}.btn.primary:hover{background:var(--mrn-h)}
+.btn.primary{background:var(--mrn);border-color:var(--mrn);color:#fff}.btn.primary:hover{background:var(--mrn-h)}
 .btn.sm{padding:5px 10px;font-size:.72rem;border-radius:7px}
 .btn.danger:hover{border-color:#c0392b;color:#e06b5e}
 
@@ -32,7 +32,7 @@ a{color:inherit}
 .inp{width:100%;background:var(--bg);border:1px solid var(--glass-b);border-radius:9px;padding:12px 14px;color:var(--txt);font-family:inherit;font-size:.95rem;outline:none}
 .inp:focus{border-color:var(--mrn)}
 a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--pink);outline-offset:2px;border-radius:4px}
-.login-err{color:#e06b5e;font-size:.82rem;margin-top:10px;min-height:1em}
+.login-err{color:#c0392b;font-size:.82rem;margin-top:10px;min-height:1em}
 
 /* DASHBOARD */
 .dash{max-width:1200px;margin:0 auto;padding:26px 24px 80px;display:none}
@@ -53,23 +53,23 @@ table{width:100%;border-collapse:collapse;font-size:.86rem;min-width:900px}
 th{text-align:left;padding:12px 14px;background:var(--bg3);color:var(--dim);font-size:.68rem;text-transform:uppercase;letter-spacing:1px;font-weight:600;border-bottom:1px solid var(--glass-b);white-space:nowrap}
 td{padding:12px 14px;border-bottom:1px solid var(--glass-b);vertical-align:top}
 tr:last-child td{border-bottom:none}
-tr:hover td{background:rgba(255,255,255,.02)}
+tr:hover td{background:rgba(0,0,0,.03)}
 .who .nm{font-weight:600}
 .who .sub{font-size:.76rem;color:var(--dim)}
 .players-cell{font-size:.82rem}
 .badge{display:inline-block;padding:3px 9px;border-radius:100px;font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
-.badge.paid{background:rgba(63,174,90,.15);color:#6fce86;border:1px solid rgba(63,174,90,.35)}
-.badge.pending{background:rgba(217,164,65,.15);color:var(--amber);border:1px solid rgba(217,164,65,.35)}
-.badge.canceled{background:rgba(255,255,255,.06);color:var(--dim);border:1px solid var(--glass-b)}
-.badge.refunded{background:rgba(212,80,106,.15);color:var(--pink);border:1px solid rgba(212,80,106,.35)}
-.badge.error{background:rgba(192,57,43,.15);color:#e06b5e;border:1px solid rgba(192,57,43,.35)}
+.badge.paid{background:rgba(47,158,79,.12);color:#1f7a38;border:1px solid rgba(47,158,79,.4)}
+.badge.pending{background:rgba(169,120,12,.12);color:var(--amber);border:1px solid rgba(169,120,12,.35)}
+.badge.canceled{background:#eceef1;color:var(--dim);border:1px solid var(--glass-b)}
+.badge.refunded{background:rgba(168,46,82,.1);color:var(--pink);border:1px solid rgba(168,46,82,.35)}
+.badge.error{background:rgba(192,57,43,.1);color:#b02a2a;border:1px solid rgba(192,57,43,.35)}
 .badge.abandoned{background:rgba(122,117,128,.14);color:var(--dim);border:1px solid var(--glass-b)}
 .acts{display:flex;gap:5px;flex-wrap:wrap}
 .medflag{display:inline-block;margin-top:6px;font-size:.68rem;font-weight:800;letter-spacing:.6px;color:#fff;background:#c0392b;border:1px solid #ff6b5e;border-radius:6px;padding:3px 10px;cursor:pointer;text-transform:uppercase;box-shadow:0 0 12px rgba(192,57,43,.5);animation:medpulse 1.8s ease-in-out infinite}
 @keyframes medpulse{0%,100%{box-shadow:0 0 8px rgba(192,57,43,.4)}50%{box-shadow:0 0 16px rgba(192,57,43,.85)}}
-.med-alert{background:rgba(192,57,43,.16);border:1px solid #c0392b;border-left:4px solid #ff6b5e;border-radius:8px;padding:12px 14px;margin:8px 0 4px;color:#ffd9d4}
-.med-alert .lbl{font-size:.62rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#ff8a7e;margin-bottom:3px}
-.med-alert .txt{font-size:.95rem;color:#fff;line-height:1.4}
+.med-alert{background:rgba(192,57,43,.08);border:1px solid #e3aca6;border-left:4px solid #c0392b;border-radius:8px;padding:12px 14px;margin:8px 0 4px;color:#8a1c1c}
+.med-alert .lbl{font-size:.62rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#b02a2a;margin-bottom:3px}
+.med-alert .txt{font-size:.95rem;color:#7a1e1e;line-height:1.4}
 .empty{padding:40px;text-align:center;color:var(--dim)}
 .mono{font-family:'IBM Plex Mono',monospace}
 
@@ -95,7 +95,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <div class="brand">DOWNER <span>· Clinic Admin</span></div>
   <button class="btn sm" id="logoutBtn" style="display:none">Log out</button>
 </div>
-<div id="demoBanner" style="display:none;background:rgba(212,80,106,.14);border-bottom:1px solid rgba(212,80,106,.4);color:#F0ECE8;text-align:center;padding:9px 16px;font-size:.82rem">👀 <b>Demo preview</b> — sample data, not real registrations. Refund &amp; Cancel are disabled here.</div>
+<div id="demoBanner" style="display:none;background:rgba(168,46,82,.1);border-bottom:1px solid rgba(168,46,82,.35);color:#8B1A2B;text-align:center;padding:9px 16px;font-size:.82rem">👀 <b>Demo preview</b> — sample data, not real registrations. Refund &amp; Cancel are disabled here.</div>
 
 <!-- LOGIN -->
 <div class="login-wrap" id="loginWrap">
@@ -275,7 +275,7 @@ document.getElementById('modalBg').addEventListener('click', function(e){ if(e.t
 // Formal, printable waiver agreement document (mirrors the RYZER waiver PDF).
 function waiverCard(r){
   var players = (r.players || []).map(function(p){ return esc((p.first + ' ' + p.last).trim()); }).join(', ') || '—';
-  return '<div style="background:#fff;color:#111;font-family:Arial,Helvetica,sans-serif;border-radius:10px;overflow:hidden">'+
+  return '<div style="background:#fff;color:#111;border:1px solid #e2e6ea;font-family:Arial,Helvetica,sans-serif;border-radius:10px;overflow:hidden">'+
     '<div style="background:#8B1A2B;color:#fff;padding:14px 16px"><div style="font-weight:800;font-size:15px;letter-spacing:.3px">'+esc(r.clinic_title||'DBA Fall Clinics')+' &ndash; Refund/Waiver Agreement</div></div>'+
     '<div style="padding:16px;font-size:13px;line-height:1.6;color:#222">'+
       '<p style="margin:0 0 12px"><strong>Participant:</strong> '+players+'</p>'+
@@ -318,7 +318,7 @@ function receiptCard(r){
   var players=(r.players||[]).map(function(p){return esc((p.first+' '+p.last).trim());}).join('<br>')||'—';
   var sess=sessText(r);
   function rr(k,v,strong){ return '<div style="display:flex;justify-content:space-between;gap:16px;padding:8px 14px;border-top:1px solid #eee;font-size:13px'+(strong?';font-weight:700':'')+'"><span style="color:#777">'+k+'</span><span style="text-align:right;color:#111">'+v+'</span></div>'; }
-  return '<div style="background:#fff;color:#111;border-radius:10px;overflow:hidden;font-family:Arial,Helvetica,sans-serif">'+
+  return '<div style="background:#fff;color:#111;border:1px solid #e2e6ea;border-radius:10px;overflow:hidden;font-family:Arial,Helvetica,sans-serif">'+
     '<div style="background:#8B1A2B;color:#fff;padding:14px 16px"><div style="font-weight:800;letter-spacing:2px;font-size:15px">DOWNER BASKETBALL ACADEMY</div><div style="font-size:11px;color:#f0d0d6;letter-spacing:1px">REGISTRATION RECEIPT</div></div>'+
     '<div style="padding:4px 0">'+
       rr('Receipt #','<span style="font-family:monospace">'+esc(r.id||'')+'</span>')+
