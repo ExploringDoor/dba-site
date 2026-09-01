@@ -165,7 +165,12 @@ select.inp{appearance:none;cursor:pointer}
         <div class="fg"><label for="f-pkname">Authorized pickup — name (optional)</label><input class="inp" id="f-pkname" name="pickup_name" placeholder="Anyone besides you allowed to pick up"></div>
         <div class="fg"><label for="f-pkphone">Authorized pickup — phone (optional)</label><input class="inp" id="f-pkphone" type="tel" name="pickup_phone" placeholder="(610) 555-0150" inputmode="tel"></div>
       </div>
-      <div class="fg"><label for="f-medical">Allergies / medical notes (optional)</label><textarea class="inp" id="f-medical" name="medical" placeholder="Anything our staff should know?"></textarea></div>
+      <div class="grid2">
+        <div class="fg"><label for="f-allerg">Allergies (optional)</label><input class="inp" id="f-allerg" name="allergies" placeholder="e.g., peanuts, bee stings"></div>
+        <div class="fg"><label for="f-meds">Medications (optional)</label><input class="inp" id="f-meds" name="medications" placeholder="Name + dosage, if any"></div>
+      </div>
+      <div class="fg"><label for="f-cond">Medical conditions (optional)</label><textarea class="inp" id="f-cond" name="medical_conditions" placeholder="Asthma, etc. — anything our staff should know"></textarea></div>
+      <label class="check"><input type="checkbox" name="treat_ok" value="1"><span>I authorize DBA staff to treat minor ailments with non-prescription medications (e.g., ibuprofen, antacids) if needed.</span></label>
       <label class="check"><input type="checkbox" name="photo" value="1"><span>I consent to photos/video of my player for DBA promotional use (optional).</span></label>
     </div>
 
@@ -316,7 +321,9 @@ document.getElementById('regForm').addEventListener('submit', function(e){
     parent_email: f.parent_email.value.trim(), parent_phone: f.parent_phone.value.trim(),
     emerg_name: f.emerg_name.value.trim(), emerg_phone: f.emerg_phone.value.trim(),
     pickup_name: f.pickup_name.value.trim(), pickup_phone: f.pickup_phone.value.trim(),
-    medical: f.medical.value.trim(), photo: f.photo.checked ? 1 : 0,
+    allergies: f.allergies.value.trim(), medications: f.medications.value.trim(),
+    medical_conditions: f.medical_conditions.value.trim(), treat_ok: f.treat_ok.checked ? 1 : 0,
+    photo: f.photo.checked ? 1 : 0,
     waiver_name: f.waiver_name.value.trim(), waiver_agree: true
   };
 

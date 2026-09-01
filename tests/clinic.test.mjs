@@ -51,11 +51,12 @@ await test('normalize accepts a good body + captures pickup', () => {
   assert.ok(r.ok); assert.equal(r.reg.pickup_name, 'Gran'); assert.equal(r.reg.player_count, 1);
 });
 await test('normalize strips HTML metacharacters from names (anti-XSS at intake)', () => {
-  const r = normalizeRegistration({ ...GOOD, players: [{ first: '<img src=x onerror=alert(1)>', last: 'B', dob: '2015-01-01' }], parent_name: 'Al<script>ert', medical: 'nut <b>allergy</b>' });
+  const r = normalizeRegistration({ ...GOOD, players: [{ first: '<img src=x onerror=alert(1)>', last: 'B', dob: '2015-01-01' }], parent_name: 'Al<script>ert', allergies: 'nut <b>allergy</b>', medical_conditions: 'asthma <x>' });
   assert.ok(r.ok);
   assert.ok(!/[<>]/.test(r.reg.players[0].first), 'player name must have no angle brackets');
   assert.ok(!/[<>]/.test(r.reg.parent_name), 'parent name must have no angle brackets');
-  assert.ok(!/[<>]/.test(r.reg.medical), 'medical note must have no angle brackets');
+  assert.ok(!/[<>]/.test(r.reg.allergies), 'allergies must have no angle brackets');
+  assert.ok(!/[<>]/.test(r.reg.medical_conditions), 'medical conditions must have no angle brackets');
 });
 await test('normalize caps runaway player list', () => assert.equal(normalizeRegistration({ ...GOOD, players: Array(20).fill({ first: 'A', last: 'B', dob: 'x' }) }).error, 'too_many_players'));
 await test('honeypot (company field) rejects bots', () => assert.equal(normalizeRegistration({ ...GOOD, company: 'AcmeBot' }).error, 'spam'));

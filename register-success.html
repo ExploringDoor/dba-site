@@ -97,8 +97,8 @@ h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:2rem;margin-bo
   <!-- ERROR / NO RID -->
   <div class="card hidden" id="error">
     <div class="badge wait">🤔</div>
-    <h1>We couldn't find that registration</h1>
-    <p class="lead">If you just paid, check your email for a receipt. Otherwise, head back and try again.</p>
+    <h1>This registration isn't active</h1>
+    <p class="lead">If you just paid, check your email for your receipt. If it was canceled or refunded, nothing is owed. Otherwise, head back and register again.</p>
     <a href="register.html" class="btn">Back to Registration →</a>
     <p class="muted">Need help? Email <a href="mailto:aceshoops@gmail.com" style="color:var(--txt-m);text-decoration:underline">aceshoops@gmail.com</a></p>
   </div>
@@ -126,7 +126,7 @@ function renderRecap(d){
   html += row('Base', '$'+esc(d.base));
   html += row('Processing', '$'+esc(d.processing));
   html += row('Total paid', '$'+esc(d.amount), 'rc-total');
-  if(d.card_last4) html += row('Paid with', esc(d.paid_via||'Card')+' ending '+esc(d.card_last4));
+  if(d.paid_via||d.card_last4) html += row('Paid with', esc(d.paid_via||'Card')+(d.card_last4?(' ending '+esc(d.card_last4)):''));
   if(d.waiver_agreed) html += row('Waiver & refund policy', 'Agreed'+(d.waiver_name?' · '+esc(d.waiver_name):''));
   document.getElementById('recap').innerHTML = html;
 }
@@ -141,6 +141,7 @@ function check(){
       var d = res.d || {};
       if(res.status === 404){ show('error'); return; }
       if(d.ok && d.status === 'paid'){ renderRecap(d); show('paid'); return; }
+      if(d.status === 'canceled' || d.status === 'refunded' || d.status === 'error'){ show('error'); return; }
       show('pending');
     })
     .catch(function(){ show('pending'); });

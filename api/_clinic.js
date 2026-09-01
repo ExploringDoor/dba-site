@@ -129,7 +129,10 @@ export function normalizeRegistration(body) {
     emerg_phone,
     pickup_name: stripTags(clip(b.pickup_name, 120)).trim(),
     pickup_phone: clip(b.pickup_phone, 60).trim(),
-    medical: stripTags(clip(b.medical, 1000)).trim(),
+    allergies: stripTags(clip(b.allergies, 300)).trim(),
+    medications: stripTags(clip(b.medications, 300)).trim(),
+    medical_conditions: stripTags(clip(b.medical_conditions, 1000)).trim(),
+    treat_ok: b.treat_ok ? true : false,
     photo: b.photo ? true : false,
     waiver_name,
   };

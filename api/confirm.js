@@ -55,6 +55,12 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true, ...summary(merged) });
   }
 
+  // Terminal states are final — never re-verify or re-finalize (a canceled, refunded,
+  // or abandoned registration must not get flipped back to paid by a stray confirm call).
+  if (reg.status === 'canceled' || reg.status === 'refunded' || reg.status === 'abandoned' || reg.status === 'error') {
+    return res.status(200).json({ ok: false, status: reg.status });
+  }
+
   try {
     const v = await verifyPayment(reg);
     if (!v.paid) return res.status(200).json({ ok: false, status: reg.status || 'pending' });
