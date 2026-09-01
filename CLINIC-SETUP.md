@@ -79,6 +79,17 @@ Pick any passcode you'll type to open `admin.html`.
 
 ---
 
+## 5b. Before go-live: extra hardening (recommended)
+
+- **Set `SITE_URL`** (section 5) in production — the post-payment redirect then can't be
+  influenced by a spoofed `Host` header.
+- **Watch for spam once payments are on.** `/api/checkout` is public (it has to be) and has a
+  hidden-field honeypot, but no rate limit. If you ever see junk/bot registrations, add a free
+  **Cloudflare Turnstile** (your site is already on Cloudflare) or a rate limiter in front of it.
+- **Flip the marketing copy from "opens soon" to "open now"** on `index.html` and `clinics.html`
+  (announce bars, hero button, pricing button/subtext, final CTA) once checkout is live, so the
+  pages match reality.
+
 ## 6. Finish
 
 - [ ] Tell me the real **fall clinic dates** so I replace the placeholders.

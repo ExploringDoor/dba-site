@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin.html
+Disallow: /register-success.html
+
+Sitemap: https://www.downerbasketballacademy.com/sitemap.xml

@@ -5,6 +5,10 @@
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());gtag("config","G-KT0BL96HRZ");</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🏀%3C/text%3E%3C/svg%3E">
+<meta name="theme-color" content="#8B1A2B">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <title>Register — Fall Clinics | Downer Basketball Academy</title>
 <meta name="robots" content="noindex">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Outfit:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&family=Saira+Condensed:wght@600;800&display=swap" rel="stylesheet">
@@ -49,6 +53,7 @@ a{color:inherit}img{max-width:100%;display:block}
 .fg label .req{color:var(--pink)}
 .inp{background:var(--bg);border:1px solid var(--glass-b);border-radius:10px;padding:12px 14px;color:var(--txt);font-family:'Outfit',sans-serif;font-size:.95rem;outline:none;transition:border .25s;width:100%}
 .inp:focus{border-color:var(--mrn)}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--pink);outline-offset:2px;border-radius:4px}
 .inp::placeholder{color:var(--dim2)}
 textarea.inp{resize:vertical;min-height:72px}
 select.inp{appearance:none;cursor:pointer}
@@ -123,6 +128,7 @@ select.inp{appearance:none;cursor:pointer}
 
   <!-- LEFT COLUMN -->
   <div>
+    <noscript><div class="notice" style="border-color:rgba(212,80,106,.5)">This registration form needs JavaScript enabled. Please turn it on in your browser, or email <a href="mailto:aceshoops@gmail.com" style="color:var(--pink);text-decoration:underline">aceshoops@gmail.com</a> to register.</div></noscript>
     <!-- SESSIONS -->
     <div class="card">
       <h2>1. Choose Sessions</h2>
@@ -146,20 +152,20 @@ select.inp{appearance:none;cursor:pointer}
       <h2>3. Parent / Guardian</h2>
       <p class="hint">Where we send the receipt and any clinic updates.</p>
       <div class="grid2">
-        <div class="fg"><label>Full name <span class="req">*</span></label><input class="inp" name="parent_name" placeholder="Parent / guardian name" required></div>
-        <div class="fg"><label>Relationship</label><input class="inp" name="parent_rel" placeholder="Mother, Father, Guardian…"></div>
-        <div class="fg"><label>Email <span class="req">*</span></label><input class="inp" type="email" name="parent_email" placeholder="you@email.com" required></div>
-        <div class="fg"><label>Phone <span class="req">*</span></label><input class="inp" type="tel" name="parent_phone" placeholder="(610) 555-0123" required></div>
+        <div class="fg"><label for="f-pname">Full name <span class="req">*</span></label><input class="inp" id="f-pname" name="parent_name" placeholder="Parent / guardian name" autocomplete="name" required></div>
+        <div class="fg"><label for="f-prel">Relationship</label><input class="inp" id="f-prel" name="parent_rel" placeholder="Mother, Father, Guardian…"></div>
+        <div class="fg"><label for="f-pemail">Email <span class="req">*</span></label><input class="inp" id="f-pemail" type="email" name="parent_email" placeholder="you@email.com" inputmode="email" autocomplete="email" required></div>
+        <div class="fg"><label for="f-pphone">Phone <span class="req">*</span></label><input class="inp" id="f-pphone" type="tel" name="parent_phone" placeholder="(610) 555-0123" inputmode="tel" autocomplete="tel" required></div>
       </div>
       <div class="grid2">
-        <div class="fg"><label>Emergency contact name <span class="req">*</span></label><input class="inp" name="emerg_name" placeholder="If different from above" required></div>
-        <div class="fg"><label>Emergency contact phone <span class="req">*</span></label><input class="inp" type="tel" name="emerg_phone" placeholder="(610) 555-0199" required></div>
+        <div class="fg"><label for="f-ename">Emergency contact name <span class="req">*</span></label><input class="inp" id="f-ename" name="emerg_name" placeholder="If different from above" required></div>
+        <div class="fg"><label for="f-ephone">Emergency contact phone <span class="req">*</span></label><input class="inp" id="f-ephone" type="tel" name="emerg_phone" placeholder="(610) 555-0199" inputmode="tel"></div>
       </div>
       <div class="grid2">
-        <div class="fg"><label>Authorized pickup — name (optional)</label><input class="inp" name="pickup_name" placeholder="Anyone besides you allowed to pick up"></div>
-        <div class="fg"><label>Authorized pickup — phone (optional)</label><input class="inp" type="tel" name="pickup_phone" placeholder="(610) 555-0150"></div>
+        <div class="fg"><label for="f-pkname">Authorized pickup — name (optional)</label><input class="inp" id="f-pkname" name="pickup_name" placeholder="Anyone besides you allowed to pick up"></div>
+        <div class="fg"><label for="f-pkphone">Authorized pickup — phone (optional)</label><input class="inp" id="f-pkphone" type="tel" name="pickup_phone" placeholder="(610) 555-0150" inputmode="tel"></div>
       </div>
-      <div class="fg"><label>Allergies / medical notes (optional)</label><textarea class="inp" name="medical" placeholder="Anything our staff should know?"></textarea></div>
+      <div class="fg"><label for="f-medical">Allergies / medical notes (optional)</label><textarea class="inp" id="f-medical" name="medical" placeholder="Anything our staff should know?"></textarea></div>
       <label class="check"><input type="checkbox" name="photo" value="1"><span>I consent to photos/video of my player for DBA promotional use (optional).</span></label>
     </div>
 
@@ -171,7 +177,7 @@ select.inp{appearance:none;cursor:pointer}
         <p><strong>Liability Waiver &amp; Code of Conduct.</strong> I understand that participation in basketball activities involves inherent risks, including the risk of injury. On behalf of my player(s), I release Downer Basketball Academy, Lower Merion School District, the Kobe Bryant Gymnasium, and their respective staff and volunteers from liability for injuries sustained during clinic activities, except in cases of gross negligence. I certify that my player is physically able to participate. I authorize DBA staff to seek emergency medical treatment if needed and I agree my player will follow the code of conduct.</p>
       </div>
       <label class="check"><input type="checkbox" id="waiverAgree" required><span>I have read and agree to the liability waiver &amp; code of conduct on behalf of my player(s). <span class="req">*</span></span></label>
-      <div class="fg"><label>Type your full name to sign <span class="req">*</span></label><input class="inp" name="waiver_name" placeholder="Your legal name" required></div>
+      <div class="fg"><label for="f-waiver">Type your full name to sign <span class="req">*</span></label><input class="inp" id="f-waiver" name="waiver_name" placeholder="Your legal name" autocomplete="name" required></div>
     </div>
   </div>
 
@@ -233,12 +239,13 @@ function addPlayer(){
     '<div class="p-num">Player '+pCount+'</div>' +
     (pCount>1 ? '<button type="button" class="rm">remove</button>' : '') +
     '<div class="grid2">' +
-      '<div class="fg"><label>First name <span class="req">*</span></label><input class="inp p-first" placeholder="First"></div>' +
-      '<div class="fg"><label>Last name <span class="req">*</span></label><input class="inp p-last" placeholder="Last"></div>' +
-      '<div class="fg"><label>Date of birth <span class="req">*</span></label><input class="inp p-dob" type="date"></div>' +
-      '<div class="fg"><label>Grade (fall 2026)</label><input class="inp p-grade" placeholder="e.g. 4th"></div>' +
+      '<div class="fg"><label>First name <span class="req">*</span></label><input class="inp p-first" placeholder="First" aria-label="Player first name" autocomplete="off"></div>' +
+      '<div class="fg"><label>Last name <span class="req">*</span></label><input class="inp p-last" placeholder="Last" aria-label="Player last name" autocomplete="off"></div>' +
+      '<div class="fg"><label>Date of birth <span class="req">*</span></label><input class="inp p-dob" type="date" aria-label="Player date of birth"></div>' +
+      '<div class="fg"><label>Grade (fall 2026)</label><input class="inp p-grade" placeholder="e.g. 4th" aria-label="Player grade"></div>' +
     '</div>';
   playerList.appendChild(d);
+  try { d.querySelector('.p-dob').max = new Date().toISOString().slice(0, 10); } catch (e) {}
   var rm = d.querySelector('.rm');
   if(rm) rm.addEventListener('click', function(){ d.remove(); renumber(); recalc(); });
   recalc();
