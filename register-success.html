@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>/* capture rid, then scrub it from the URL BEFORE analytics/referrer see it */window.__RID__=(new URLSearchParams(location.search).get('rid'))||'';try{if(location.search&&history.replaceState)history.replaceState(null,'',location.pathname);}catch(e){}</script>
+<script>/* capture rid + demo flag, then scrub the URL BEFORE analytics/referrer see it */var __q=new URLSearchParams(location.search);window.__RID__=__q.get('rid')||'';window.__DEMO__=(__q.get('demo')==='1');try{if(location.search&&history.replaceState)history.replaceState(null,'',location.pathname);}catch(e){}</script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-KT0BL96HRZ"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());gtag("config","G-KT0BL96HRZ");</script>
 <meta charset="UTF-8">
@@ -64,6 +64,7 @@ h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:2rem;margin-bo
 </nav>
 
 <div class="wrap">
+  <div id="demoNote" style="display:none;text-align:center;background:rgba(212,80,106,.14);border:1px solid rgba(212,80,106,.4);border-radius:10px;padding:9px 14px;margin:0 auto 18px;font-size:.82rem;color:var(--txt-m)">👀 Demo preview — sample receipt, not a real registration</div>
   <!-- LOADING -->
   <div class="card" id="loading">
     <div class="badge wait">⏳</div>
@@ -132,7 +133,9 @@ function renderRecap(d){
 }
 document.getElementById('printBtn').addEventListener('click',function(){ window.print(); });
 
+var DEMO_RECEIPT={ ok:true, status:'paid', reg_id:'aB3x9Kp2Qr', date:'2026-09-20T14:03:00Z', title:'DBA Fall Clinics 2026', players:['Marcus Avery','Maya Avery'], all_six:true, session_count:6, sessions_labels:['Sun, Sep 27','Sun, Oct 4','Sun, Oct 11','Sun, Oct 18','Sun, Oct 25','Sun, Nov 1'], base:'300.00', processing:'28.00', amount:'328.00', card_last4:'4242', paid_via:'Stripe', waiver_agreed:true, waiver_name:'Jordan Avery' };
 function check(){
+  if(window.__DEMO__){ renderRecap(DEMO_RECEIPT); show('paid'); var dn=document.getElementById('demoNote'); if(dn) dn.style.display='block'; return; }
   if(!rid){ show('error'); return; }
   show('loading');
   fetch('/api/confirm?rid=' + encodeURIComponent(rid))
