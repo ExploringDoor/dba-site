@@ -272,19 +272,48 @@ function showWaiver(r){
     '<div class="waivertext">Liability Waiver &amp; Code of Conduct — the signer agreed on behalf of their player(s) to the DBA liability release, certified physical fitness to participate, authorized emergency medical treatment, and accepted the code of conduct.</div>'+
     '<div class="foot"><button class="btn" onclick="closeModal()">Close</button></div>');
 }
+function regBreakdown(r){
+  var n=(r.sessions||[]).length;
+  var players=(r.player_count||(r.players||[]).length||0);
+  var all6=!!r.all_six||n===6;
+  var basePer=all6?15000:n*3000;
+  var feePer=all6?1400:n*800;
+  return { base:basePer*players, fee:feePer*players };
+}
+// A self-contained white "paper" receipt — renders inside the dark modal AND in a print window.
+function receiptCard(r){
+  var b=regBreakdown(r);
+  var players=(r.players||[]).map(function(p){return esc((p.first+' '+p.last).trim());}).join('<br>')||'—';
+  var sess=r.all_six?'All 6 Sundays':((r.sessions||[]).map(function(x){return SESSION_LABELS[x]||x;}).join(', ')||'—');
+  function rr(k,v,strong){ return '<div style="display:flex;justify-content:space-between;gap:16px;padding:8px 14px;border-top:1px solid #eee;font-size:13px'+(strong?';font-weight:700':'')+'"><span style="color:#777">'+k+'</span><span style="text-align:right;color:#111">'+v+'</span></div>'; }
+  return '<div style="background:#fff;color:#111;border-radius:10px;overflow:hidden;font-family:Arial,Helvetica,sans-serif">'+
+    '<div style="background:#8B1A2B;color:#fff;padding:14px 16px"><div style="font-weight:800;letter-spacing:2px;font-size:15px">DOWNER BASKETBALL ACADEMY</div><div style="font-size:11px;color:#f0d0d6;letter-spacing:1px">REGISTRATION RECEIPT</div></div>'+
+    '<div style="padding:4px 0">'+
+      rr('Receipt #','<span style="font-family:monospace">'+esc(r.id||'')+'</span>')+
+      rr('Date', fmtDateTime(r.paid_at||r.created))+
+      rr('Registrant', esc(r.parent_name||'—'))+
+      rr('Player(s)', players)+
+      rr('Sessions', sess)+
+      rr('Base', money(b.base))+
+      rr('Processing', money(b.fee))+
+      rr('Total paid', money(r.amount_cents), true)+
+      ((r.amount_refunded_cents||0)>0?rr('Refunded','-'+money(r.amount_refunded_cents)):'')+
+      rr('Paid with', esc(r.paid_via||r.payment_provider||'Card')+(r.card_last4?(' ending '+esc(r.card_last4)):''))+
+      rr('Waiver & refund policy', r.waiver_name?('Agreed &middot; '+esc(r.waiver_name)):'Agreed')+
+    '</div>'+
+  '</div>';
+}
+function printReceipt(rid){
+  var r=byId(rid); if(!r) return;
+  var w=window.open('','_blank'); if(!w) return;
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Receipt '+esc(r.id||'')+'</title></head><body style="margin:24px;background:#fff">'+receiptCard(r)+'<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},150);}<\/scr'+'ipt></body></html>');
+  w.document.close();
+}
 function showReceipt(r){
-  var net=(r.amount_cents||0)-(r.amount_refunded_cents||0);
-  modal('<h3>Payment — '+esc(r.parent_name)+'</h3>'+
-    kv('Status', r.status||'pending')+
-    kv('Provider', esc(r.paid_via||r.payment_provider||'—'))+
-    kv('Card', r.card_last4?('•••• '+esc(r.card_last4)):'—')+
-    kv('Amount', money(r.amount_cents))+
-    kv('Refunded', money(r.amount_refunded_cents))+
-    kv('Net', money(net))+
-    kv('Paid at', fmtDateTime(r.paid_at))+
-    kv('Payment ID', '<span class="mono" style="font-size:.72rem">'+esc(r.stripe_payment_intent||r.square_payment_id||'—')+'</span>')+
-    '<p style="font-size:.76rem;color:var(--dim);margin-top:12px">The official card receipt is emailed to the parent automatically by '+(esc(r.paid_via||'the processor'))+'.</p>'+
-    '<div class="foot"><button class="btn" onclick="closeModal()">Close</button></div>');
+  modal('<h3>Receipt</h3>'+ receiptCard(r) +
+    '<p style="font-size:.72rem;color:var(--dim);margin-top:10px">The official card receipt is also emailed to the parent by '+(esc(r.paid_via||'the processor'))+'.</p>'+
+    '<div class="foot"><button class="btn" id="rcPrint">🖨 Print</button><button class="btn primary" onclick="closeModal()">Close</button></div>');
+  var pb=document.getElementById('rcPrint'); if(pb) pb.addEventListener('click', function(){ printReceipt(r.id); });
 }
 function doRefund(r){
   var max=((r.amount_cents||0)-(r.amount_refunded_cents||0));

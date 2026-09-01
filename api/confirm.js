@@ -11,19 +11,31 @@
 
 import { fsGet } from './_firestore.js';
 import { verifyPayment, finalizePaid } from './_finalize.js';
+import { priceBreakdown, sessionLabels } from './_clinic.js';
 
 function safeId(id) { return /^[A-Za-z0-9_-]{1,128}$/.test(String(id || '')); }
 
-// Minimal, non-sensitive recap for the success page. Deliberately omits the
-// parent email and any contact info (the page doesn't need it, and this endpoint
-// is unauthenticated).
+// Receipt recap for the (buyer's own) success page, reached via their unique rid.
+// Includes what belongs on a receipt — but deliberately NOT parent email/phone,
+// emergency contact, or medical notes (those never leave the authenticated admin).
 function summary(reg) {
+  const b = priceBreakdown(reg);
   return {
+    reg_id: reg.id || '',
+    date: reg.paid_at || reg.created || '',
     title: reg.clinic_title || 'DBA Fall Clinics',
-    amount: ((reg.amount_cents || 0) / 100).toFixed(2),
     players: (reg.players || []).map((p) => `${p.first} ${p.last}`.trim()),
-    session_count: reg.session_count || 0,
     all_six: !!reg.all_six,
+    session_count: reg.session_count || b.session_count,
+    sessions_labels: sessionLabels(reg),
+    base: (b.base_cents / 100).toFixed(2),
+    processing: (b.fee_cents / 100).toFixed(2),
+    amount: ((reg.amount_cents || 0) / 100).toFixed(2),
+    card_last4: reg.card_last4 || '',
+    paid_via: reg.paid_via || '',
+    waiver_agreed: !!reg.waiver_name,
+    waiver_name: reg.waiver_name || '',
+    waiver_at: reg.waiver_at || '',
     status: reg.status || 'pending',
   };
 }

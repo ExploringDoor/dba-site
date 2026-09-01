@@ -60,6 +60,29 @@ export function expectedCents(reg) {
   return perPlayer * players;
 }
 
+// Receipt helpers ─────────────────────────────────────────────────────────
+// Split the authoritative total into base + processing (for an itemized receipt).
+export function priceBreakdown(reg) {
+  const n = cleanSessions(reg && reg.sessions).length;
+  const players = Array.isArray(reg && reg.players) ? reg.players.length : 0;
+  const allSix = n === SESSION_IDS.length;
+  const basePer = allSix ? PRICE.baseAllSixCents : n * PRICE.baseSessionCents;
+  const feePer = allSix ? PRICE.feeAllSixCents : n * PRICE.feeSessionCents;
+  return {
+    base_cents: basePer * players,
+    fee_cents: feePer * players,
+    total_cents: (basePer + feePer) * players,
+    all_six: allSix,
+    session_count: n,
+    player_count: players,
+  };
+}
+// The chosen sessions as human date labels, e.g. ["Sun, Sep 27", "Sun, Oct 11"].
+export function sessionLabels(reg) {
+  const chosen = cleanSessions(reg && reg.sessions);
+  return SESSIONS.filter((s) => chosen.includes(s.id)).map((s) => s.label.replace(/^Session \d+ — /, ''));
+}
+
 // Validate + sanitize an incoming registration body. Returns
 // { ok:true, reg } with a clean object, or { ok:false, error }.
 export function normalizeRegistration(body) {

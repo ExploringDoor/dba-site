@@ -39,7 +39,22 @@ h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:2rem;margin-bo
 .muted{font-size:.82rem;color:var(--dim);margin-top:18px}
 .spinner{width:34px;height:34px;border:3px solid var(--glass-b);border-top-color:var(--pink);border-radius:50%;margin:8px auto 0;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+.recap .row.rc-total{border-top:2px solid var(--glass-b);border-bottom:none;margin-top:4px;padding-top:12px;font-size:1rem;font-weight:700}
+.recap .row.rc-total .v{color:var(--txt)}
+.btn-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:4px}
+.btn.ghost{background:var(--glass);border:1px solid var(--glass-b);color:var(--txt)}
+.btn.ghost:hover{background:rgba(255,255,255,.06)}
 .hidden{display:none}
+@media print{
+  body{background:#fff;color:#000}
+  .nav,.btn-row,.muted,#loading,#pending,#error{display:none !important}
+  .wrap{padding:16px;max-width:100%}
+  .card{border:none;background:#fff;color:#000;text-align:left;padding:0}
+  .badge{display:none}
+  h1{color:#000}
+  .recap{background:#fff;border:1px solid #ccc}
+  .recap .k{color:#555}.recap .v,.recap .row.rc-total .v{color:#000}
+}
 </style>
 </head>
 <body>
@@ -61,9 +76,12 @@ h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:2rem;margin-bo
   <div class="card hidden" id="paid">
     <div class="badge ok">🏀</div>
     <h1>You're registered!</h1>
-    <p class="lead" id="paidLead">Your spot is locked in. A receipt has been emailed to you.</p>
+    <p class="lead">Your spot is locked in — a receipt has been emailed to you. Here's a copy for your records.</p>
     <div class="recap" id="recap"></div>
-    <a href="clinics.html" class="btn">Back to Clinics →</a>
+    <div class="btn-row">
+      <button class="btn" id="printBtn">🖨 Print receipt</button>
+      <a href="clinics.html" class="btn ghost">Back to Clinics</a>
+    </div>
     <p class="muted">Questions? Email <a href="mailto:aceshoops@gmail.com" style="color:var(--txt-m);text-decoration:underline">aceshoops@gmail.com</a></p>
   </div>
 
@@ -92,17 +110,27 @@ function show(id){ ['loading','paid','pending','error'].forEach(function(x){ doc
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];}); }
 var rid = window.__RID__ || qs('rid');
 
+function fmtDate(iso){ if(!iso) return ''; var d=new Date(iso); return isNaN(d)?'':d.toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}); }
 function renderRecap(d){
-  var rows = [];
-  rows.push(['Clinic', esc(d.title)]);
-  if(d.players && d.players.length) rows.push([d.players.length>1?'Players':'Player', d.players.map(esc).join(', ')]);
-  rows.push(['Sessions', d.all_six ? 'All 6 sessions' : (parseInt(d.session_count,10)||0) + ' session' + (d.session_count>1?'s':'')]);
-  rows.push(['Total paid', '$' + esc(d.amount)]);
-  document.getElementById('recap').innerHTML = rows.map(function(r){
-    return '<div class="row"><span class="k">'+r[0]+'</span><span class="v">'+r[1]+'</span></div>';
-  }).join('');
-  // (parent email is intentionally not returned by /api/confirm; the generic message stands)
+  function row(k,v,cls){ return '<div class="row'+(cls?' '+cls:'')+'"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>'; }
+  var labels = (d.sessions_labels||[]).map(esc);
+  var players = (d.players||[]).map(esc).join('<br>') || '—';
+  var sessions = d.all_six
+    ? ('All 6 Sundays' + (labels.length ? '<br><span style="color:var(--dim);font-size:.82rem">'+labels.join(' · ')+'</span>' : ''))
+    : (labels.length ? labels.join('<br>') : ((parseInt(d.session_count,10)||0)+' session(s)'));
+  var html = '';
+  html += row('Receipt #', '<span style="font-family:monospace">'+esc(d.reg_id||'')+'</span>');
+  if(fmtDate(d.date)) html += row('Date', fmtDate(d.date));
+  html += row(d.players&&d.players.length>1?'Players':'Player', players);
+  html += row('Sessions', sessions);
+  html += row('Base', '$'+esc(d.base));
+  html += row('Processing', '$'+esc(d.processing));
+  html += row('Total paid', '$'+esc(d.amount), 'rc-total');
+  if(d.card_last4) html += row('Paid with', esc(d.paid_via||'Card')+' ending '+esc(d.card_last4));
+  if(d.waiver_agreed) html += row('Waiver & refund policy', 'Agreed'+(d.waiver_name?' · '+esc(d.waiver_name):''));
+  document.getElementById('recap').innerHTML = html;
 }
+document.getElementById('printBtn').addEventListener('click',function(){ window.print(); });
 
 function check(){
   if(!rid){ show('error'); return; }
