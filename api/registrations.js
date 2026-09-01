@@ -6,6 +6,7 @@
 // Env: ADMIN_PASSWORD (+ FIREBASE_* / FB_ADMIN_* for Firestore).
 
 import { fbConfigured, fbAdminConfigured, fsList } from './_firestore.js';
+import { cleanSessions } from './_clinic.js';
 
 function ctEq(a, b) {
   a = String(a || ''); b = String(b || '');
@@ -39,7 +40,7 @@ export default async function handler(req, res) {
   const collectedCents = paid.reduce((s, r) => s + ((r.amount_cents || 0) - (r.amount_refunded_cents || 0)), 0);
   const players = paid.reduce((s, r) => s + (r.player_count || 0), 0);
   const perSession = {};
-  paid.forEach((r) => (r.sessions || []).forEach((sid) => { perSession[sid] = (perSession[sid] || 0) + (r.player_count || 0); }));
+  paid.forEach((r) => cleanSessions(r.sessions).forEach((sid) => { perSession[sid] = (perSession[sid] || 0) + (r.player_count || 0); }));
 
   return res.status(200).json({
     ok: true,

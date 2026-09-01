@@ -41,7 +41,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .tile .n{font-family:'DM Serif Display',serif;font-size:1.9rem;color:var(--pink);line-height:1}
 .tile .l{font-size:.72rem;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-top:6px}
 .sessbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
-.sesschip{font-family:'IBM Plex Mono',monospace;font-size:.72rem;background:var(--glass);border:1px solid var(--glass-b);border-radius:8px;padding:6px 10px;color:var(--txt-m)}
+.sesschip{font-family:'IBM Plex Mono',monospace;font-size:.72rem;background:var(--glass);border:1px solid var(--glass-b);border-radius:8px;padding:6px 10px;color:var(--txt-m);cursor:pointer;transition:all .15s}
+.sesschip:hover{border-color:var(--mrn);color:var(--txt)}
 .sesschip b{color:var(--txt)}
 .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
 .toolbar .inp{width:auto;flex:1;min-width:180px;padding:9px 12px}
@@ -127,6 +128,7 @@ tr:hover td{background:rgba(0,0,0,.03)}
     </div>
     <button class="btn sm" id="refreshBtn">↻ Refresh</button>
     <button class="btn sm" id="csvBtn">⬇ Export CSV</button>
+    <button class="btn sm" id="rostersBtn">🖨 Session sheets</button>
   </div>
   <div class="tbl-wrap">
     <table>
@@ -198,7 +200,7 @@ function render(){
     tile(s.paid||0,'Paid registrations')+tile(s.players||0,'Players')+tile('$'+(s.collected||'0.00'),'Collected (net)')+tile(s.pending||0,'Pending');
   var ps=s.perSession||{};
   document.getElementById('sessbar').innerHTML=Object.keys(SESSION_LABELS).map(function(id){
-    return '<span class="sesschip">'+SESSION_LABELS[id]+' <b>'+(ps[id]||0)+'</b></span>';
+    return '<span class="sesschip" data-sid="'+id+'" title="View / print this session\'s roster">'+SESSION_LABELS[id]+' <b>'+(ps[id]||0)+'</b></span>';
   }).join('');
 
   var rows=state.data.filter(function(r){
@@ -429,6 +431,51 @@ function kv(k,v){ return '<div class="kv"><span class="k">'+k+'</span><span clas
 function fmtDateTime(iso){ if(!iso) return '—'; var d=new Date(iso); return isNaN(d)?'—':d.toLocaleString(); }
 
 /* ── CSV export ── */
+/* ── Per-session check-in rosters (click a session chip; or print all) ── */
+function sessionRoster(sid){
+  var rows=[];
+  state.data.forEach(function(r){
+    if(r.status!=='paid') return;
+    if(cleanSess(r).indexOf(sid)<0) return;
+    (r.players||[]).forEach(function(p){
+      rows.push({ player:(p.first+' '+p.last).trim(), parent:r.parent_name||'', phone:r.parent_phone||'', med:medicalSummary(r) });
+    });
+  });
+  rows.sort(function(a,b){ return a.player.localeCompare(b.player); });
+  return rows;
+}
+function rosterCard(sid){
+  var label=SESSION_LABELS[sid]||sid;
+  var rows=sessionRoster(sid);
+  var body=rows.map(function(x,i){
+    return '<tr>'+
+      '<td style="padding:6px 8px;border-top:1px solid #eee;color:#888">'+(i+1)+'</td>'+
+      '<td style="padding:6px 8px;border-top:1px solid #eee;font-weight:600">'+esc(x.player)+(x.med?' <span style="color:#c0392b">⚠</span>':'')+'</td>'+
+      '<td style="padding:6px 8px;border-top:1px solid #eee">'+esc(x.parent)+'</td>'+
+      '<td style="padding:6px 8px;border-top:1px solid #eee">'+esc(x.phone)+'</td>'+
+      '<td style="padding:6px 8px;border-top:1px solid #eee;font-size:11px;color:#b02a2a">'+esc(x.med)+'</td>'+
+      '<td style="padding:6px 8px;border-top:1px solid #eee;text-align:center;font-size:16px">&#9744;</td>'+
+    '</tr>';
+  }).join('') || '<tr><td colspan="6" style="padding:16px;text-align:center;color:#888">No paid registrations for this session yet.</td></tr>';
+  return '<div style="background:#fff;color:#111;border:1px solid #e2e6ea;border-radius:10px;overflow:hidden;font-family:Arial,Helvetica,sans-serif">'+
+    '<div style="background:#8B1A2B;color:#fff;padding:12px 16px"><div style="font-weight:800;font-size:15px">DBA Fall Clinic &mdash; '+esc(label)+'</div><div style="font-size:11px;color:#f0d0d6">Check-in roster &middot; '+rows.length+' player'+(rows.length===1?'':'s')+'</div></div>'+
+    '<table style="width:100%;border-collapse:collapse;font-size:13px">'+
+      '<thead><tr style="background:#f3f4f6;color:#555;font-size:11px;text-transform:uppercase;letter-spacing:.5px">'+
+        '<th style="padding:6px 8px;text-align:left">#</th><th style="padding:6px 8px;text-align:left">Player</th><th style="padding:6px 8px;text-align:left">Parent</th><th style="padding:6px 8px;text-align:left">Phone</th><th style="padding:6px 8px;text-align:left">Allergy / Med</th><th style="padding:6px 8px;text-align:center">In</th>'+
+      '</tr></thead><tbody>'+body+'</tbody></table>'+
+  '</div>';
+}
+function showRoster(sid){
+  modal('<h3>'+esc(SESSION_LABELS[sid]||sid)+' — Roster</h3><div style="overflow-x:auto">'+ rosterCard(sid) +'</div>'+
+    '<div class="foot"><button class="btn" id="rosterPrint">🖨 Print sheet</button><button class="btn primary" onclick="closeModal()">Close</button></div>', true);
+  var pb=document.getElementById('rosterPrint'); if(pb) pb.addEventListener('click', function(){ printDoc('Roster '+(SESSION_LABELS[sid]||sid), rosterCard(sid)); });
+}
+function printAllRosters(){
+  var html=Object.keys(SESSION_LABELS).map(function(sid,i){
+    return '<div style="'+(i>0?'page-break-before:always;':'')+'padding-bottom:12px">'+rosterCard(sid)+'</div>';
+  }).join('');
+  printDoc('DBA Fall Clinic — Session Rosters', html);
+}
 document.getElementById('csvBtn').addEventListener('click', function(){
   var cols=['Parent','Email','Phone','Emergency','EmergPhone','Pickup','PickupPhone','Allergies','Medications','Conditions','TreatOK','Players','Sessions','Amount','Refunded','Status','Provider','Last4','Created','WaiverSignedBy'];
   var lines=[cols.join(',')];
@@ -452,6 +499,8 @@ document.getElementById('filters').addEventListener('click', function(e){
   render();
 });
 document.getElementById('search').addEventListener('input', function(){ state.q=this.value.trim().toLowerCase(); render(); });
+document.getElementById('sessbar').addEventListener('click', function(e){ var el=e.target.closest('[data-sid]'); if(el) showRoster(el.dataset.sid); });
+document.getElementById('rostersBtn').addEventListener('click', printAllRosters);
 document.getElementById('refreshBtn').addEventListener('click', function(){ load(); });
 
 /* ── Demo preview (?demo=1) — sample data, no login, no backend ── */
@@ -463,9 +512,18 @@ var SAMPLE_DATA=[
   {id:'a5',status:'canceled',payment_provider:'stripe',paid_via:'Stripe',card_last4:'3333',stripe_payment_intent:'pi_5',players:[{first:'Ivy',last:'Nguyen'}],sessions:['s2','s3'],session_count:2,amount_cents:7600,amount_refunded_cents:0,parent_name:'Minh Nguyen',parent_email:'minh@example.com',parent_phone:'(610) 555-0200',emerg_name:'Lan Nguyen',emerg_phone:'(610) 555-0201',created:'2026-08-22T10:00:00Z',paid_at:'2026-08-22T10:01:00Z',canceled_at:'2026-08-23T08:00:00Z',waiver_name:'Minh Nguyen'},
   {id:'a6',status:'abandoned',payment_provider:'square',players:[{first:'Sky',last:'Watts'}],sessions:['s4'],session_count:1,amount_cents:3800,amount_refunded_cents:0,parent_name:'Rae Watts',parent_email:'rae@example.com',parent_phone:'(610) 555-0210',created:'2026-08-15T10:00:00Z',abandoned_at:'2026-08-17T10:05:00Z'}
 ];
-var SAMPLE_SUMMARY={paid:2,pending:1,canceled:1,refunded:1,abandoned:1,players:3,collected:'365.00',perSession:{s1:2,s2:2,s3:2,s4:1,s5:1,s6:1}};
+// Compute the summary from data the same way the server does, so demo counts
+// (tiles + session chips) match the rosters exactly.
+function computeSummary(data){
+  var paid=data.filter(function(r){return r.status==='paid';});
+  var collected=paid.reduce(function(s,r){return s+((r.amount_cents||0)-(r.amount_refunded_cents||0));},0);
+  var players=paid.reduce(function(s,r){return s+(r.player_count||(r.players||[]).length||0);},0);
+  var per={};
+  paid.forEach(function(r){ cleanSess(r).forEach(function(sid){ per[sid]=(per[sid]||0)+(r.player_count||(r.players||[]).length||0); }); });
+  return { paid:paid.length, pending:data.filter(function(r){return r.status==='pending';}).length, canceled:data.filter(function(r){return r.status==='canceled';}).length, refunded:data.filter(function(r){return r.status==='refunded';}).length, abandoned:data.filter(function(r){return r.status==='abandoned';}).length, players:players, collected:(collected/100).toFixed(2), perSession:per };
+}
 function enterDemo(){
-  state.demo=true; state.data=SAMPLE_DATA; state.summary=SAMPLE_SUMMARY;
+  state.demo=true; state.data=SAMPLE_DATA; state.summary=computeSummary(SAMPLE_DATA);
   document.getElementById('loginWrap').style.display='none';
   document.getElementById('dash').style.display='block';
   document.getElementById('demoBanner').style.display='block';
