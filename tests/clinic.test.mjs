@@ -7,6 +7,8 @@ import assert from 'node:assert';
 import { expectedCents, normalizeRegistration, cleanSessions, PRICE, SESSION_IDS } from '../api/_clinic.js';
 import { buildRefundEmail, buildReminderEmail } from '../api/_email.js';
 import { nextDayET, sessionOn } from '../api/remind.js';
+import webhook, { verifySignature } from '../api/webhook-stripe.js';
+import { createHmac } from 'node:crypto';
 
 let pass = 0, fail = 0;
 function test(name, fn) {
@@ -141,6 +143,27 @@ await test('buildReminderEmail names the player, the date, and where to park', (
   assert.match(em.subject, /Oct 4/);
   assert.match(em.html, /Maya Avery/);
   assert.match(em.html, /lot right by the gymnasium/);
+});
+
+await test('verifySignature accepts a valid Stripe signature, rejects wrong secret / stale / tampered', () => {
+  const secret = 'whsec_testsecret', now = 1700000000;
+  const body = Buffer.from('{"id":"evt_1","type":"checkout.session.completed"}');
+  const sig = createHmac('sha256', secret).update(`${now}.`).update(body).digest('hex');
+  assert.equal(verifySignature(body, `t=${now},v1=${sig}`, secret, now), true);
+  assert.equal(verifySignature(body, `t=${now},v1=${sig}`, 'whsec_wrong', now), false);            // wrong secret
+  assert.equal(verifySignature(body, `t=${now},v1=${sig}`, secret, now + 1000), false);             // stale → replay-protected
+  assert.equal(verifySignature(Buffer.from('tampered'), `t=${now},v1=${sig}`, secret, now), false); // body changed
+});
+await test('webhook → 503 when STRIPE_WEBHOOK_SECRET is unset', async () => {
+  delete process.env.STRIPE_WEBHOOK_SECRET;
+  const res = mockRes(); await webhook(mockReq({ method: 'POST', body: '{}' }), res);
+  assert.equal(res.statusCode, 503);
+});
+await test('webhook → 400 bad_signature on an unsigned call (forgery blocked)', async () => {
+  process.env.STRIPE_WEBHOOK_SECRET = 'whsec_x';
+  const res = mockRes(); await webhook(mockReq({ method: 'POST', body: '{}' }), res);
+  assert.equal(res.statusCode, 400); assert.equal(res.body.error, 'bad_signature');
+  delete process.env.STRIPE_WEBHOOK_SECRET;
 });
 
 console.log(`\n${pass} passed, ${fail} failed\n`);
