@@ -9,7 +9,7 @@
 // call it with the x-admin-key header.
 // Env: CRON_SECRET (for the cron), ADMIN_PASSWORD (for manual), + Firestore/provider vars.
 
-import { fbConfigured, fbAdminConfigured, fsList, fsPatchVerified } from './_firestore.js';
+import { fbConfigured, fbAdminConfigured, fsList, fsPatch, fsPatchVerified } from './_firestore.js';
 import { verifyPayment, finalizePaid } from './_finalize.js';
 
 const PENDING_GRACE_MS = 2 * 60 * 1000;        // don't touch anything younger than 2 min (still checking out)
@@ -52,6 +52,9 @@ export default async function handler(req, res) {
   }
 
   const result = { ok: true, pending: pending.length, checked, finalized, abandoned, inconclusive };
+  // Heartbeat the admin dashboard can see. Lives under the (admin-writable) registrations
+  // collection as a reserved `_`-prefixed doc; /api/registrations filters it out of the list.
+  try { await fsPatch('registrations/_cron_reconcile', { last_run: new Date().toISOString(), ...result }); } catch (e) { /* never fail the cron on a heartbeat */ }
   console.log('reconcile', JSON.stringify(result)); // heartbeat — if this never logs, the cron isn't running
   return res.status(200).json(result);
 }

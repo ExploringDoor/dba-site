@@ -3,7 +3,8 @@
   "outputDirectory": ".",
   "framework": null,
   "crons": [
-    { "path": "/api/reconcile", "schedule": "*/15 * * * *" }
+    { "path": "/api/reconcile", "schedule": "*/15 * * * *" },
+    { "path": "/api/remind", "schedule": "0 20 * * *" }
   ],
   "headers": [
     { "source": "/(.*).html", "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }] },

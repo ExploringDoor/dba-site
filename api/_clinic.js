@@ -9,12 +9,12 @@
 // stored — keep them stable; only edit labels if dates change. Keep in sync with
 // register.html (SESSIONS) and admin.html (SESSION_LABELS).
 export const SESSIONS = [
-  { id: 's1', label: 'Session 1 — Sun, Sep 27' },
-  { id: 's2', label: 'Session 2 — Sun, Oct 4' },
-  { id: 's3', label: 'Session 3 — Sun, Oct 11' },
-  { id: 's4', label: 'Session 4 — Sun, Oct 18' },
-  { id: 's5', label: 'Session 5 — Sun, Oct 25' },
-  { id: 's6', label: 'Session 6 — Sun, Nov 1' },
+  { id: 's1', label: 'Session 1 — Sun, Sep 27', date: '2026-09-27' },
+  { id: 's2', label: 'Session 2 — Sun, Oct 4',  date: '2026-10-04' },
+  { id: 's3', label: 'Session 3 — Sun, Oct 11', date: '2026-10-11' },
+  { id: 's4', label: 'Session 4 — Sun, Oct 18', date: '2026-10-18' },
+  { id: 's5', label: 'Session 5 — Sun, Oct 25', date: '2026-10-25' },
+  { id: 's6', label: 'Session 6 — Sun, Nov 1',  date: '2026-11-01' },
 ];
 export const SESSION_IDS = SESSIONS.map((s) => s.id);
 

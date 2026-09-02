@@ -146,3 +146,35 @@ export function buildRefundEmail(reg, refundedNowCents, fullyRefunded) {
     </div>`;
   return { subject, html };
 }
+
+// Branded "see you tomorrow" reminder for ONE clinic session (sent by api/remind.js
+// the day before). `session` is an entry from SESSIONS in _clinic.js.
+export function buildReminderEmail(reg, session) {
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
+  const when = esc(session && session.label ? session.label.replace(/^Session \d+ — /, '') : 'tomorrow');
+  const players = (reg.players || []).map((p) => esc(`${p.first} ${p.last}`.trim())).filter(Boolean);
+  const who = players.length ? players.join(' & ') : 'your player';
+  const cell = (k, v, top) => `<tr><td style="padding:9px 14px;color:#777;white-space:nowrap${top ? ';border-top:1px solid #eee' : ''}">${k}</td><td style="padding:9px 14px;text-align:right${top ? ';border-top:1px solid #eee' : ''}">${v}</td></tr>`;
+
+  const subject = `Reminder: clinic tomorrow — ${when}, 11:00 AM`;
+  const html = `
+    <div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;color:#222">
+      <div style="background:#8B1A2B;color:#fff;padding:22px 24px;border-radius:12px 12px 0 0">
+        <div style="font-weight:800;letter-spacing:3px;font-size:20px">DOWNER BASKETBALL ACADEMY</div>
+        <div style="color:#f0d0d6;font-size:12px;letter-spacing:1px;margin-top:2px">SESSION REMINDER</div>
+      </div>
+      <div style="border:1px solid #eee;border-top:none;padding:24px;border-radius:0 0 12px 12px">
+        <h2 style="margin:0 0 6px">See you tomorrow! &#127936;</h2>
+        <p style="color:#555;line-height:1.6;margin:0 0 18px">Quick reminder that <strong>${who}</strong> ${players.length > 1 ? 'are' : 'is'} signed up for the Fall Clinic on <strong>${when}</strong>.</p>
+        <table style="width:100%;border-collapse:collapse;border:1px solid #eee;border-radius:8px;overflow:hidden;font-size:14px">
+          ${cell('When', when + ' &middot; 11:00 AM &ndash; 12:15 PM', false)}
+          ${cell('Where', 'Kobe Bryant Gymnasium, Lower Merion HS<br><span style="color:#777">315 E. Montgomery Ave, Ardmore, PA 19003</span>', true)}
+          ${cell('Parking', 'The lot right by the gymnasium', true)}
+          ${cell('Bring', 'Sneakers, athletic clothes, and a water bottle', true)}
+        </table>
+        <p style="color:#555;line-height:1.6;font-size:13px;margin:16px 0 0">Please arrive about 10 minutes early for check-in. Can't make it? Just reply to this email or contact aceshoops@gmail.com.</p>
+        <p style="color:#999;font-size:12px;line-height:1.6;margin:14px 0 0">Downer Basketball Academy &middot; Fall Clinics 2026</p>
+      </div>
+    </div>`;
+  return { subject, html };
+}

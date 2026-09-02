@@ -31,7 +31,10 @@ export default async function handler(req, res) {
   if (!authed(req)) return res.status(401).json({ error: 'unauthorized' });
   if (!fbConfigured() || !fbAdminConfigured()) return res.status(503).json({ error: 'db_not_configured' });
 
-  const all = await fsList('registrations');
+  const raw = await fsList('registrations');
+  // Reserved `_`-prefixed docs are internal (the reconcile cron's heartbeat) — never list them.
+  const cronDoc = raw.find((r) => r.id === '_cron_reconcile') || null;
+  const all = raw.filter((r) => !String(r.id || '').startsWith('_'));
   // newest first
   all.sort((a, b) => String(b.created || '').localeCompare(String(a.created || '')));
 
@@ -57,6 +60,7 @@ export default async function handler(req, res) {
       collected: (collectedCents / 100).toFixed(2),
       perSession,
     },
+    cron: cronDoc ? { last_run: cronDoc.last_run || '', pending: cronDoc.pending || 0, finalized: cronDoc.finalized || 0, abandoned: cronDoc.abandoned || 0 } : null,
     registrations: all,
   });
 }

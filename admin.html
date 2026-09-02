@@ -114,6 +114,7 @@ tr:hover td{background:rgba(0,0,0,.03)}
 <!-- DASHBOARD -->
 <div class="dash" id="dash">
   <div class="tiles" id="tiles"></div>
+  <div id="cronStatus" style="font-size:.78rem;color:var(--dim);margin:-6px 0 14px 2px"></div>
   <div class="sessbar" id="sessbar"></div>
   <div class="toolbar">
     <input class="inp" id="search" placeholder="Search name, email, player…">
@@ -164,7 +165,7 @@ function load(){
     if(r.status===503){ throw {code:'config'}; }
     return r.json();
   }).then(function(d){
-    state.data=d.registrations||[]; state.summary=d.summary||{};
+    state.data=d.registrations||[]; state.summary=d.summary||{}; state.cron=d.cron||null;
     render();
   });
 }
@@ -198,6 +199,7 @@ function render(){
   var s=state.summary;
   document.getElementById('tiles').innerHTML=
     tile(s.paid||0,'Paid registrations')+tile(s.players||0,'Players')+tile('$'+(s.collected||'0.00'),'Collected (net)')+tile(s.pending||0,'Pending');
+  renderCron();
   var ps=s.perSession||{};
   document.getElementById('sessbar').innerHTML=Object.keys(SESSION_LABELS).map(function(id){
     return '<span class="sesschip" data-sid="'+id+'" title="View / print this session\'s roster">'+SESSION_LABELS[id]+' <b>'+(ps[id]||0)+'</b></span>';
@@ -219,6 +221,17 @@ function render(){
   });
 }
 function tile(n,l){ return '<div class="tile"><div class="n">'+n+'</div><div class="l">'+l+'</div></div>'; }
+/* Payment safety-net (reconcile cron) heartbeat — runs every 15 min; flag it if it's gone quiet. */
+function renderCron(){
+  var el=document.getElementById('cronStatus'); if(!el) return;
+  if(state.demo){ el.innerHTML=''; return; }
+  var c=state.cron;
+  if(!c||!c.last_run){ el.innerHTML='<span style="color:var(--amber)">⚠</span> Payment safety-net hasn\'t reported in yet (it runs every 15 min).'; return; }
+  var mins=Math.round((Date.now()-new Date(c.last_run).getTime())/60000);
+  var fresh=mins<=35;
+  el.innerHTML=(fresh?'<span style="color:var(--ok)">✓</span> Payment safety-net running':'<span style="color:var(--amber)">⚠</span> Payment safety-net last ran')
+    +' · '+(mins<1?'just now':mins+' min ago')+(c.finalized?' · rescued '+c.finalized+' payment'+(c.finalized===1?'':'s'):'');
+}
 function byId(rid){ return state.data.filter(function(r){return r.id===rid;})[0]; }
 function medicalSummary(r){
   function real(v){ v=String(v||'').trim(); return v && !/^(none|n\/?a|no|no\.|nope|n)$/i.test(v) ? v : ''; }

@@ -5,7 +5,8 @@
 
 import assert from 'node:assert';
 import { expectedCents, normalizeRegistration, cleanSessions, PRICE, SESSION_IDS } from '../api/_clinic.js';
-import { buildRefundEmail } from '../api/_email.js';
+import { buildRefundEmail, buildReminderEmail } from '../api/_email.js';
+import { nextDayET, sessionOn } from '../api/remind.js';
 
 let pass = 0, fail = 0;
 function test(name, fn) {
@@ -122,6 +123,24 @@ await test('buildRefundEmail notes a partial refund with running total', () => {
   const em = buildRefundEmail(reg, 1000, false);
   assert.match(em.html, /Partial refund/);
   assert.match(em.html, /\$10\.00 of \$38\.00/);
+});
+
+await test('nextDayET uses Eastern time, not UTC, before adding a day', () => {
+  assert.equal(nextDayET(new Date('2026-09-26T20:00:00Z')), '2026-09-27'); // 4 pm EDT Sat → Sun
+  assert.equal(nextDayET(new Date('2026-09-27T03:30:00Z')), '2026-09-27'); // 11:30 pm EDT Sat (already Sun in UTC) → still Sun
+  assert.equal(nextDayET(new Date('2026-10-31T20:00:00Z')), '2026-11-01'); // eve of the last session
+});
+await test('sessionOn matches a session date and returns null otherwise', () => {
+  assert.equal(sessionOn('2026-09-27').id, 's1');
+  assert.equal(sessionOn('2026-11-01').id, 's6');
+  assert.equal(sessionOn('2026-09-28'), null);
+});
+await test('buildReminderEmail names the player, the date, and where to park', () => {
+  const em = buildReminderEmail({ players: [{ first: 'Maya', last: 'Avery' }] }, sessionOn('2026-10-04'));
+  assert.match(em.subject, /Reminder: clinic tomorrow/);
+  assert.match(em.subject, /Oct 4/);
+  assert.match(em.html, /Maya Avery/);
+  assert.match(em.html, /lot right by the gymnasium/);
 });
 
 console.log(`\n${pass} passed, ${fail} failed\n`);
