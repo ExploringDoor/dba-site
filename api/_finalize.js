@@ -28,11 +28,25 @@ export async function verifyStripe(reg) {
   }
   const paid = d.payment_status === 'paid';
   let last4 = '', payId = '';
-  const pi = d.payment_intent;
+  const hdr = { Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}` };
+  const cardLast4 = (ch) => (ch && ch.payment_method_details && ch.payment_method_details.card && ch.payment_method_details.card.last4) || '';
+  let pi = d.payment_intent;
+  // The expand doesn't always nest — Stripe can return payment_intent as a bare id string.
+  // Fetch it (with its charge) so we still capture last4. Best-effort: never affects `paid`.
+  if (typeof pi === 'string' && pi) {
+    payId = pi;
+    try {
+      const pr = await fetch(`https://api.stripe.com/v1/payment_intents/${encodeURIComponent(pi)}?expand[]=latest_charge`, { headers: hdr });
+      pi = await pr.json();
+    } catch (e) { pi = null; }
+  }
   if (pi && typeof pi === 'object') {
-    payId = pi.id || '';
-    const ch = pi.latest_charge;
-    if (ch && ch.payment_method_details && ch.payment_method_details.card) last4 = ch.payment_method_details.card.last4 || '';
+    payId = pi.id || payId;
+    let ch = pi.latest_charge;
+    if (typeof ch === 'string' && ch) {
+      try { const cr = await fetch(`https://api.stripe.com/v1/charges/${encodeURIComponent(ch)}`, { headers: hdr }); ch = await cr.json(); } catch (e) { ch = null; }
+    }
+    last4 = cardLast4(ch);
   }
   return { paid, determinate: true, patch: { stripe_payment_intent: payId, card_last4: last4, paid_via: 'Stripe', amount_captured_cents: (typeof d.amount_total === 'number' ? d.amount_total : null) } };
 }

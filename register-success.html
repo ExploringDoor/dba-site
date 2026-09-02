@@ -84,7 +84,7 @@ h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:2rem;margin-bo
       <a href="clinics.html" class="btn ghost">Back to Clinics</a>
     </div>
     <p class="muted">Questions? Email <a href="mailto:aceshoops@gmail.com" style="color:var(--txt-m);text-decoration:underline">aceshoops@gmail.com</a></p>
-    <p class="muted" style="font-size:.72rem;opacity:.8">Payments are collected by Always Competing Sports LLC on behalf of the clinic's organizing booster club and remitted to them.</p>
+    <p class="muted" style="font-size:.72rem;opacity:.8">Payments are collected by Always Competing Sports LLC on behalf of the clinic's organizing booster club and remitted to them. · <a href="policies.html" style="color:var(--dim);text-decoration:underline">Policies &amp; refunds</a></p>
   </div>
 
   <!-- PENDING / UNCONFIRMED -->
@@ -144,7 +144,7 @@ function check(){
     .then(function(res){
       var d = res.d || {};
       if(res.status === 404){ show('error'); return; }
-      if(d.ok && d.status === 'paid'){ renderRecap(d); show('paid'); return; }
+      if(d.ok && d.status === 'paid'){ renderRecap(d); show('paid'); try{ if(window.gtag) gtag('event','purchase',{transaction_id:String(d.reg_id||''),value:parseFloat(d.amount||'0')||0,currency:'USD'}); }catch(e){} return; }
       if(d.status === 'canceled' || d.status === 'refunded' || d.status === 'error'){ show('error'); return; }
       show('pending');
     })

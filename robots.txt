@@ -3,4 +3,4 @@ Allow: /
 Disallow: /admin.html
 Disallow: /register-success.html
 
-Sitemap: https://www.downerbasketballacademy.com/sitemap.xml
+Sitemap: https://www.greggdownerbasketball.com/sitemap.xml
