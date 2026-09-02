@@ -129,6 +129,13 @@ a{color:inherit;text-decoration:none}img{max-width:100%;display:block}
 
 /* WHAT YOU GET */
 .feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:1000px;margin:0 auto}
+/* TESTIMONIALS */
+.quote-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:1000px;margin:0 auto}
+.quote-card{background:var(--glass);backdrop-filter:blur(16px);border:1px solid var(--glass-b);border-radius:var(--r);padding:26px 22px;display:flex;flex-direction:column}
+.quote-stars{color:#e3b341;font-size:.85rem;letter-spacing:2px;margin-bottom:10px}
+.quote-text{font-size:.95rem;color:var(--txt);line-height:1.6;flex:1;font-style:italic}
+.quote-who{margin-top:14px;font-size:.8rem;color:var(--dim)}
+.quote-who strong{display:block;color:var(--txt);font-weight:600;font-size:.88rem;margin-bottom:2px}
 .feat-card{background:var(--glass);border:1px solid var(--glass-b);border-radius:var(--r);padding:28px 24px;text-align:center;transition:all .3s}
 .feat-card:hover{border-color:rgba(139,26,43,.25);transform:translateY(-3px)}
 .feat-ico{font-size:1.6rem;margin-bottom:12px}
@@ -168,7 +175,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   .hero-inner{padding:0 24px}
   .detail-wrap{grid-template-columns:1fr}
   .price-panel{position:static}
-  .feat-grid{grid-template-columns:1fr}
+  .feat-grid,.quote-grid{grid-template-columns:1fr}
   .footer{grid-template-columns:1fr 1fr;padding:32px 24px}
   .footer-bottom{padding:12px 24px}
 }
@@ -221,7 +228,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 
 <!-- HERO -->
 <section class="hero">
-  <div class="hero-img"><img src="img/coach-player.jpg" alt="A young player working on skills at a clinic"></div>
+  <div class="hero-img"><img fetchpriority="high" src="img/coach-player.jpg" alt="A young player working on skills at a clinic"></div>
   <div class="hero-glow"></div>
   <div class="hero-inner">
     <div class="hero-pill sr"><span class="dot"></span> Ardmore, PA · Fall 2026</div>
@@ -243,7 +250,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   </div>
   <div class="detail-wrap sr">
     <div class="detail-card">
-      <div class="detail-photo"><img src="img/camp-demo.jpg" alt="Skills instruction at a DBA clinic"></div>
+      <div class="detail-photo"><img loading="lazy" decoding="async" src="img/camp-demo.jpg" alt="Skills instruction at a DBA clinic"></div>
       <div class="detail-body">
         <div class="detail-badge">Fall · Clinic Series</div>
         <div class="detail-name">Sunday Skills Clinics</div>
@@ -251,7 +258,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
           <li class="spec"><span class="spec-ico">📅</span><div><div class="spec-k">Dates</div><div class="spec-v">Six Sundays — Sep 27, Oct 4, 11, 18, 25 &amp; Nov 1, 2026</div></div></li>
           <li class="spec"><span class="spec-ico">⏰</span><div><div class="spec-k">Time</div><div class="spec-v">11:00 AM – 12:15 PM</div></div></li>
           <li class="spec"><span class="spec-ico">🎯</span><div><div class="spec-k">Ages</div><div class="spec-v">Boys &amp; Girls, ages 6–14 · all levels welcome</div></div></li>
-          <li class="spec"><span class="spec-ico">📍</span><div><div class="spec-k">Location</div><div class="spec-v">Kobe Bryant Gymnasium<br>Lower Merion High School<br>315 E. Montgomery Ave, Ardmore, PA 19003</div></div></li>
+          <li class="spec"><span class="spec-ico">📍</span><div><div class="spec-k">Location</div><div class="spec-v">Kobe Bryant Gymnasium<br>Lower Merion High School<br>315 E. Montgomery Ave, Ardmore, PA 19003<br><span style="color:var(--dim)">🅿️ Park in the lot right by the gymnasium</span></div></div></li>
           <li class="spec"><span class="spec-ico">🏀</span><div><div class="spec-k">What to bring</div><div class="spec-v">Sneakers, athletic clothes, and a water bottle. Basketballs provided.</div></div></li>
         </ul>
       </div>
@@ -289,6 +296,33 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   </div>
 </section>
 
+<!-- A TYPICAL SUNDAY -->
+<section class="section" style="padding-top:0">
+  <div class="sec-head">
+    <div class="stag sr">What to Expect</div>
+    <h2 class="stitle sr">What a Sunday Looks Like</h2>
+    <p class="ssub sr">Every session runs 11:00 AM – 12:15 PM. Here's how the 75 minutes break down.</p>
+  </div>
+  <div class="feat-grid">
+    <div class="feat-card sr"><div class="feat-ico">🔥</div><div class="feat-title">1 · Warm-up &amp; Fundamentals</div><div class="feat-desc">A dynamic warm-up, then ball-handling and footwork to get every player moving and locked in.</div></div>
+    <div class="feat-card sr"><div class="feat-ico">🎯</div><div class="feat-title">2 · Skill Stations</div><div class="feat-desc">Small groups by age and level rotate through shooting form, passing, and finishing — lots of reps, lots of touches.</div></div>
+    <div class="feat-card sr"><div class="feat-ico">🏆</div><div class="feat-title">3 · Competitive Games</div><div class="feat-desc">Small-sided games to put the day's skills to work. Every player plays, every session.</div></div>
+  </div>
+</section>
+
+<!-- WHAT FAMILIES SAY -->
+<section class="section" style="padding-top:0">
+  <div class="sec-head">
+    <div class="stag sr">What Families Say</div>
+    <h2 class="stitle sr">Trusted by Main Line Families</h2>
+  </div>
+  <div class="quote-grid">
+    <div class="quote-card sr"><div class="quote-stars">★★★★★</div><p class="quote-text">"…he came back a different player every single summer. The confidence, the work ethic, the love for the game. There's nothing else like it."</p><div class="quote-who"><strong>Freddie Klevan</strong>9-Year DBA Family</div></div>
+    <div class="quote-card sr"><div class="quote-stars">★★★★★</div><p class="quote-text">"…fundamentals, discipline, and character. I couldn't have asked for a better coach for my kid."</p><div class="quote-who"><strong>Brett Brown</strong>Former Philadelphia 76ers Head Coach</div></div>
+    <div class="quote-card sr"><div class="quote-stars">★★★★★</div><p class="quote-text">"…camp is like a family. I love coming back to lend a hand."</p><div class="quote-who"><strong>Dan Capkin '05</strong>Gettysburg · DIII All-American</div></div>
+  </div>
+</section>
+
 <!-- REGISTER -->
 <section class="section" id="register" style="border-top:1px solid var(--glass-b)">
   <div class="sec-head">
@@ -320,7 +354,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
     </details>
     <details class="faq-item">
       <summary class="faq-q">Where are the clinics held?</summary>
-      <p class="faq-a">The Kobe Bryant Gymnasium at Lower Merion High School, 315 E. Montgomery Ave, Ardmore, PA 19003.</p>
+      <p class="faq-a">The Kobe Bryant Gymnasium at Lower Merion High School, 315 E. Montgomery Ave, Ardmore, PA 19003. Park in the lot right by the gymnasium and come in through the gym entrance.</p>
     </details>
     <details class="faq-item">
       <summary class="faq-q">Do clinics sell out?</summary>

@@ -100,7 +100,7 @@ export function buildConfirmationEmail(reg) {
         </p>
 
         <hr style="border:none;border-top:1px solid #eee;margin:18px 0">
-        <p style="color:#555;line-height:1.6;margin:0 0 8px"><strong>Location:</strong> Kobe Bryant Gymnasium, Lower Merion HS, 315 E. Montgomery Ave, Ardmore, PA 19003.<br><strong>Time:</strong> Sundays, 11:00 AM &ndash; 12:15 PM.<br><strong>Bring:</strong> sneakers, athletic clothes, and a water bottle. Basketballs provided.</p>
+        <p style="color:#555;line-height:1.6;margin:0 0 8px"><strong>Location:</strong> Kobe Bryant Gymnasium, Lower Merion HS, 315 E. Montgomery Ave, Ardmore, PA 19003.<br><strong>Parking:</strong> the lot right by the gymnasium.<br><strong>Time:</strong> Sundays, 11:00 AM &ndash; 12:15 PM.<br><strong>Bring:</strong> sneakers, athletic clothes, and a water bottle. Basketballs provided.</p>
         <p style="color:#999;font-size:12px;line-height:1.6;margin:14px 0 0">Payments are collected by Always Competing Sports LLC on behalf of the clinic's organizing booster club and remitted to them. Your card processor also emails an official payment receipt. Questions? Reply to this email or contact aceshoops@gmail.com.</p>
       </div>
     </div>`;
