@@ -5,6 +5,7 @@
 
 import assert from 'node:assert';
 import { expectedCents, normalizeRegistration, cleanSessions, PRICE, SESSION_IDS } from '../api/_clinic.js';
+import { buildRefundEmail } from '../api/_email.js';
 
 let pass = 0, fail = 0;
 function test(name, fn) {
@@ -105,6 +106,22 @@ await test('cancel wrong key → 401', async () => {
 await test('refund rejects malformed rid even with right key (bad_rid, not a charge)', async () => {
   const res = mockRes(); await refund(mockReq({ method: 'POST', headers: { 'x-admin-key': 'secret-pass' }, body: { rid: '../admins/x' } }), res);
   assert.ok(res.statusCode === 400 || res.statusCode === 503); // 400 bad_rid, or 503 if DB gate hits first
+});
+
+await test('buildRefundEmail renders a branded full-refund receipt', () => {
+  const reg = { id: 'abc123', clinic_title: 'DBA Fall Clinics 2026', players: [{ first: 'Testy', last: 'M' }], amount_cents: 3800, amount_refunded_cents: 3800, paid_via: 'Stripe', card_last4: '4242' };
+  const em = buildRefundEmail(reg, 3800, true);
+  assert.match(em.subject, /Refund processed/);
+  assert.match(em.html, /REFUND RECEIPT/);
+  assert.match(em.html, /abc123/);
+  assert.match(em.html, /\$38\.00/);
+  assert.ok(!/Partial refund/.test(em.html), 'full refund should not show the partial note');
+});
+await test('buildRefundEmail notes a partial refund with running total', () => {
+  const reg = { id: 'abc123', clinic_title: 'DBA', players: [{ first: 'T', last: 'M' }], amount_cents: 3800, amount_refunded_cents: 1000 };
+  const em = buildRefundEmail(reg, 1000, false);
+  assert.match(em.html, /Partial refund/);
+  assert.match(em.html, /\$10\.00 of \$38\.00/);
 });
 
 console.log(`\n${pass} passed, ${fail} failed\n`);

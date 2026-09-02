@@ -106,3 +106,43 @@ export function buildConfirmationEmail(reg) {
     </div>`;
   return { subject, html };
 }
+
+// Branded refund receipt — emailed to the parent when a refund is issued.
+// refundedNowCents = amount refunded in THIS action; fullyRefunded flags a full refund.
+export function buildRefundEmail(reg, refundedNowCents, fullyRefunded) {
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
+  const money = (c) => '$' + ((c || 0) / 100).toFixed(2);
+  const title = esc(reg.clinic_title || 'DBA Fall Clinics');
+  const regId = esc(reg.id || '');
+  const players = (reg.players || []).map((p) => esc(`${p.first} ${p.last}`.trim())).filter(Boolean);
+  const via = esc(reg.paid_via || 'card');
+  const last4 = esc(reg.card_last4 || '');
+  const totalRefunded = reg.amount_refunded_cents || refundedNowCents || 0;
+  const paidTotal = reg.amount_cents || 0;
+
+  const row = (k, v, opts) => `<tr><td style="padding:9px 14px;color:#777;border-top:1px solid #eee;vertical-align:top;white-space:nowrap">${k}</td><td style="padding:9px 14px;border-top:1px solid #eee;text-align:right${opts && opts.strong ? ';font-weight:700' : ''}">${v}</td></tr>`;
+
+  const subject = `Refund processed — ${reg.clinic_title || 'DBA Fall Clinics'}`;
+  const html = `
+    <div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;color:#222">
+      <div style="background:#8B1A2B;color:#fff;padding:22px 24px;border-radius:12px 12px 0 0">
+        <div style="font-weight:800;letter-spacing:3px;font-size:20px">DOWNER BASKETBALL ACADEMY</div>
+        <div style="color:#f0d0d6;font-size:12px;letter-spacing:1px;margin-top:2px">REFUND RECEIPT</div>
+      </div>
+      <div style="border:1px solid #eee;border-top:none;padding:24px;border-radius:0 0 12px 12px">
+        <h2 style="margin:0 0 6px">Your refund has been processed</h2>
+        <p style="color:#555;line-height:1.6;margin:0 0 18px">We've refunded your payment for the <strong>${title}</strong>. It should appear on your original payment method within <strong>5&ndash;10 business days</strong>.</p>
+
+        <table style="width:100%;border-collapse:collapse;border:1px solid #eee;border-radius:8px;overflow:hidden;font-size:14px">
+          <tr><td style="padding:9px 14px;color:#777;white-space:nowrap">Receipt #</td><td style="padding:9px 14px;text-align:right;font-family:monospace">${regId}</td></tr>
+          ${row('Player(s)', players.length ? players.join('<br>') : '&mdash;')}
+          ${row('Refund amount', money(refundedNowCents), { strong: true })}
+          ${last4 ? row('Refunded to', via + ' ending ' + last4) : row('Refunded to', 'your original ' + via)}
+          ${!fullyRefunded ? row('Note', 'Partial refund &mdash; ' + money(totalRefunded) + ' of ' + money(paidTotal) + ' refunded to date') : ''}
+        </table>
+
+        <p style="color:#999;font-size:12px;line-height:1.6;margin:16px 0 0">Questions about your refund? Reply to this email or contact aceshoops@gmail.com.</p>
+      </div>
+    </div>`;
+  return { subject, html };
+}

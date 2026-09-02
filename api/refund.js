@@ -6,6 +6,7 @@
 // Auth: ADMIN_PASSWORD via the x-admin-key header only (never a URL query param).
 
 import { fbConfigured, fbAdminConfigured, fsGet, fsPatchVerified } from './_firestore.js';
+import { sendMail, buildRefundEmail, ADMIN_EMAIL } from './_email.js';
 
 // Constant-time string compare (avoids leaking the passcode via timing).
 function ctEq(a, b) {
@@ -101,6 +102,17 @@ export default async function handler(req, res) {
       last_refund_at: new Date().toISOString(),
     };
     await fsPatchVerified(`registrations/${b.rid}`, patch);
+
+    // Branded refund receipt to the parent (best-effort — a mail failure must never
+    // fail the refund itself, which has already gone through at the processor).
+    try {
+      if (reg.parent_email) {
+        const merged = { ...reg, ...patch };
+        const em = buildRefundEmail(merged, cents, fullyRefunded);
+        await sendMail({ to: reg.parent_email, subject: em.subject, html: em.html, bcc: ADMIN_EMAIL });
+      }
+    } catch (e) { /* swallow — refund already succeeded */ }
+
     return res.status(200).json({ ok: true, refunded_cents: newRefunded, refunded: (newRefunded / 100).toFixed(2), status: patch.status });
   } catch (e) {
     return res.status(502).json({ error: 'refund_failed', detail: String(e.message || e).slice(0, 200) });
