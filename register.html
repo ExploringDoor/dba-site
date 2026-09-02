@@ -19,7 +19,7 @@
   --bg:#0A0A0C;--bg2:#101014;--bg3:#16161A;
   --glass:rgba(255,255,255,.035);--glass-b:rgba(255,255,255,.07);--glass-h:rgba(255,255,255,.1);
   --txt:#F0ECE8;--txt-m:rgba(240,236,232,.82);--dim:#9B95A0;--dim2:#7A7580;
-  --ok:#2a7a3a;--err:#c0392b;--r:16px;
+  --ok:#2a7a3a;--err:#ff6b6b;--r:16px;
 }
 html{scroll-behavior:smooth}
 body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased;line-height:1.5}
@@ -51,7 +51,7 @@ a{color:inherit}img{max-width:100%;display:block}
 .fg{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
 .fg label{font-size:.72rem;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--txt-m)}
 .fg label .req{color:var(--pink)}
-.inp{background:var(--bg);border:1px solid var(--glass-b);border-radius:10px;padding:12px 14px;color:var(--txt);font-family:'Outfit',sans-serif;font-size:.95rem;outline:none;transition:border .25s;width:100%}
+.inp{background:var(--bg);border:1px solid var(--glass-b);border-radius:10px;padding:12px 14px;color:var(--txt);font-family:'Outfit',sans-serif;font-size:16px;outline:none;transition:border .25s;width:100%}
 .inp:focus{border-color:var(--mrn)}
 a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--pink);outline-offset:2px;border-radius:4px}
 .inp::placeholder{color:var(--dim2)}
@@ -76,7 +76,7 @@ select.inp{appearance:none;cursor:pointer}
 /* PLAYERS repeater */
 .player{border:1px solid var(--glass-b);border-radius:12px;padding:18px;margin-bottom:12px;position:relative}
 .player .p-num{font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--pink);margin-bottom:12px}
-.player .rm{position:absolute;top:14px;right:14px;background:none;border:none;color:var(--dim);font-size:.78rem;cursor:pointer;text-decoration:underline}
+.player .rm{position:absolute;top:6px;right:6px;background:none;border:none;color:var(--dim);font-size:.82rem;cursor:pointer;text-decoration:underline;padding:10px}
 .player .rm:hover{color:var(--err)}
 .add-player{background:var(--glass);border:1px dashed var(--glass-h);color:var(--txt-m);padding:12px;border-radius:10px;width:100%;cursor:pointer;font-family:inherit;font-size:.88rem;transition:all .2s}
 .add-player:hover{border-color:var(--mrn);color:var(--txt)}
@@ -194,7 +194,7 @@ select.inp{appearance:none;cursor:pointer}
     <button type="submit" class="btn-pay" id="payBtn" disabled>Continue to Payment →</button>
     <p class="pay-note" id="payNote">Secure checkout · card receipt emailed instantly</p>
     <p class="pay-note" style="margin-top:10px;opacity:.8;line-height:1.5">Payments are collected by Always Competing Sports LLC on behalf of the clinic's organizing booster club and remitted to them. Refunds &amp; questions: <a href="mailto:aceshoops@gmail.com" style="color:inherit;text-decoration:underline">aceshoops@gmail.com</a>.</p>
-    <p class="err-msg" id="errMsg"></p>
+    <p class="err-msg" id="errMsg" role="alert" aria-live="assertive" tabindex="-1"></p>
   </aside>
 </form>
 
@@ -343,7 +343,7 @@ document.getElementById('regForm').addEventListener('submit', function(e){
     })
     .catch(function(){ showErr('Could not reach the server. Please try again or email aceshoops@gmail.com.'); payBtn.disabled=false; payBtn.textContent='Continue to Payment →'; });
 });
-function showErr(m){ var e=document.getElementById('errMsg'); e.textContent=m; e.style.display='block'; }
+function showErr(m){ var e=document.getElementById('errMsg'); e.textContent=m; e.style.display='block'; try{ e.focus({preventScroll:true}); e.scrollIntoView({block:'center',behavior:'smooth'}); }catch(_){ } }
 
 /* ── Ask the server if payments are ready; hide the test banner if so ── */
 fetch('/api/checkout').then(function(r){ return r.json(); }).then(function(d){
