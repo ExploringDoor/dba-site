@@ -229,6 +229,13 @@ a{color:inherit;text-decoration:none}img{max-width:100%;display:block}
 .chip{font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:1px;text-transform:uppercase;padding:5px 12px;border-radius:100px;border:1px solid var(--glass-b);color:var(--txt-m)}
 .prog-cta{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:10px;background:var(--mrn);color:#fff;font-weight:600;font-size:.8rem;border:none;cursor:pointer;transition:all .3s;text-decoration:none;align-self:flex-start}
 .prog-cta:hover{background:var(--mrn-h);transform:translateY(-1px)}
+/* Past programs: dimmed, with a big red X crossed through and a disabled CTA */
+.prog-card.past{position:relative;opacity:.7;filter:grayscale(.5)}
+.prog-card.past:hover{transform:none;box-shadow:none;border-color:var(--glass-b)}
+.prog-card.past:hover::before{opacity:0}
+.prog-card.past::after{content:'';position:absolute;inset:0;z-index:4;pointer-events:none;background:linear-gradient(to top left,transparent calc(50% - 1.5px),rgba(200,16,46,.6) calc(50% - 1.5px),rgba(200,16,46,.6) calc(50% + 1.5px),transparent calc(50% + 1.5px)),linear-gradient(to top right,transparent calc(50% - 1.5px),rgba(200,16,46,.6) calc(50% - 1.5px),rgba(200,16,46,.6) calc(50% + 1.5px),transparent calc(50% + 1.5px))}
+.prog-card.past .prog-badge{color:var(--dim)}
+.prog-cta.done{background:var(--glass);border:1px solid var(--glass-b);color:var(--dim);cursor:default;pointer-events:none}
 
 /* BANNER */
 .banner{position:relative;margin:0 48px;border-radius:20px;overflow:hidden;min-height:320px;display:flex;align-items:center}
@@ -424,49 +431,50 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   <div class="sec-head">
     <div class="stag sr">Programs</div>
     <h2 class="stitle sr">Camps, Clinics & Training</h2>
+    <p class="ssub sr">Our 2026 summer &amp; overnight camps have wrapped — 2027 dates coming soon. <strong style="color:var(--txt)">Fall Clinics are open now</strong> 👇</p>
   </div>
   <div class="prog-grid prog-grid-5">
-    <div class="prog-card sr">
+    <div class="prog-card sr past">
       <div class="prog-img"><img src="img/daycamp-lm1.jpg" alt="DBA Day Camp at Lower Merion" style="object-position:center center"></div>
       <div class="prog-body">
         <div class="prog-badge">Summer · Week 1</div>
         <div class="prog-name">Downer Basketball Academy Week 1</div>
         <p class="prog-desc">June 22 – 25, 2026. Mon–Thu, 8:30 AM – 3:30 PM. Ages 8–16. Kobe Bryant Gymnasium, LMHS.</p>
         <p style="font-family:'Outfit',sans-serif;font-size:1.1rem;font-weight:300;color:var(--pink);margin-bottom:16px">$300</p>
-        <a href="https://register.ryzer.com/camp.cfm?sport=4&id=314753" target="_blank" class="prog-cta">Register Week 1 →</a>
+        <span class="prog-cta done">✕ Summer 2026 — ended</span>
       </div>
     </div>
-    <div class="prog-card sr">
+    <div class="prog-card sr past">
       <div class="prog-img"><img src="img/daycamp-lm2.jpg" alt="DBA Day Camp at Bryant Gymnasium" style="object-position:center 40%"></div>
       <div class="prog-body">
         <div class="prog-badge">Summer · Week 2</div>
         <div class="prog-name">Downer Basketball Academy Week 2</div>
         <p class="prog-desc">July 13 – 16, 2026. Mon–Thu, 8:30 AM – 3:30 PM. Ages 8–16. Kobe Bryant Gymnasium, LMHS.</p>
         <p style="font-family:'Outfit',sans-serif;font-size:1.1rem;font-weight:300;color:var(--pink);margin-bottom:16px">$300</p>
-        <a href="https://register.ryzer.com/camp.cfm?sport=4&id=314754" target="_blank" class="prog-cta">Register Week 2 →</a>
+        <span class="prog-cta done">✕ Summer 2026 — ended</span>
       </div>
     </div>
-    <div class="prog-card sr">
+    <div class="prog-card sr past">
       <div class="prog-img"><img src="img/camp-demo.jpg" alt="Coach Downer teaching at DBA camp" style="object-position:center center"></div>
       <div class="prog-body">
-        <div class="prog-badge" style="display:flex;align-items:center;gap:8px">Summer · Westtown Week 1 <span style="background:var(--pink);color:#fff;padding:2px 8px;border-radius:4px;font-size:.55rem;letter-spacing:1px">NEW!</span></div>
+        <div class="prog-badge">Summer · Westtown Week 1</div>
         <div class="prog-name">Downer Basketball Academy — Westtown Week 1</div>
         <p class="prog-desc">July 27 – 31, 2026. Mon–Thu 9 AM – 3 PM, Fri 9 AM – 1 PM. Ages 8–16. Westtown School, West Chester.</p>
         <p style="font-family:'Outfit',sans-serif;font-size:1.1rem;font-weight:300;color:var(--pink);margin-bottom:16px">$300</p>
-        <a href="https://register.ryzer.com/camp.cfm?sport=4&id=317898" target="_blank" class="prog-cta">Register Westtown Week 1 →</a>
+        <span class="prog-cta done">✕ Summer 2026 — ended</span>
       </div>
     </div>
-    <div class="prog-card sr">
+    <div class="prog-card sr past">
       <div class="prog-img"><img src="img/camp-gym.jpg" alt="DBA Camp at Bryant Gymnasium" style="object-position:center center"></div>
       <div class="prog-body">
         <div class="prog-badge">Summer · Week 3</div>
         <div class="prog-name">Downer Basketball Academy Week 3</div>
         <p class="prog-desc">Aug 3 – 6, 2026. Mon–Thu, 8:30 AM – 3:30 PM. Ages 8–16. Kobe Bryant Gymnasium, LMHS, 315 E. Montgomery Ave, Ardmore, PA 19003.</p>
         <p style="font-family:'Outfit',sans-serif;font-size:1.1rem;font-weight:300;color:var(--pink);margin-bottom:16px">$300</p>
-        <a href="https://register.ryzer.com/camp.cfm?sport=4&id=328755" target="_blank" class="prog-cta">Register Week 3 →</a>
+        <span class="prog-cta done">✕ Summer 2026 — ended</span>
       </div>
     </div>
-    <div class="prog-card sr" style="grid-column:span 1">
+    <div class="prog-card sr past" style="grid-column:span 1">
       <div class="prog-img"><img src="img/overnight-outdoor.png" alt="Overnight camp outdoor session at Berkshire Trails" style="object-position:center 30%"></div>
       <div class="prog-body">
         <div class="prog-badge">Featured · Overnight</div>
@@ -475,20 +483,19 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
         <p style="font-family:'Outfit',sans-serif;font-size:1.1rem;font-weight:300;color:var(--pink);margin-bottom:4px">From $900</p>
         <div style="font-size:.8rem;color:var(--txt-m);margin-bottom:16px;line-height:1.6">
           Overnight: $1,431 · Commuter: $900<br>
-          Save $250 if registered by Sept 15 · Save $150 by June 1<br>
           +$100 each way for van transport
         </div>
-        <a href="https://register.ryzer.com/camp.cfm?sport=4&id=312417" target="_blank" class="prog-cta">Register Overnight →</a>
+        <span class="prog-cta done">✕ Summer 2026 — ended</span>
       </div>
     </div>
-    <div class="prog-card sr">
+    <div class="prog-card sr" style="order:-1;border-color:rgba(139,26,43,.45);box-shadow:0 8px 32px rgba(139,26,43,.12)">
       <div class="prog-img"><img src="img/coach-player.jpg" alt="Coach Downer working with player" style="object-position:center center"></div>
       <div class="prog-body">
         <div class="prog-badge" style="display:flex;align-items:center;gap:8px">Fall · Clinics <span style="background:var(--pink);color:#fff;padding:2px 8px;border-radius:4px;font-size:.55rem;letter-spacing:1px">NEW!</span></div>
         <div class="prog-name">Fall Clinics 2026</div>
         <p class="prog-desc">Six Sundays, Sep 27 – Nov 1, 11:00 AM – 12:15 PM. Boys &amp; girls ages 6–14. Kobe Bryant Gymnasium, LMHS, Ardmore, PA.</p>
         <p style="font-family:'Outfit',sans-serif;font-size:1.1rem;font-weight:300;color:var(--pink);margin-bottom:16px">$38/session · $164 all 6</p>
-        <a href="clinics.html" class="prog-cta">View Fall Clinics →</a>
+        <a href="clinics.html#register" class="prog-cta">Register Now →</a>
       </div>
     </div>
   </div>
@@ -644,7 +651,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
           <div class="form-group"><label class="form-label">Last Name</label><input class="form-input" id="cf-last" name="Last Name" placeholder="Last name" required></div>
         </div>
         <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="cf-email" name="Email" placeholder="your@email.com" required></div>
-        <div class="form-group"><label class="form-label">Interested In</label><select class="form-input" id="cf-program" name="Program"><option value="" disabled selected>Select a program ▾</option><option>Downer Basketball Academy Week 1 (June 22–25)</option><option>Downer Basketball Academy Week 2 (July 13–16)</option><option>Downer Basketball Academy — Westtown Week 1 (July 27–31)</option><option>Downer Basketball Academy Week 3 (Aug 3–6)</option><option>2026 Overnight Camp (Aug 9–13)</option><option>Spring Clinics 2026</option><option>Fall Clinics</option><option>General Inquiry</option></select></div>
+        <div class="form-group"><label class="form-label">Interested In</label><select class="form-input" id="cf-program" name="Program"><option value="" disabled selected>Select a program ▾</option><option>Fall Clinics 2026</option><option>Future Camps &amp; Clinics (2027)</option><option>General Inquiry</option></select></div>
         <div class="form-group"><label class="form-label">Message</label><textarea class="form-input" id="cf-msg" name="Message" placeholder="Tell us about your player..."></textarea></div>
         <button type="submit" class="btn btn-m btn-lg" style="align-self:flex-start">Send Message →</button>
       </form>
@@ -654,7 +661,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
       <div class="info-item"><div class="info-label">Address</div><div class="info-value">PO Box 292, Narberth, PA 19072</div></div>
       <div class="info-item"><div class="info-label">Locations</div><div class="info-value">Kobe Bryant Gymnasium<br>Lower Merion HS<br>315 E. Montgomery Ave, Ardmore, PA 19003<br><br>Westtown School<br>975 Westtown Rd, West Chester, PA</div></div>
       <div class="info-item"><div class="info-label">Overnight</div><div class="info-value">Berkshire Trails Camp<br>25 Deerwood Park Dr, Great Barrington, MA</div></div>
-      <div class="info-item"><div class="info-label">Register</div><div class="info-value"><a href="https://register.ryzer.com/camp.cfm?sport=4&id=314753" target="_blank">Week 1 — June 22–25 →</a><br><a href="https://register.ryzer.com/camp.cfm?sport=4&id=314754" target="_blank">Week 2 — July 13–16 →</a><br><a href="https://register.ryzer.com/camp.cfm?sport=4&id=317898" target="_blank">Westtown Week 1 — July 27–31 →</a><br><a href="https://register.ryzer.com/camp.cfm?sport=4&id=328755" target="_blank">Week 3 — Aug 3–6 →</a><br><a href="https://register.ryzer.com/camp.cfm?sport=4&id=312417" target="_blank">Overnight Camp — Aug 9–13 →</a><br><a href="https://register.ryzer.com/camp.cfm?id=329567" target="_blank">Spring Clinics — Apr 12 – May 17 →</a></div></div>
+      <div class="info-item"><div class="info-label">Register</div><div class="info-value"><a href="clinics.html#register">Fall Clinics — Sundays, Sep 27 – Nov 1 →</a><br><span style="color:var(--dim)">2026 summer &amp; overnight camps have ended. 2027 dates coming soon — <a href="mailto:aceshoops@gmail.com">email us</a> to be notified.</span></div></div>
     </div>
   </div>
 </section>
