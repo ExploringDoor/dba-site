@@ -12,9 +12,11 @@ the terminal, and don't push to git or change accounts without being asked.
 
 ## Gotchas
 - **Payment provider is a switch**: `PAYMENT_PROVIDER=stripe|square`. Both adapters exist.
-- **Session dates/prices live in three places that must stay in sync**: `api/_clinic.js`
-  (authoritative), `register.html` (`SESSIONS`/`PRICE_*`, display), `clinics.html` (display).
-  Fall dates are still placeholders — marked with the dashed-pink `.tbd` style.
+- **Session dates/prices live in four places that must stay in sync**: `api/_clinic.js`
+  (authoritative), `register.html` (`SESSIONS`/`PRICE_*`, display), `clinics.html` (display),
+  `admin.html` (`SESSION_LABELS`/`SESSION_DATES`). Fall 2026 dates are real and final.
+- **Check-in**: `checkin.html` + `/api/checkin` use `CHECKIN_PASSWORD` (coach) or `ADMIN_PASSWORD`;
+  attendance is stored on each registration as `attendance[sessionId][playerIndex]`.
 - **Never trust browser prices** — the server recomputes via `expectedCents` in `api/_clinic.js`.
 - **Registrations** are in Firestore; browsers never touch it directly (all via `/api`).
 - Run `npm test` for the offline suite (pricing, validation, auth gating).

@@ -37,8 +37,12 @@ Set `PAYMENT_PROVIDER` to `stripe` **or** `square`, then fill that one's keys.
 
 ### If Stripe
 - **dashboard.stripe.com** → Developers → API keys → copy the **Secret key** (`sk_live_...`).
-- Turn on emailed receipts: Settings → Customer emails → enable "Successful payments."
 - Env: `STRIPE_SECRET_KEY`
+- **Webhook (required):** Developers → Webhooks → Add destination → URL
+  `https://www.greggdownerbasketball.com/api/webhook-stripe`, event `checkout.session.completed`.
+  Copy its **Signing secret** (`whsec_...`) → Env: `STRIPE_WEBHOOK_SECRET`. This is what marks a
+  registration paid the instant Stripe confirms it, even if the parent closes the tab.
+- Stripe's own customer emails are left OFF — our branded confirmation email is the receipt.
 
 ### If Square
 - **developer.squareup.com** → your application → **Production** → copy the **Access token**
@@ -50,14 +54,17 @@ Set `PAYMENT_PROVIDER` to `stripe` **or** `square`, then fill that one's keys.
 
 ## 3. Confirmation emails (SendGrid) — optional but nice
 
-The card **receipt** is sent automatically by Stripe/Square. SendGrid is only for our own
-branded "You're registered!" email.
+SendGrid sends our branded "You're registered!" receipt, the refund receipt, and the
+day-before reminder. (Stripe's own customer emails are left off — ours is the receipt.)
 
 1. **sendgrid.com** → Settings → **API Keys** → Create → copy it.
-2. Settings → **Sender Authentication** → verify a From address (e.g. `aceshoops@gmail.com`).
-- Env: `SENDGRID_API_KEY`, `MAIL_FROM` = your verified address,
+2. Settings → **Sender Authentication** → **Authenticate Your Domain** (`greggdownerbasketball.com`;
+   add the records it gives you in Cloudflare as **DNS only**, not proxied). Don't send from a
+   gmail.com address — it fails DMARC and lands in spam.
+- Env: `SENDGRID_API_KEY`, `MAIL_FROM` = `noreply@greggdownerbasketball.com`,
   `MAIL_FROM_NAME` = `Downer Basketball Academy` (optional),
-  `ADMIN_EMAIL` = `aceshoops@gmail.com` (optional — you get a BCC of each confirmation).
+  `ADMIN_EMAIL` = `aceshoops@gmail.com` (optional — you get a BCC of each confirmation),
+  `MAIL_REPLY_TO` = where parent replies go (optional; defaults to `aceshoops@gmail.com`).
 
 ---
 
@@ -89,15 +96,13 @@ Pick any passcode you'll type to open `admin.html`.
 - **Set `SITE_URL`** (section 5) in production — the post-payment redirect then can't be
   influenced by a spoofed `Host` header.
 - **Watch for spam once payments are on.** `/api/checkout` is public (it has to be) and has a
-  hidden-field honeypot, but no rate limit. If you ever see junk/bot registrations, add a free
-  **Cloudflare Turnstile** (your site is already on Cloudflare) or a rate limiter in front of it.
-- **Flip the marketing copy from "opens soon" to "open now"** on `index.html` and `clinics.html`
-  (announce bars, hero button, pricing button/subtext, final CTA) once checkout is live, so the
-  pages match reality.
+  hidden-field honeypot plus a duplicate-paid guard, but no rate limit of its own. Note: DNS is
+  on Cloudflare but the site is served straight from Vercel (not proxied), so Cloudflare
+  rate-limit/Turnstile rules do NOT apply — use **Vercel → Firewall → Rate limiting** on
+  `POST /api/checkout` (Pro plan) if bot signups ever appear.
 
 ## 6. Finish
 
-- [ ] Tell me the real **fall clinic dates** so I replace the placeholders.
 - [ ] After pasting env vars, Vercel redeploys; open the site — the "opens soon" banner is gone.
 - [ ] Do one **test registration** (Stripe/Square test mode) end to end.
 - [ ] Open **/admin.html**, enter your passcode, confirm the test shows up, try a refund.
@@ -107,6 +112,7 @@ Pick any passcode you'll type to open `admin.html`.
 ```
 PAYMENT_PROVIDER          stripe | square
 STRIPE_SECRET_KEY         (if Stripe)
+STRIPE_WEBHOOK_SECRET     (if Stripe — required)
 SQUARE_ACCESS_TOKEN       (if Square)
 SQUARE_LOCATION_ID        (if Square)
 SQUARE_ENVIRONMENT        production | sandbox   (if Square)

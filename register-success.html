@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>/* capture rid + demo flag, then scrub the URL BEFORE analytics/referrer see it */var __q=new URLSearchParams(location.search);window.__RID__=__q.get('rid')||'';window.__DEMO__=(__q.get('demo')==='1');try{if(location.search&&history.replaceState)history.replaceState(null,'',location.pathname);}catch(e){}</script>
+<script>/* capture rid + demo flag, then scrub the URL BEFORE analytics/referrer see it. The rid is also kept in sessionStorage so a pull-to-refresh or Back on this page still finds the receipt. */var __q=new URLSearchParams(location.search);var __r=__q.get('rid')||'';try{if(__r)sessionStorage.setItem('dba_rid',__r);else __r=sessionStorage.getItem('dba_rid')||'';}catch(e){}window.__RID__=__r;window.__DEMO__=(__q.get('demo')==='1');try{if(location.search&&history.replaceState)history.replaceState(null,'',location.pathname);}catch(e){}</script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-KT0BL96HRZ"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());gtag("config","G-KT0BL96HRZ");</script>
 <meta charset="UTF-8">
@@ -100,9 +100,9 @@ h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:2rem;margin-bo
   <!-- ERROR / NO RID -->
   <div class="card hidden" id="error">
     <div class="badge wait">🤔</div>
-    <h1>This registration isn't active</h1>
-    <p class="lead">If you just paid, check your email for your receipt. If it was canceled or refunded, nothing is owed. Otherwise, head back and register again.</p>
-    <a href="register.html" class="btn">Back to Registration →</a>
+    <h1>We can't find that registration</h1>
+    <p class="lead">If you just paid, you're all set — your receipt is on its way by email (check spam too) and there's nothing else to do. If your registration was canceled or refunded, nothing is owed. If you never reached the payment screen, you can start again below.</p>
+    <a href="register.html" class="btn">Start a registration →</a>
     <p class="muted">Need help? Email <a href="mailto:aceshoops@gmail.com" style="color:var(--txt-m);text-decoration:underline">aceshoops@gmail.com</a></p>
   </div>
 </div>
@@ -129,13 +129,14 @@ function renderRecap(d){
   html += row('Base', '$'+esc(d.base));
   html += row('Processing', '$'+esc(d.processing));
   html += row('Total paid', '$'+esc(d.amount), 'rc-total');
-  if(d.paid_via||d.card_last4) html += row('Paid with', esc(d.paid_via||'Card')+(d.card_last4?(' ending '+esc(d.card_last4)):''));
+  if(d.paid_via||d.card_last4) html += row('Paid with', d.card_last4 ? ('Card ending '+esc(d.card_last4)+(d.paid_via?' (via '+esc(d.paid_via)+')':'')) : esc(d.paid_via||'Card'));
   if(d.waiver_agreed) html += row('Waiver & refund policy', 'Agreed'+(d.waiver_name?' · '+esc(d.waiver_name):''));
   document.getElementById('recap').innerHTML = html;
 }
 document.getElementById('printBtn').addEventListener('click',function(){ window.print(); });
 
 var DEMO_RECEIPT={ ok:true, status:'paid', reg_id:'aB3x9Kp2Qr', date:'2026-09-20T14:03:00Z', title:'DBA Fall Clinics 2026', players:['Marcus Avery','Maya Avery'], all_six:true, session_count:6, sessions_labels:['Sun, Sep 27','Sun, Oct 4','Sun, Oct 11','Sun, Oct 18','Sun, Oct 25','Sun, Nov 1'], base:'300.00', processing:'28.00', amount:'328.00', card_last4:'4242', paid_via:'Stripe', waiver_agreed:true, waiver_name:'Jordan Avery' };
+var tries = 0; // auto-retry a couple of times before showing "Almost there" — the webhook/cron usually lands within seconds
 function check(){
   if(window.__DEMO__){ renderRecap(DEMO_RECEIPT); show('paid'); var dn=document.getElementById('demoNote'); if(dn) dn.style.display='block'; return; }
   if(!rid){ show('error'); return; }
@@ -145,13 +146,19 @@ function check(){
     .then(function(res){
       var d = res.d || {};
       if(res.status === 404){ show('error'); return; }
-      if(d.ok && d.status === 'paid'){ renderRecap(d); show('paid'); try{ if(window.gtag) gtag('event','purchase',{transaction_id:String(d.reg_id||''),value:parseFloat(d.amount||'0')||0,currency:'USD'}); }catch(e){} return; }
+      if(d.ok && d.status === 'paid'){
+        try{ sessionStorage.removeItem('dba_regform'); }catch(e){} // the saved form draft is no longer needed
+        renderRecap(d); show('paid');
+        try{ if(window.gtag) gtag('event','purchase',{transaction_id:String(d.reg_id||''),value:parseFloat(d.amount||'0')||0,currency:'USD'}); }catch(e){}
+        return;
+      }
       if(d.status === 'canceled' || d.status === 'refunded' || d.status === 'error'){ show('error'); return; }
+      if(tries++ < 2){ setTimeout(check, 3000); return; }
       show('pending');
     })
-    .catch(function(){ show('pending'); });
+    .catch(function(){ if(tries++ < 2){ setTimeout(check, 3000); return; } show('pending'); });
 }
-document.getElementById('retryBtn').addEventListener('click', check);
+document.getElementById('retryBtn').addEventListener('click', function(){ tries = 0; check(); });
 check();
 </script>
 </body>

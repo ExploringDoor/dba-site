@@ -9,7 +9,7 @@
 //   determinate=false means we COULD NOT tell (provider unreachable / error) — callers
 //   must NOT treat that as "unpaid" (never abandon a possibly-real payment on an outage).
 
-import { fsPatch, fsPatchVerified } from './_firestore.js';
+import { fsPatch, fsPatchVerified, fsGetMeta } from './_firestore.js';
 import { sendMail, buildConfirmationEmail, emailConfigured, ADMIN_EMAIL } from './_email.js';
 
 // ── Verify with Stripe: was the Checkout Session actually paid? ──
@@ -87,12 +87,20 @@ export async function verifyPayment(reg) {
   return reg.payment_provider === 'square' ? verifySquare(reg) : verifyStripe(reg);
 }
 
-// Send the branded confirmation once. No-ops if already sent or SendGrid unset.
+// Send the branded confirmation ONCE, even when the webhook, the parent's return (confirm)
+// and the reconcile cron all finalize the same payment within the same few seconds.
+// "Claim before send": re-read the record, then flip confirm_email_sent with a Firestore
+// precondition on its updateTime — only the one caller whose write lands sends the email.
+// If the send then fails, the claim is released so the cron can try again later.
 export async function maybeSendConfirmation(rid, reg) {
   if (reg.confirm_email_sent || !emailConfigured() || !reg.parent_email) return false;
-  const { subject, html } = buildConfirmationEmail(reg);
+  const cur = await fsGetMeta(`registrations/${rid}`);
+  if (!cur || !cur.doc || cur.doc.confirm_email_sent) return false;
+  const claim = await fsPatchVerified(`registrations/${rid}`, { confirm_email_sent: true, confirm_email_at: new Date().toISOString() }, 2, { ifUpdateTime: cur.updateTime });
+  if (!claim.ok) return false; // another path already claimed it (or the write failed — the cron will revisit)
+  const { subject, html } = buildConfirmationEmail(Object.assign({}, cur.doc, reg));
   const ok = await sendMail({ to: reg.parent_email, subject, html, bcc: ADMIN_EMAIL });
-  if (ok) await fsPatch(`registrations/${rid}`, { confirm_email_sent: true });
+  if (!ok) await fsPatch(`registrations/${rid}`, { confirm_email_sent: false, confirm_email_error: 'send_failed' });
   return ok;
 }
 
@@ -108,7 +116,8 @@ export async function finalizePaid(rid, reg, verifyPatch) {
   if (typeof vp.amount_captured_cents === 'number' && typeof reg.amount_cents === 'number' && vp.amount_captured_cents !== reg.amount_cents) {
     patch.amount_mismatch = true;
   }
-  await fsPatchVerified(`registrations/${rid}`, patch);
+  const w = await fsPatchVerified(`registrations/${rid}`, patch);
+  if (!w.ok) return reg; // couldn't record "paid" — don't email a receipt for a record that still says pending; the cron retries
   const merged = Object.assign({}, reg, patch);
   await maybeSendConfirmation(rid, merged);
   return merged;

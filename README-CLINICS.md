@@ -24,7 +24,7 @@ agnostic: **Stripe or Square**, flipped with one env var. No build step, no SDKs
 | `cancel.js` | Admin: mark a registration canceled. |
 | `registrations.js` | Admin: list registrations + rollup for the dashboard. |
 | `checkin.js` | Staff/Admin: a session's roster (door-side fields only) + record/clear a check-in. Accepts `CHECKIN_PASSWORD` **or** `ADMIN_PASSWORD`. |
-| `remind.js` | Cron (8 PM ET nightly): "clinic tomorrow" reminder email to each paid family, once per session. |
+| `remind.js` | Cron (daily, 4 PM ET): "clinic tomorrow" reminder email to each paid family, once per session. |
 | `webhook-stripe.js` | Stripe webhook (signature-verified): finalizes a paid registration the moment Stripe confirms it, even if the parent never returns. |
 | `_clinic.js` | **Authoritative** pricing (`expectedCents`) + validation (`normalizeRegistration`). |
 | `_firestore.js` | Firestore REST helper; server signs in as one admin user (no key file). |
@@ -63,4 +63,3 @@ Preview the dashboard without a backend: `admin.html?demo=1`.
 ## Editing the clinic
 - **Sessions / dates / prices** live in `api/_clinic.js` (authoritative) and are mirrored for
   display in `register.html` (`SESSIONS`, `PRICE_*`) and `clinics.html`. Keep them in sync.
-- Placeholder fall dates are marked with the dashed-pink `.tbd` style on `clinics.html`.

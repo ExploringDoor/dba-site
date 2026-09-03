@@ -85,10 +85,24 @@ export function sessionLabels(reg) {
 
 // Validate + sanitize an incoming registration body. Returns
 // { ok:true, reg } with a clean object, or { ok:false, error }.
+// DOB must be YYYY-MM-DD and give an age of 3–18 on the first clinic day. This is a TYPO
+// guard (a mis-typed year), not an eligibility rule — the 6–14 guidance is Adam's call at the door.
+export function plausibleDob(dob) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dob || ''))) return false;
+  const d = new Date(dob + 'T12:00:00Z');
+  if (isNaN(d)) return false;
+  const ref = new Date(SESSIONS[0].date + 'T12:00:00Z');
+  let age = ref.getUTCFullYear() - d.getUTCFullYear();
+  const m = ref.getUTCMonth() - d.getUTCMonth();
+  if (m < 0 || (m === 0 && ref.getUTCDate() < d.getUTCDate())) age--;
+  return age >= 3 && age <= 18;
+}
+
 export function normalizeRegistration(body) {
   const b = body || {};
-  // Honeypot: a hidden "company" field no real user ever fills. Bots do → reject.
-  if (String(b.company || '').trim()) return { ok: false, error: 'spam' };
+  // Honeypot: a hidden field no real user ever fills (named so autofill never touches it).
+  // `company` is the legacy name — still honoured for any cached copy of the old form.
+  if (String(b.dba_ref || b.company || '').trim()) return { ok: false, error: 'spam' };
   const sessions = cleanSessions(b.sessions);
   if (!sessions.length) return { ok: false, error: 'no_sessions' };
 
@@ -101,8 +115,10 @@ export function normalizeRegistration(body) {
   if (!players.length) return { ok: false, error: 'no_players' };
   if (players.length > 8) return { ok: false, error: 'too_many_players' };
   if (players.some((p) => !p.first || !p.last || !p.dob)) return { ok: false, error: 'incomplete_player' };
+  if (players.some((p) => !plausibleDob(p.dob))) return { ok: false, error: 'bad_dob' };
 
-  const parent_email = clip(b.parent_email, 200).trim();
+  // Lower-cased so the same family always matches (duplicate guard, admin search, Stripe prefill).
+  const parent_email = clip(b.parent_email, 200).trim().toLowerCase();
   if (!validEmail(parent_email)) return { ok: false, error: 'bad_email' };
   const parent_name = stripTags(clip(b.parent_name, 200)).trim();
   const parent_phone = clip(b.parent_phone, 60).trim();

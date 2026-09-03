@@ -13,8 +13,8 @@
 //   Firestore: FIREBASE_PROJECT_ID, FIREBASE_API_KEY, FB_ADMIN_EMAIL, FB_ADMIN_PASSWORD
 //   Optional: SITE_URL (e.g. https://www.downerbasketballacademy.com) for redirect links
 
-import { fbConfigured, fbAdminConfigured, fsCreate, fsPatch, fsPatchVerified } from './_firestore.js';
-import { normalizeRegistration, expectedCents, CLINIC } from './_clinic.js';
+import { fbConfigured, fbAdminConfigured, fsCreate, fsPatch, fsPatchVerified, fsQuery } from './_firestore.js';
+import { normalizeRegistration, expectedCents, cleanSessions, CLINIC } from './_clinic.js';
 
 const PROVIDER = (process.env.PAYMENT_PROVIDER || '').toLowerCase();
 
@@ -44,6 +44,9 @@ function summarize(reg) {
 async function createStripeCheckout({ regId, reg, cents, base }) {
   const params = new URLSearchParams();
   params.set('mode', 'payment');
+  // A checkout link is only good for an hour (Stripe default is 24h) — a stale tab re-opened
+  // days later can't turn into a second charge for a family that already re-registered.
+  params.set('expires_at', String(Math.floor(Date.now() / 1000) + 60 * 60));
   params.set('success_url', `${base}/register-success.html?rid=${regId}&provider=stripe`);
   params.set('cancel_url', `${base}/register.html`);
   params.set('customer_email', reg.parent_email);
@@ -117,6 +120,20 @@ export default async function handler(req, res) {
   // If payments/DB aren't wired yet, tell the page so it shows "opens soon".
   if (!ready()) return res.status(503).json({ error: 'not_configured' });
 
+  // 0) Duplicate guard: the same family paying twice for the same child + Sunday (a re-submit
+  //    after Back from Stripe, or two parents registering the same kid). Blocks only when an
+  //    existing PAID registration for this email has the same player AND an overlapping session.
+  //    Best-effort — a lookup failure never blocks a real signup.
+  try {
+    const key = (p) => `${p.first}|${p.last}|${p.dob}`.toLowerCase().replace(/\s+/g, ' ');
+    const mine = new Set(reg.players.map(key));
+    const prior = await fsQuery('registrations', 'parent_email', 'EQUAL', reg.parent_email);
+    const clash = (prior || []).find((d) => d.status === 'paid'
+      && (d.players || []).some((p) => mine.has(key(p)))
+      && cleanSessions(d.sessions).some((s) => reg.sessions.includes(s)));
+    if (clash) return res.status(409).json({ error: 'already_registered' });
+  } catch (e) { /* fall through — never block on a lookup error */ }
+
   // 1) Persist a PENDING registration so we have a record even if the parent
   //    abandons checkout (and so the admin can see incomplete attempts).
   const now = new Date().toISOString();
@@ -127,7 +144,7 @@ export default async function handler(req, res) {
     amount_refunded_cents: 0,
     currency: 'USD',
     waiver_at: now,
-    waiver_ip: String((req.headers['x-forwarded-for'] || '').split(',')[0] || '').slice(0, 60),
+    waiver_ip: String(req.headers['cf-connecting-ip'] || (req.headers['x-forwarded-for'] || '').split(',')[0] || '').slice(0, 60),
     created: now,
   }));
   const regId = created && created.name ? String(created.name).split('/').pop() : null;

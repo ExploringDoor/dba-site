@@ -11,6 +11,18 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <title>Register — Fall Clinics | Downer Basketball Academy</title>
 <meta name="robots" content="noindex">
+<meta name="description" content="Register for Fall Clinics: six Sundays, Sep 27 – Nov 1, 11:00 AM – 12:15 PM, boys & girls ages 6–14, Kobe Bryant Gymnasium, Ardmore, PA.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://www.greggdownerbasketball.com/register.html">
+<meta property="og:title" content="Register — Fall Clinics | Downer Basketball Academy">
+<meta property="og:description" content="Six Sundays, Sep 27 – Nov 1 · 11:00 AM – 12:15 PM · Boys & girls ages 6–14 · Kobe Bryant Gymnasium, Ardmore, PA.">
+<meta property="og:image" content="https://www.greggdownerbasketball.com/img/og-clinics.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Register — Fall Clinics | Downer Basketball Academy">
+<meta name="twitter:description" content="Six Sundays, Sep 27 – Nov 1 · 11:00 AM – 12:15 PM · Boys & girls ages 6–14 · Kobe Bryant Gymnasium, Ardmore, PA.">
+<meta name="twitter:image" content="https://www.greggdownerbasketball.com/img/og-clinics.jpg">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Outfit:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&family=Saira+Condensed:wght@600;800&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -70,7 +82,6 @@ select.inp{appearance:none;cursor:pointer}
 .all6 input{width:18px;height:18px;accent-color:var(--pink)}
 .all6 .a-label{flex:1;font-weight:600}
 .all6 .a-save{font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--pink);letter-spacing:1px}
-.tbd{background:rgba(212,80,106,.14);border-bottom:1px dashed rgba(212,80,106,.5);padding:0 3px;border-radius:3px}
 .hp{position:absolute!important;left:-9999px!important;width:1px;height:1px;overflow:hidden}
 
 /* PLAYERS repeater */
@@ -98,6 +109,11 @@ select.inp{appearance:none;cursor:pointer}
 .btn-pay:disabled{opacity:.5;cursor:not-allowed}
 .pay-note{font-size:.72rem;color:var(--dim);text-align:center;margin-top:12px;line-height:1.5}
 .err-msg{color:var(--err);font-size:.84rem;margin-top:12px;display:none}
+.inp.inp-err{border-color:var(--err)}
+input[type=checkbox].inp-err{outline:2px solid var(--err);outline-offset:2px}
+.sum-note{font-size:.72rem;color:var(--dim);margin-top:10px;line-height:1.45}
+/* On phones the summary (and its error line) sits below the form — float the error so it's seen next to the field that needs fixing. */
+@media(max-width:880px){.err-msg{position:fixed;left:12px;right:12px;bottom:12px;z-index:200;margin:0;background:#1a0f12;border:1px solid rgba(255,107,107,.5);border-radius:12px;padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.6)}}
 
 @media(max-width:880px){
   .wrap{grid-template-columns:1fr}
@@ -114,15 +130,16 @@ select.inp{appearance:none;cursor:pointer}
 </nav>
 
 <form class="wrap" id="regForm" novalidate>
-  <div class="hp" aria-hidden="true"><label>Company (leave blank)<input type="text" name="company" tabindex="-1" autocomplete="off"></label></div>
+  <!-- Honeypot for bots. Deliberately NOT named like an address/company field so browser autofill and password managers never touch it. -->
+  <div class="hp" aria-hidden="true"><label>Leave this field empty<input type="text" name="dba_ref" tabindex="-1" autocomplete="off"></label></div>
   <div class="head">
     <div class="tag">Fall Clinic Registration</div>
     <h1>Sign Up for Fall Clinics</h1>
-    <p>Pick your Sundays, add your player(s), sign the waiver, and check out securely. A receipt is emailed automatically.</p>
+    <p>Pick your Sundays, add your player(s), sign the waiver, and check out securely. A receipt is emailed automatically.<br><span style="color:var(--dim);font-size:.9em">Boys &amp; girls ages 6–14 · Kobe Bryant Gymnasium, Lower Merion High School, 315 E. Montgomery Ave, Ardmore</span></p>
   </div>
 
-  <!-- This banner auto-hides once PAYMENT_PROVIDER + keys are configured (server says ready). -->
-  <div class="notice" id="testNotice">
+  <!-- Hidden by default; shown only if the server reports payments are NOT ready (no flash of "opens soon" on a slow connection). -->
+  <div class="notice" id="testNotice" style="display:none">
     <strong>Registration opens soon.</strong> We're putting the final touches on secure checkout. You can explore the form now — the payment step goes live the moment our card processing is switched on.
   </div>
 
@@ -142,7 +159,7 @@ select.inp{appearance:none;cursor:pointer}
     <!-- PLAYERS -->
     <div class="card">
       <h2>2. Player(s)</h2>
-      <p class="hint">Add each child you're registering. Siblings can share the same sessions above.</p>
+      <p class="hint">Add each child you're registering. Every player on this form gets the Sundays you picked above (pricing is per player). To sign siblings up for different dates, submit a separate registration for each.</p>
       <div id="playerList"></div>
       <button type="button" class="add-player" id="addPlayer">+ Add another player</button>
     </div>
@@ -158,8 +175,8 @@ select.inp{appearance:none;cursor:pointer}
         <div class="fg"><label for="f-pphone">Phone <span class="req">*</span></label><input class="inp" id="f-pphone" type="tel" name="parent_phone" placeholder="(610) 555-0123" inputmode="tel" autocomplete="tel" required></div>
       </div>
       <div class="grid2">
-        <div class="fg"><label for="f-ename">Emergency contact name <span class="req">*</span></label><input class="inp" id="f-ename" name="emerg_name" placeholder="If different from above" required></div>
-        <div class="fg"><label for="f-ephone">Emergency contact phone <span class="req">*</span></label><input class="inp" id="f-ephone" type="tel" name="emerg_phone" placeholder="(610) 555-0199" inputmode="tel"></div>
+        <div class="fg"><label for="f-ename">Emergency contact name <span class="req">*</span></label><input class="inp" id="f-ename" name="emerg_name" placeholder="Name" required></div>
+        <div class="fg"><label for="f-ephone">Emergency contact phone <span class="req">*</span></label><input class="inp" id="f-ephone" type="tel" name="emerg_phone" placeholder="(610) 555-0199" inputmode="tel" required></div>
       </div>
       <div class="grid2">
         <div class="fg"><label for="f-pkname">Authorized pickup — name (optional)</label><input class="inp" id="f-pkname" name="pickup_name" placeholder="Anyone besides you allowed to pick up"></div>
@@ -179,8 +196,8 @@ select.inp{appearance:none;cursor:pointer}
       <h2>4. Waiver &amp; Signature</h2>
       <p class="hint">Required to participate.</p>
       <div class="waiver-box">
-        <p><strong>Liability Waiver &amp; Code of Conduct.</strong> I understand that participation in basketball activities involves inherent risks, including the risk of injury. On behalf of my player(s), I release Downer Basketball Academy, Lower Merion School District, the Kobe Bryant Gymnasium, and their respective staff and volunteers from liability for injuries sustained during clinic activities, except in cases of gross negligence. I certify that my player is physically able to participate. I authorize DBA staff to seek emergency medical treatment if needed and I agree my player will follow the code of conduct.</p>
-        <p style="margin-top:10px"><strong>Refund &amp; Cancellation Policy.</strong> Registration fees are non-refundable except that, for injury or withdrawal, we issue a credit toward a future DBA clinic; if DBA cancels a session, that session is credited or refunded. See the full <a href="policies.html#refunds" target="_blank" rel="noopener" style="color:var(--pink);text-decoration:underline">refund policy</a> and <a href="policies.html#privacy" target="_blank" rel="noopener" style="color:var(--pink);text-decoration:underline">privacy policy</a>.</p>
+        <p><strong>Liability Waiver &amp; Code of Conduct.</strong> I understand that participation in basketball activities involves inherent risks, including the risk of injury. On behalf of my player(s), I release Downer Basketball Academy ("DBA"), Lower Merion School District, the Kobe Bryant Gymnasium, and their respective staff and volunteers from liability for injuries sustained during clinic activities, except in cases of gross negligence. I certify that my player is physically able to participate. I authorize DBA staff to seek emergency medical treatment if needed and I agree my player will follow the code of conduct.</p>
+        <p style="margin-top:10px"><strong>Refund &amp; Cancellation Policy.</strong> Registration fees are non-refundable except that, for injury or withdrawal, we issue a credit toward a future DBA clinic; if DBA cancels a session, that session is credited or refunded. The card-processing fee is non-refundable. See the full <a href="policies.html#refunds" target="_blank" rel="noopener" style="color:var(--pink);text-decoration:underline">refund policy</a> and <a href="policies.html#privacy" target="_blank" rel="noopener" style="color:var(--pink);text-decoration:underline">privacy policy</a>.</p>
       </div>
       <label class="check"><input type="checkbox" id="waiverAgree" required><span>I have read and agree to the liability waiver, code of conduct &amp; refund policy on behalf of my player(s). <span class="req">*</span></span></label>
       <div class="fg"><label for="f-waiver">Type your full name to sign <span class="req">*</span></label><input class="inp" id="f-waiver" name="waiver_name" placeholder="Your legal name" autocomplete="name" required></div>
@@ -244,7 +261,7 @@ function addPlayer(){
   d.className = 'player';
   d.innerHTML =
     '<div class="p-num">Player '+pCount+'</div>' +
-    (pCount>1 ? '<button type="button" class="rm">remove</button>' : '') +
+    '<button type="button" class="rm">remove</button>' +
     '<div class="grid2">' +
       '<div class="fg"><label>First name <span class="req">*</span></label><input class="inp p-first" placeholder="First" aria-label="Player first name" autocomplete="off"></div>' +
       '<div class="fg"><label>Last name <span class="req">*</span></label><input class="inp p-last" placeholder="Last" aria-label="Player last name" autocomplete="off"></div>' +
@@ -252,14 +269,16 @@ function addPlayer(){
       '<div class="fg"><label>Grade (fall 2026)</label><input class="inp p-grade" placeholder="e.g. 4th" aria-label="Player grade"></div>' +
     '</div>';
   playerList.appendChild(d);
-  try { d.querySelector('.p-dob').max = new Date().toISOString().slice(0, 10); } catch (e) {}
+  try { var dob = d.querySelector('.p-dob'); dob.max = new Date().toISOString().slice(0, 10); dob.min = '2006-01-01'; } catch (e) {}
   var rm = d.querySelector('.rm');
   if(rm) rm.addEventListener('click', function(){ d.remove(); renumber(); recalc(); });
-  recalc();
+  renumber(); recalc();
 }
+// Any player can be removed as long as at least one remains (the "remove" link hides on a lone row).
 function renumber(){
-  Array.prototype.slice.call(playerList.children).forEach(function(p,i){ p.querySelector('.p-num').textContent = 'Player '+(i+1); });
-  pCount = playerList.children.length;
+  var kids = Array.prototype.slice.call(playerList.children);
+  kids.forEach(function(p,i){ p.querySelector('.p-num').textContent = 'Player '+(i+1); var rm = p.querySelector('.rm'); if(rm) rm.style.display = kids.length > 1 ? '' : 'none'; });
+  pCount = kids.length;
 }
 document.getElementById('addPlayer').addEventListener('click', addPlayer);
 addPlayer(); // start with one
@@ -281,7 +300,8 @@ function recalc(){
     var line = (n === SESSIONS.length) ? 'All 6 sessions' : (n + ' session' + (n>1?'s':''));
     sum.innerHTML =
       '<div class="sum-row"><span>'+line+' × '+players+' player'+(players>1?'s':'')+'</span><span class="amt">$'+pp+' ea</span></div>' +
-      '<div class="sum-row total"><span>Total</span><span class="amt">$'+total+'</span></div>';
+      '<div class="sum-row total"><span>Total</span><span class="amt">$'+total+'</span></div>' +
+      '<div class="sum-note">Includes a card-processing fee ($8 per session · $14 for all six), which is non-refundable.</div>';
   }
   updatePayState();
 }
@@ -296,11 +316,35 @@ function updatePayState(){
 
 /* ── Submit ── */
 var TEST_MODE = true; // flipped off automatically below if server reports ready
+var PAY_LABEL = 'Continue to Payment →';
+var HELP = ' Or email aceshoops@gmail.com and we\'ll register you.';
+// Plain-English messages for server error codes — a parent never sees a raw code.
+var ERR_TEXT = {
+  bad_email: 'That email address doesn\'t look right — please double-check it.',
+  missing_contact: 'Please complete the required parent and emergency contact fields.',
+  incomplete_player: 'Please fill in each player\'s first name, last name, and date of birth.',
+  bad_dob: 'One of the dates of birth doesn\'t look right — please check the year.',
+  no_sessions: 'Please choose at least one session.',
+  no_players: 'Please add at least one player.',
+  too_many_players: 'You can register up to 8 players at once — email aceshoops@gmail.com for a larger group.',
+  waiver_required: 'Please agree to the waiver and type your name to sign.',
+  already_registered: 'This player is already registered for one of those Sundays — check your email for the receipt, or email aceshoops@gmail.com to make changes.',
+  spam: 'We couldn\'t submit the form.' + HELP,
+  not_configured: 'Online payment isn\'t switched on yet. Please email aceshoops@gmail.com to hold your spot.',
+  checkout_unavailable: 'Checkout is temporarily unavailable — please try again in a minute.' + HELP,
+  checkout_failed: 'We couldn\'t start the payment — please try again in a minute.' + HELP,
+  save_failed: 'We couldn\'t save your registration — please try again.' + HELP
+};
+function resetPay(){ payBtn.textContent = PAY_LABEL; updatePayState(); }
+// Typo guard only (a mis-typed year); the server applies the same rule. Not an age-eligibility rule.
+function plausibleDob(v){ if(!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false; var y=parseInt(v.slice(0,4),10); return y >= 2007 && y <= 2024; }
 document.getElementById('regForm').addEventListener('submit', function(e){
   e.preventDefault();
   var err = document.getElementById('errMsg'); err.style.display='none';
-  // gather players
-  var players = Array.prototype.slice.call(playerList.children).map(function(p){
+  Array.prototype.slice.call(document.querySelectorAll('.inp-err')).forEach(function(i){ i.classList.remove('inp-err'); });
+  var f = e.target;
+  var rows = Array.prototype.slice.call(playerList.children);
+  var players = rows.map(function(p){
     return {
       first: p.querySelector('.p-first').value.trim(),
       last:  p.querySelector('.p-last').value.trim(),
@@ -308,15 +352,22 @@ document.getElementById('regForm').addEventListener('submit', function(e){
       grade: p.querySelector('.p-grade').value.trim()
     };
   });
-  var missing = players.some(function(p){ return !p.first || !p.last || !p.dob; });
-  var f = e.target;
-  if(selectedSessions().length===0){ return showErr('Please choose at least one session.'); }
-  if(missing){ return showErr('Please fill in each player\'s first name, last name, and date of birth.'); }
-  if(!f.parent_name.value.trim()||!f.parent_email.value.trim()||!f.parent_phone.value.trim()||!f.emerg_name.value.trim()||!f.emerg_phone.value.trim()){ return showErr('Please complete the required parent and emergency contact fields.'); }
-  if(!document.getElementById('waiverAgree').checked || !f.waiver_name.value.trim()){ return showErr('Please agree to the waiver and type your name to sign.'); }
+  if(selectedSessions().length===0){ return showErr(ERR_TEXT.no_sessions, document.getElementById('all6')); }
+  for(var i=0;i<rows.length;i++){
+    var p=players[i], r=rows[i];
+    if(!p.first) return showErr(ERR_TEXT.incomplete_player, r.querySelector('.p-first'));
+    if(!p.last)  return showErr(ERR_TEXT.incomplete_player, r.querySelector('.p-last'));
+    if(!p.dob)   return showErr(ERR_TEXT.incomplete_player, r.querySelector('.p-dob'));
+    if(!plausibleDob(p.dob)) return showErr(ERR_TEXT.bad_dob, r.querySelector('.p-dob'));
+  }
+  var reqs=['parent_name','parent_email','parent_phone','emerg_name','emerg_phone'];
+  for(var j=0;j<reqs.length;j++){ if(!f[reqs[j]].value.trim()) return showErr(ERR_TEXT.missing_contact, f[reqs[j]]); }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(f.parent_email.value.trim())) return showErr(ERR_TEXT.bad_email, f.parent_email);
+  if(!document.getElementById('waiverAgree').checked) return showErr('Please tick the box to agree to the waiver, code of conduct & refund policy.', document.getElementById('waiverAgree'));
+  if(!f.waiver_name.value.trim()) return showErr('Please type your full name to sign the waiver.', f.waiver_name);
 
   var payload = {
-    company: (f.company && f.company.value || '').trim(), // honeypot — real users never fill this
+    dba_ref: (f.dba_ref && f.dba_ref.value || '').trim(), // honeypot — real users never fill this
     sessions: selectedSessions(),
     players: players,
     parent_name: f.parent_name.value.trim(), parent_rel: f.parent_rel.value.trim(),
@@ -329,27 +380,77 @@ document.getElementById('regForm').addEventListener('submit', function(e){
     waiver_name: f.waiver_name.value.trim(), waiver_agree: true
   };
 
+  saveDraft(); // so Back from the payment page (or a reload) doesn't wipe the form
   payBtn.disabled = true; payBtn.textContent = 'Starting checkout…';
-  fetch('/api/checkout', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
-    .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, status:r.status, d:d}; }); })
+  var ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  var timer = ctl ? setTimeout(function(){ ctl.abort(); }, 25000) : null;
+  fetch('/api/checkout', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload), signal: ctl ? ctl.signal : undefined })
+    .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, status:r.status, d:d}; }, function(){ return {ok:false, status:r.status, d:null}; }); })
     .then(function(res){
+      if(timer) clearTimeout(timer);
       if(res.ok && res.d && res.d.url){ window.location = res.d.url; return; } // Stripe/Square hosted checkout
-      if(res.status===503 || (res.d && (res.d.error==='not_configured'||res.d.error==='stripe_not_configured'||res.d.error==='payments_not_configured'))){
-        showErr('Online payment isn\'t switched on yet. Please email aceshoops@gmail.com to hold your spot — checkout goes live shortly.');
-      } else {
-        showErr((res.d && res.d.error) ? ('Something went wrong: '+res.d.error) : 'Something went wrong. Please try again or email aceshoops@gmail.com.');
-      }
-      payBtn.disabled=false; payBtn.textContent='Continue to Payment →';
+      var code = (res.d && res.d.error) || (res.status===503 ? 'not_configured' : '');
+      showErr(ERR_TEXT[code] || ('Something went wrong (' + (res.status || 'no response') + ').' + HELP));
+      resetPay();
     })
-    .catch(function(){ showErr('Could not reach the server. Please try again or email aceshoops@gmail.com.'); payBtn.disabled=false; payBtn.textContent='Continue to Payment →'; });
+    .catch(function(x){
+      if(timer) clearTimeout(timer);
+      showErr((x && x.name==='AbortError') ? 'That took too long — please check your connection and try again.' : 'Could not reach the server — please check your connection and try again.' + HELP);
+      resetPay();
+    });
 });
-function showErr(m){ var e=document.getElementById('errMsg'); e.textContent=m; e.style.display='block'; try{ e.focus({preventScroll:true}); e.scrollIntoView({block:'center',behavior:'smooth'}); }catch(_){ } }
+// Once the parent starts fixing things, clear the error and the highlight.
+document.getElementById('regForm').addEventListener('input', function(ev){
+  var e=document.getElementById('errMsg'); if(e.style.display==='block') e.style.display='none';
+  if(ev.target && ev.target.classList) ev.target.classList.remove('inp-err');
+});
+// Show the message and highlight + focus the field that needs attention (when there is one).
+function showErr(m, el){
+  var e=document.getElementById('errMsg'); e.textContent=m; e.style.display='block';
+  try{
+    if(el){ if(el.classList) el.classList.add('inp-err'); el.focus({preventScroll:true}); el.scrollIntoView({block:'center',behavior:'smooth'}); }
+    else { e.focus({preventScroll:true}); e.scrollIntoView({block:'center',behavior:'smooth'}); }
+  }catch(_){ }
+}
 
-/* ── Ask the server if payments are ready; hide the test banner if so ── */
+/* ── Keep what the parent typed if they come back from checkout (or the page reloads) ── */
+var DRAFT_KEY='dba_regform';
+var DRAFT_FIELDS=['parent_name','parent_rel','parent_email','parent_phone','emerg_name','emerg_phone','pickup_name','pickup_phone','allergies','medications','medical_conditions','waiver_name'];
+function saveDraft(){
+  try{
+    var f=document.getElementById('regForm');
+    var d={ sessions:selectedSessions(), fields:{}, checks:{}, players:Array.prototype.slice.call(playerList.children).map(function(p){
+      return { first:p.querySelector('.p-first').value, last:p.querySelector('.p-last').value, dob:p.querySelector('.p-dob').value, grade:p.querySelector('.p-grade').value };
+    }) };
+    DRAFT_FIELDS.forEach(function(n){ d.fields[n]=f[n].value; });
+    ['treat_ok','photo'].forEach(function(n){ d.checks[n]=!!f[n].checked; });
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(d));
+  }catch(_){ }
+}
+function restoreDraft(){
+  try{
+    var raw=sessionStorage.getItem(DRAFT_KEY); if(!raw) return;
+    var d=JSON.parse(raw), f=document.getElementById('regForm');
+    (d.sessions||[]).forEach(function(id){ sessChks.forEach(function(c){ if(c.value===id) c.checked=true; }); });
+    all6.checked = selectedSessions().length===SESSIONS.length; syncSessRows();
+    var ps=d.players||[];
+    while(playerList.children.length<ps.length) addPlayer();
+    ps.forEach(function(p,i){ var row=playerList.children[i]; if(!row) return; row.querySelector('.p-first').value=p.first||''; row.querySelector('.p-last').value=p.last||''; row.querySelector('.p-dob').value=p.dob||''; row.querySelector('.p-grade').value=p.grade||''; });
+    DRAFT_FIELDS.forEach(function(n){ if(f[n] && d.fields && d.fields[n]!=null) f[n].value=d.fields[n]; });
+    Object.keys(d.checks||{}).forEach(function(n){ if(f[n]) f[n].checked=!!d.checks[n]; });
+  }catch(_){ }
+}
+// If the parent taps Back from the payment page, the browser may restore this page from its
+// cache with the button still greyed out — un-stick it.
+window.addEventListener('pageshow', function(e){ if(e.persisted) resetPay(); });
+
+/* ── Ask the server if payments are ready; show the "opens soon" banner only if NOT ── */
 fetch('/api/checkout').then(function(r){ return r.json(); }).then(function(d){
-  if(d && d.ready){ document.getElementById('testNotice').style.display='none'; TEST_MODE=false; }
+  if(d && d.ready){ TEST_MODE=false; }
+  else if(d && d.ready===false){ document.getElementById('testNotice').style.display='block'; }
 }).catch(function(){});
 
+restoreDraft();
 recalc();
 </script>
 </body>

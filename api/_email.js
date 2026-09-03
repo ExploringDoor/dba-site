@@ -1,20 +1,32 @@
 // Shared SendGrid sender (fetch-based, no SDK) — mirrors the STS/Plumlee pattern.
-// Used for DBA's OWN branded emails (e.g. the registration confirmation). The
-// official card RECEIPT is emailed automatically by Stripe/Square, not here.
+// Used for DBA's OWN branded emails: the registration receipt, refund receipt, and the
+// day-before reminder. (Stripe's own customer emails are deliberately OFF — this IS the receipt.)
 //
-// Env: SENDGRID_API_KEY, MAIL_FROM (a SendGrid-verified sender address),
-//      MAIL_FROM_NAME (optional), ADMIN_EMAIL (optional — BCC'd a copy).
+// Env: SENDGRID_API_KEY, MAIL_FROM (a domain-authenticated sender, e.g. noreply@greggdownerbasketball.com),
+//      MAIL_FROM_NAME (optional), ADMIN_EMAIL (optional — BCC'd a copy),
+//      MAIL_REPLY_TO (optional — where "reply to this email" actually goes; defaults to aceshoops@gmail.com).
 
 import { priceBreakdown, sessionLabels } from './_clinic.js';
 
 function fmtDate(iso) {
   if (!iso) return '';
-  try { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }); } catch (e) { return ''; }
+  try { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'America/New_York' }); } catch (e) { return ''; }
+}
+// Plain-text fallback for the HTML body: strip tags AND decode the entities we use, so a
+// text-only client never sees "&ndash;" or "&#127936;" literally.
+function htmlToText(html) {
+  const ents = { '&nbsp;': ' ', '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'", '&ndash;': '–', '&mdash;': '—', '&middot;': '·', '&times;': '×', '&hellip;': '…' };
+  return String(html || '')
+    .replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|tr|h[1-6]|li)>/gi, '\n').replace(/<[^>]+>/g, ' ')
+    .replace(/&#(\d+);/g, (m, n) => { try { return String.fromCodePoint(parseInt(n, 10)); } catch (e) { return ''; } })
+    .replace(/&[a-z]+;/gi, (m) => (m in ents ? ents[m] : ''))
+    .replace(/[ \t]+/g, ' ').replace(/\n\s*\n\s*\n+/g, '\n\n').trim();
 }
 
 const SG_KEY = process.env.SENDGRID_API_KEY || '';
 const MAIL_FROM = process.env.MAIL_FROM || '';
 const MAIL_FROM_NAME = process.env.MAIL_FROM_NAME || 'Downer Basketball Academy';
+const MAIL_REPLY_TO = process.env.MAIL_REPLY_TO || 'aceshoops@gmail.com';
 export const ADMIN_EMAIL = process.env.ADMIN_EMAIL || '';
 
 export function emailConfigured() { return !!(SG_KEY && MAIL_FROM); }
@@ -33,9 +45,10 @@ export async function sendMail({ to, subject, html, text, bcc }) {
       body: JSON.stringify({
         personalizations: [personalization],
         from: { email: MAIL_FROM, name: MAIL_FROM_NAME },
+        reply_to: { email: MAIL_REPLY_TO, name: MAIL_FROM_NAME },
         subject: subject || 'Downer Basketball Academy',
         content: [
-          { type: 'text/plain', value: text || (html ? html.replace(/<[^>]+>/g, ' ') : '') },
+          { type: 'text/plain', value: text || htmlToText(html) },
           ...(html ? [{ type: 'text/html', value: html }] : []),
         ],
       }),
@@ -91,17 +104,18 @@ export function buildConfirmationEmail(reg) {
           ${row(baseLabel, money(b.base_cents))}
           ${row('Processing', money(b.fee_cents))}
           ${row('Total paid', money(reg.amount_cents), { strong: true })}
-          ${last4 ? row('Paid with', via + ' ending ' + last4) : row('Paid with', via)}
+          ${last4 ? row('Paid with', 'Card ending ' + last4 + ' (via ' + via + ')') : row('Paid with', via)}
         </table>
 
         <p style="color:#555;line-height:1.6;font-size:13px;margin:16px 0 0">
           <strong>Waiver &amp; refund policy:</strong> Agreed${signer ? ' &mdash; signed by ' + signer : ''}${signedAt ? ' on ' + signedAt : ''}.
-          Refunds are issued as credit toward a future clinic for injury or withdrawal &mdash; contact us.
+          Injury or withdrawal: credit toward a future DBA clinic. If DBA cancels a session: credit or refund for that session. The card-processing fee is non-refundable.
+          Full policy: <a href="https://www.greggdownerbasketball.com/policies.html#refunds" style="color:#8B1A2B">greggdownerbasketball.com/policies</a>.
         </p>
 
         <hr style="border:none;border-top:1px solid #eee;margin:18px 0">
-        <p style="color:#555;line-height:1.6;margin:0 0 8px"><strong>Location:</strong> Kobe Bryant Gymnasium, Lower Merion HS, 315 E. Montgomery Ave, Ardmore, PA 19003.<br><strong>Parking:</strong> the lot right by the gymnasium.<br><strong>Time:</strong> Sundays, 11:00 AM &ndash; 12:15 PM.<br><strong>Bring:</strong> sneakers, athletic clothes, and a water bottle. Basketballs provided.</p>
-        <p style="color:#999;font-size:12px;line-height:1.6;margin:14px 0 0">Payments are collected by Always Competing Sports LLC on behalf of the clinic's organizing booster club and remitted to them. Your card processor also emails an official payment receipt. Questions? Reply to this email or contact aceshoops@gmail.com.</p>
+        <p style="color:#555;line-height:1.6;margin:0 0 8px"><strong>Location:</strong> Kobe Bryant Gymnasium, Lower Merion HS, 315 E. Montgomery Ave, Ardmore, PA 19003.<br><strong>Parking:</strong> the lot right by the gymnasium.<br><strong>Time:</strong> Sundays, 11:00 AM &ndash; 12:15 PM. Please arrive about 10 minutes early and check in with our staff at the gym door.<br><strong>Pick-up:</strong> players are released to a parent or the authorized pickup person on this registration.<br><strong>Bring:</strong> sneakers, athletic clothes, and a water bottle. Basketballs provided.</p>
+        <p style="color:#999;font-size:12px;line-height:1.6;margin:14px 0 0">This email is your receipt. Payments are collected by Always Competing Sports LLC on behalf of the clinic's organizing booster club and remitted to them. Questions? Reply to this email or contact aceshoops@gmail.com.</p>
       </div>
     </div>`;
   return { subject, html };
@@ -137,7 +151,7 @@ export function buildRefundEmail(reg, refundedNowCents, fullyRefunded) {
           <tr><td style="padding:9px 14px;color:#777;white-space:nowrap">Receipt #</td><td style="padding:9px 14px;text-align:right;font-family:monospace">${regId}</td></tr>
           ${row('Player(s)', players.length ? players.join('<br>') : '&mdash;')}
           ${row('Refund amount', money(refundedNowCents), { strong: true })}
-          ${last4 ? row('Refunded to', via + ' ending ' + last4) : row('Refunded to', 'your original ' + via)}
+          ${last4 ? row('Refunded to', 'Card ending ' + last4 + ' (your original payment method)') : row('Refunded to', 'Your original payment method')}
           ${!fullyRefunded ? row('Note', 'Partial refund &mdash; ' + money(totalRefunded) + ' of ' + money(paidTotal) + ' refunded to date') : ''}
         </table>
 
@@ -172,7 +186,7 @@ export function buildReminderEmail(reg, session) {
           ${cell('Parking', 'The lot right by the gymnasium', true)}
           ${cell('Bring', 'Sneakers, athletic clothes, and a water bottle', true)}
         </table>
-        <p style="color:#555;line-height:1.6;font-size:13px;margin:16px 0 0">Please arrive about 10 minutes early for check-in. Can't make it? Just reply to this email or contact aceshoops@gmail.com.</p>
+        <p style="color:#555;line-height:1.6;font-size:13px;margin:16px 0 0">Please arrive about 10 minutes early and check in with our staff at the gym door. Players are released to a parent or your authorized pickup person. Can't make it? Just reply to this email or contact aceshoops@gmail.com.</p>
         <p style="color:#999;font-size:12px;line-height:1.6;margin:14px 0 0">Downer Basketball Academy &middot; Fall Clinics 2026</p>
       </div>
     </div>`;

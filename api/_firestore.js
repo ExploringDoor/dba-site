@@ -108,11 +108,18 @@ export function pathSafe(p) {
 }
 
 export async function fsGet(path) {
+  const m = await fsGetMeta(path);
+  return m ? m.doc : null;
+}
+// Like fsGet, but also returns Firestore's `updateTime` so a caller can make a conditional
+// write (see fsPatchVerified's `ifUpdateTime`) — the building block for "claim before send".
+export async function fsGetMeta(path) {
   if (!pathSafe(path)) return null;
   const r = await fetch(`${FB_BASE}/${path}?key=${FB_KEY}`, { headers: await authHeader() });
   if (!r.ok) return null;
   const d = await r.json();
-  return d.fields ? { id: String(d.name).split('/').pop(), ...fromFirestore(d.fields) } : null;
+  if (!d.fields) return null;
+  return { doc: { id: String(d.name).split('/').pop(), ...fromFirestore(d.fields) }, updateTime: d.updateTime || '' };
 }
 export async function fsPatch(path, fields) {
   if (!pathSafe(path)) return { error: { status: 'INVALID_ARGUMENT', code: 400, message: 'unsafe path' } };
@@ -127,13 +134,17 @@ export async function fsPatch(path, fields) {
 // network). Use for money-critical writes — marking a charged registration paid — where a
 // silently-dropped PATCH would leave a charged entry looking unpaid and thus re-chargeable.
 // Returns { ok:true, data } or { ok:false, status, error }.
-export async function fsPatchVerified(path, fields, tries = 4) {
+// opts.ifUpdateTime — only apply if the document's updateTime still equals this value (from
+// fsGetMeta). If someone else wrote in between, Firestore answers 400 FAILED_PRECONDITION and
+// we return { ok:false, status:400/412 } WITHOUT retrying — that's the "lost the race" signal.
+export async function fsPatchVerified(path, fields, tries = 4, opts = {}) {
   if (!pathSafe(path)) return { ok: false, status: 400, error: { message: 'unsafe path' } };
   const mask = Object.keys(fields).map(k => `updateMask.fieldPaths=${encodeURIComponent(k)}`).join('&');
+  const pre = opts && opts.ifUpdateTime ? `&currentDocument.updateTime=${encodeURIComponent(opts.ifUpdateTime)}` : '';
   let last = { ok: false, status: 0, error: { message: 'no attempt' } };
   for (let i = 0; i < tries; i++) {
     try {
-      const r = await fetch(`${FB_BASE}/${path}?${mask}&key=${FB_KEY}`, {
+      const r = await fetch(`${FB_BASE}/${path}?${mask}${pre}&key=${FB_KEY}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
         body: JSON.stringify({ fields: toFirestore(fields) })
       });

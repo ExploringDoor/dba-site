@@ -1,6 +1,7 @@
 User-agent: *
 Allow: /
 Disallow: /admin.html
+Disallow: /checkin.html
 Disallow: /register-success.html
 
 Sitemap: https://www.greggdownerbasketball.com/sitemap.xml

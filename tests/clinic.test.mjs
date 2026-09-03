@@ -65,6 +65,16 @@ await test('normalize strips HTML metacharacters from names (anti-XSS at intake)
 });
 await test('normalize caps runaway player list', () => assert.equal(normalizeRegistration({ ...GOOD, players: Array(20).fill({ first: 'A', last: 'B', dob: 'x' }) }).error, 'too_many_players'));
 await test('honeypot (company field) rejects bots', () => assert.equal(normalizeRegistration({ ...GOOD, company: 'AcmeBot' }).error, 'spam'));
+await test('honeypot (dba_ref field) rejects bots', () => assert.equal(normalizeRegistration({ ...GOOD, dba_ref: 'http://spam' }).error, 'spam'));
+await test('dob typo guard: garbage / mis-typed year → bad_dob; a real kid passes', () => {
+  assert.equal(normalizeRegistration({ ...GOOD, players: [{ first: 'A', last: 'B', dob: '0216-05-03' }] }).error, 'bad_dob');
+  assert.equal(normalizeRegistration({ ...GOOD, players: [{ first: 'A', last: 'B', dob: '1990-05-03' }] }).error, 'bad_dob');
+  assert.equal(normalizeRegistration({ ...GOOD, players: [{ first: 'A', last: 'B', dob: 'May 3 2015' }] }).error, 'bad_dob');
+  assert.equal(normalizeRegistration({ ...GOOD, players: [{ first: 'A', last: 'B', dob: '2018-05-03' }] }).ok, true);
+});
+await test('parent email is stored lower-cased (so the same family always matches)', () => {
+  assert.equal(normalizeRegistration({ ...GOOD, parent_email: ' Jane.Doe@Gmail.com ' }).reg.parent_email, 'jane.doe@gmail.com');
+});
 
 console.log('\ncheckout handler (no env configured)');
 const checkout = (await import('../api/checkout.js')).default;
