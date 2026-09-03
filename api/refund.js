@@ -7,6 +7,7 @@
 
 import { fbConfigured, fbAdminConfigured, fsGetMeta, fsPatchVerified } from './_firestore.js';
 import { sendMail, buildRefundEmail, ADMIN_EMAIL } from './_email.js';
+import { priceBreakdown } from './_clinic.js';
 
 // Constant-time string compare (avoids leaking the passcode via timing).
 function ctEq(a, b) {
@@ -93,10 +94,15 @@ export default async function handler(req, res) {
     const key = `rf_${reg.id}_${already}_${cents}`.slice(0, 120);
     out = reg.payment_provider === 'square' ? await refundSquare(reg, cents, key) : await refundStripe(reg, cents, key);
     const newRefunded = already + cents;
-    const fullyRefunded = newRefunded >= (reg.amount_cents || 0);
+    // Policy: the card-processing fee is non-refundable. So a registration counts as REFUNDED
+    // (off the rosters, no reminders) once everything BUT the fee has gone back — the standard
+    // refund — not only when every last dollar has. A true partial (one of two Sundays) stays paid.
+    const feeCents = priceBreakdown(reg).fee_cents || 0;
+    const refundableCents = Math.max(0, (reg.amount_cents || 0) - feeCents);
+    const fullyRefunded = newRefunded >= refundableCents;
     const patch = {
       amount_refunded_cents: newRefunded,
-      // Fully refunded → 'refunded'; partial → keep the current status (don't un-cancel).
+      // Settled (fee aside) → 'refunded'; true partial → keep the current status (don't un-cancel).
       status: fullyRefunded ? 'refunded' : (reg.status || 'paid'),
       last_refund_id: out.id || '',
       last_refund_at: new Date().toISOString(),
@@ -122,7 +128,7 @@ export default async function handler(req, res) {
       }
     } catch (e) { /* swallow — refund already succeeded */ }
 
-    return res.status(200).json({ ok: true, refunded_cents: newRefunded, refunded: (newRefunded / 100).toFixed(2), status: patch.status });
+    return res.status(200).json({ ok: true, refunded_cents: newRefunded, refunded: (newRefunded / 100).toFixed(2), status: patch.status, fee_retained_cents: fullyRefunded ? Math.max(0, (reg.amount_cents || 0) - newRefunded) : 0 });
   } catch (e) {
     // If the processor DID refund (out.id set) and something later threw, say so — never let
     // "refund_failed" tempt the admin into refunding twice.

@@ -599,7 +599,7 @@ await test('partial refund $30 of $70 → Stripe refund call, amount_refunded_ce
   rr = fake.seedReg({ status: 'paid', sessions: ['s1', 's2'], stripe_session_id: 'cs_ref', stripe_payment_intent: 'pi_ref' });
   const res = await call(refund, { method: 'POST', headers: ADMIN, body: { rid: rr, amount_cents: 3000 } });
   assert.equal(res.statusCode, 200, JSON.stringify(res.body));
-  assert.deepEqual(res.body, { ok: true, refunded_cents: 3000, refunded: '30.00', status: 'paid' });
+  assert.deepEqual(res.body, { ok: true, refunded_cents: 3000, refunded: '30.00', status: 'paid', fee_retained_cents: 0 });
   const calls = fake.calls({ host: 'api.stripe.com', method: 'POST', path: '/v1/refunds' });
   assert.equal(calls.length, 1);
   assert.deepEqual(calls[0].body, { payment_intent: 'pi_ref', amount: '3000' });
@@ -616,7 +616,7 @@ await test('partial refund $30 of $70 → Stripe refund call, amount_refunded_ce
 await test('over-refund attempt (amount_cents 999999) is clamped to the remaining $40 → fully refunded, status refunded, second receipt', async () => {
   const res = await call(refund, { method: 'POST', headers: ADMIN, body: { rid: rr, amount_cents: 999999 } });
   assert.equal(res.statusCode, 200, JSON.stringify(res.body));
-  assert.deepEqual(res.body, { ok: true, refunded_cents: 7000, refunded: '70.00', status: 'refunded' });
+  assert.deepEqual(res.body, { ok: true, refunded_cents: 7000, refunded: '70.00', status: 'refunded', fee_retained_cents: 0 });
   const calls = fake.calls({ host: 'api.stripe.com', method: 'POST', path: '/v1/refunds' });
   assert.equal(calls.length, 2);
   assert.equal(calls[1].body.amount, '4000');
@@ -663,12 +663,30 @@ await test('if Stripe refuses (our doc says $99.99 but Stripe only captured $38)
   assert.equal(d.amount_refunded_cents, 0); assert.equal(d.status, 'paid'); assert.equal(d.last_refund_id, undefined);
   assert.equal(fake.mails().length, 0);
 });
+await test('POLICY refund: $30 of a $35 single Sunday (fee kept) → status refunded, off the roster, receipt says the fee is non-refundable', async () => {
+  fake.stripe.seedSession({ id: 'cs_pol', pi: 'pi_pol', paid: true, amount: 3500 });
+  const rid = fake.seedReg({ status: 'paid', sessions: ['s1'], stripe_session_id: 'cs_pol', stripe_payment_intent: 'pi_pol', parent_email: 'pol@x.com' });
+  const before = fake.mails().length;
+  const res = await call(refund, { method: 'POST', headers: ADMIN, body: { rid, amount_cents: 3000 } });
+  assert.equal(res.statusCode, 200, JSON.stringify(res.body));
+  assert.deepEqual(res.body, { ok: true, refunded_cents: 3000, refunded: '30.00', status: 'refunded', fee_retained_cents: 500 });
+  const d = fake.doc(`registrations/${rid}`);
+  assert.equal(d.status, 'refunded'); assert.equal(d.amount_refunded_cents, 3000);
+  const m = fake.mails(); assert.equal(m.length, before + 1);
+  const last = m[m.length - 1];
+  assert.ok(last.html.includes('$30.00') && last.html.includes('non-refundable') && !last.html.includes('Partial refund'), 'receipt explains the retained fee, not "partial"');
+  const roster = await call(checkin, { method: 'GET', headers: { 'x-checkin-key': process.env.CHECKIN_PASSWORD }, query: { session: 's1' } });
+  assert.ok(!roster.body.players.some((p) => p.rid === rid), 'a refunded family is off the check-in roster');
+  const again = await call(refund, { method: 'POST', headers: ADMIN, body: { rid, amount_cents: 500 } });
+  assert.equal(again.statusCode, 200, 'the admin can still choose to refund the fee later');
+  assert.equal(fake.doc(`registrations/${rid}`).amount_refunded_cents, 3500);
+});
 await test('a canceled-but-paid reg can still be refunded; a partial keeps status canceled', async () => {
   fake.reset();
   fake.stripe.seedSession({ id: 'cs_cx', pi: 'pi_cx', paid: true, amount: 7000 });
   const rid = fake.seedReg({ status: 'canceled', sessions: ['s1', 's2'], stripe_session_id: 'cs_cx', stripe_payment_intent: 'pi_cx', canceled_at: '2026-09-02T00:00:00Z' });
   const res = await call(refund, { method: 'POST', headers: ADMIN, body: { rid, amount_cents: 3500 } });
-  assert.deepEqual(res.body, { ok: true, refunded_cents: 3500, refunded: '35.00', status: 'canceled' });
+  assert.deepEqual(res.body, { ok: true, refunded_cents: 3500, refunded: '35.00', status: 'canceled', fee_retained_cents: 0 });
   assert.equal(fake.doc(`registrations/${rid}`).status, 'canceled');
 });
 

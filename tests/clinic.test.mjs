@@ -134,6 +134,11 @@ await test('buildRefundEmail renders a branded full-refund receipt', () => {
   assert.match(em.html, /\$38\.00/);
   assert.ok(!/Partial refund/.test(em.html), 'full refund should not show the partial note');
 });
+await test('buildRefundEmail: a policy refund (fee kept) says the fee is non-refundable, not "partial"', () => {
+  const reg = { id: 'abc123', clinic_title: 'DBA', players: [{ first: 'T', last: 'M' }], amount_cents: 3500, amount_refunded_cents: 3000, paid_via: 'Stripe', card_last4: '4242' };
+  const em = buildRefundEmail(reg, 3000, true);
+  assert.ok(em.html.includes('$5.00') && em.html.includes('non-refundable') && !em.html.includes('Partial refund'));
+});
 await test('buildRefundEmail notes a partial refund with running total', () => {
   const reg = { id: 'abc123', clinic_title: 'DBA', players: [{ first: 'T', last: 'M' }], amount_cents: 3800, amount_refunded_cents: 1000 };
   const em = buildRefundEmail(reg, 1000, false);

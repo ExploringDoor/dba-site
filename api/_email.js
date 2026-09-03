@@ -152,7 +152,7 @@ export function buildRefundEmail(reg, refundedNowCents, fullyRefunded) {
           ${row('Player(s)', players.length ? players.join('<br>') : '&mdash;')}
           ${row('Refund amount', money(refundedNowCents), { strong: true })}
           ${last4 ? row('Refunded to', 'Card ending ' + last4 + ' (your original payment method)') : row('Refunded to', 'Your original payment method')}
-          ${!fullyRefunded ? row('Note', 'Partial refund &mdash; ' + money(totalRefunded) + ' of ' + money(paidTotal) + ' refunded to date') : ''}
+          ${!fullyRefunded ? row('Note', 'Partial refund &mdash; ' + money(totalRefunded) + ' of ' + money(paidTotal) + ' refunded to date') : (totalRefunded < paidTotal ? row('Note', 'The ' + money(paidTotal - totalRefunded) + ' card-processing fee is non-refundable per our <a href="https://www.greggdownerbasketball.com/policies.html#refunds" style="color:#8B1A2B">refund policy</a>') : '')}
         </table>
 
         <p style="color:#999;font-size:12px;line-height:1.6;margin:16px 0 0">Payments are collected by Always Competing Sports LLC on behalf of the clinic's organizing booster club and remitted to them. Questions about your refund? Reply to this email or contact aceshoops@gmail.com.</p>
