@@ -44,6 +44,14 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .sesschip{font-family:'IBM Plex Mono',monospace;font-size:.72rem;background:var(--glass);border:1px solid var(--glass-b);border-radius:8px;padding:6px 10px;color:var(--txt-m);cursor:pointer;transition:all .15s}
 .sesschip:hover{border-color:var(--mrn);color:var(--txt)}
 .sesschip b{color:var(--txt)}
+.sesschip.canceled{text-decoration:line-through;border-color:rgba(176,42,42,.45);color:#b02a2a}
+/* Session-notice composer */
+.nf{margin-bottom:10px}
+.nf .lbl{display:block;font-size:.7rem;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
+.ninp{width:100%;font:inherit;font-size:.9rem;padding:9px 11px;border:1px solid var(--glass-b);border-radius:8px;background:#fff;color:var(--txt)}
+.nf.row{display:flex;gap:16px;font-size:.85rem;color:var(--txt-m)}
+.chk-row{display:flex;gap:8px;align-items:flex-start;font-size:.8rem;color:var(--txt-m);line-height:1.4}
+.notice-bad{background:rgba(176,42,42,.08);border:1px solid rgba(176,42,42,.35);border-radius:8px;padding:8px 10px;font-size:.82rem;display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:10px}
 .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
 .toolbar .inp{width:auto;flex:1;min-width:180px;padding:9px 12px}
 .filters{display:flex;gap:4px}
@@ -153,7 +161,7 @@ tr:hover td{background:rgba(0,0,0,.03)}
 var KEY_STORE='dba_admin_key';
 var SESSION_LABELS={s1:'Sep 27',s2:'Oct 4',s3:'Oct 11',s4:'Oct 18',s5:'Oct 25',s6:'Nov 1'};
 var SESSION_DATES={s1:'2026-09-27',s2:'2026-10-04',s3:'2026-10-11',s4:'2026-10-18',s5:'2026-10-25',s6:'2026-11-01'}; // keep in sync with api/_clinic.js
-var state={ key:'', data:[], summary:{}, filter:'all', q:'' };
+var state={ key:'', data:[], summary:{}, filter:'all', q:'', sessions_status:{} };
 
 function money(c){ return '$'+((c||0)/100).toFixed(2); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];}); }
@@ -170,7 +178,7 @@ function load(){
     if(r.status===503){ throw {code:'config'}; }
     return r.json();
   }).then(function(d){
-    state.data=d.registrations||[]; state.summary=d.summary||{}; state.cron=d.cron||null;
+    state.data=d.registrations||[]; state.summary=d.summary||{}; state.cron=d.cron||null; state.sessions_status=d.sessions_status||{};
     render();
   });
 }
@@ -207,7 +215,8 @@ function render(){
   renderCron();
   var ps=s.perSession||{};
   document.getElementById('sessbar').innerHTML=Object.keys(SESSION_LABELS).map(function(id){
-    return '<span class="sesschip" data-sid="'+id+'" title="View / print this session\'s roster">'+SESSION_LABELS[id]+' <b>'+(ps[id]||0)+'</b></span>';
+    var off=isSessCanceled(id);
+    return '<span class="sesschip'+(off?' canceled':'')+'" data-sid="'+id+'" title="'+(off?'CANCELLED — click to view roster or reopen':'View / print this session\'s roster')+'">'+SESSION_LABELS[id]+' <b>'+(ps[id]||0)+'</b>'+(off?' ✕':'')+'</span>';
   }).join('');
 
   var rows=state.data.filter(function(r){
@@ -484,7 +493,7 @@ function rosterCard(sid, live){
     '</tr>';
   }).join('') || '<tr><td colspan="6" style="padding:16px;text-align:center;color:#888">No paid registrations for this session yet.</td></tr>';
   return '<div style="background:#fff;color:#111;border:1px solid #e2e6ea;border-radius:10px;overflow:hidden;font-family:Arial,Helvetica,sans-serif">'+
-    '<div style="background:#8B1A2B;color:#fff;padding:12px 16px"><div style="font-weight:800;font-size:15px">DBA Fall Clinic &mdash; '+esc(label)+'</div><div style="font-size:11px;color:#f0d0d6">Check-in roster &middot; '+rows.length+' player'+(rows.length===1?'':'s')+(rows.length?' &middot; '+present+' checked in':'')+'</div></div>'+
+    '<div style="background:#8B1A2B;color:#fff;padding:12px 16px"><div style="font-weight:800;font-size:15px">DBA Fall Clinic &mdash; '+esc(label)+(isSessCanceled(sid)?' <span style="background:#fff;color:#8B1A2B;border-radius:4px;padding:1px 7px;font-size:11px;letter-spacing:1px;vertical-align:middle">CANCELLED</span>':'')+'</div><div style="font-size:11px;color:#f0d0d6">Check-in roster &middot; '+rows.length+' player'+(rows.length===1?'':'s')+(rows.length?' &middot; '+present+' checked in':'')+'</div></div>'+
     '<table style="width:100%;border-collapse:collapse;font-size:13px">'+
       '<thead><tr style="background:#f3f4f6;color:#555;font-size:11px;text-transform:uppercase;letter-spacing:.5px">'+
         '<th style="padding:6px 8px;text-align:left">#</th><th style="padding:6px 8px;text-align:left">Player</th><th style="padding:6px 8px;text-align:left">Parent</th><th style="padding:6px 8px;text-align:left">Phone</th><th style="padding:6px 8px;text-align:left">Allergy / Med</th><th style="padding:6px 8px;text-align:center">In</th>'+
@@ -493,8 +502,68 @@ function rosterCard(sid, live){
 }
 function showRoster(sid){
   modal('<h3>'+esc(SESSION_LABELS[sid]||sid)+' — Roster</h3><div style="overflow-x:auto">'+ rosterCard(sid,true) +'</div>'+
-    '<div class="foot"><a class="btn" href="checkin.html" target="_blank" rel="noopener" title="Phone-friendly check-in page for coaches">📱 Check-in page</a><button class="btn" id="rosterPrint">🖨 Print sheet</button><button class="btn primary" onclick="closeModal()">Close</button></div>', 'xwide');
+    '<div class="foot"><button class="btn" id="rosterNotify" title="Email every family registered for this Sunday — e.g. a weather cancellation">📣 Email families</button><a class="btn" href="checkin.html" target="_blank" rel="noopener" title="Phone-friendly check-in page for coaches">📱 Check-in page</a><button class="btn" id="rosterPrint">🖨 Print sheet</button><button class="btn primary" onclick="closeModal()">Close</button></div>', 'xwide');
   var pb=document.getElementById('rosterPrint'); if(pb) pb.addEventListener('click', function(){ printDoc('Roster '+(SESSION_LABELS[sid]||sid), rosterCard(sid)); });
+  var nb=document.getElementById('rosterNotify'); if(nb) nb.addEventListener('click', function(){ showNotify(sid); });
+}
+
+/* ── Session notices: email every family registered for one Sunday (cancellation or update) ── */
+function isSessCanceled(sid){ var s=state.sessions_status&&state.sessions_status[sid]; return !!(s&&s.canceled); }
+function noticeTemplate(sid, cancel){
+  var when='Sun, '+(SESSION_LABELS[sid]||sid);
+  if(cancel) return { subject:'Clinic cancelled — '+when,
+    message:'Unfortunately, this Sunday\'s clinic ('+when+') is cancelled due to [weather / a gym closure].\n\nYour registration for this date will be credited toward a future clinic session — you don\'t need to do anything. If you\'d prefer a refund for this session instead, just reply to this email.\n\nSorry for the short notice, and we\'ll see you on the court soon!\n\nDowner Basketball Academy' };
+  return { subject:'Fall Clinics update — '+when, message:'' };
+}
+function showNotify(sid){
+  var when=SESSION_LABELS[sid]||sid, off=isSessCanceled(sid), t=noticeTemplate(sid, !off);
+  modal('<h3>📣 Email families — Sun, '+esc(when)+'</h3>'+
+    (off?'<div class="notice-bad"><span>This Sunday is marked <b>CANCELLED</b> — hidden from the registration form, new signups refused, reminder off.</span><button class="btn sm" id="nReopen">Reopen it</button></div>':'')+
+    '<div id="nCount" style="font-size:.82rem;color:var(--dim);margin-bottom:12px">Counting families…</div>'+
+    '<div class="nf row"><label><input type="radio" name="ntype" value="cancel"'+(off?'':' checked')+'> Cancellation notice</label><label><input type="radio" name="ntype" value="update"'+(off?' checked':'')+'> General update</label></div>'+
+    '<div class="nf"><label class="lbl" for="nSubject">Subject</label><input class="ninp" id="nSubject" value="'+esc(t.subject)+'"></div>'+
+    '<div class="nf"><label class="lbl" for="nMsg">Message <span style="text-transform:none;font-weight:400">— each family gets "Hi &lt;first name&gt;," on top; edit anything in [brackets]</span></label><textarea class="ninp" id="nMsg" rows="9">'+esc(t.message)+'</textarea></div>'+
+    '<label class="chk-row nf"><input type="checkbox" id="nCancel"'+(off?' disabled':' checked')+'> <span>Mark this Sunday as <b>cancelled</b>: it disappears from the registration form, new signups for it are refused, and the day-before reminder is skipped.'+(off?' (already cancelled)':'')+'</span></label>'+
+    '<div class="foot"><span id="nStatus" style="flex:1;font-size:.8rem;color:var(--dim)"></span><button class="btn" onclick="closeModal()">Close</button><button class="btn primary" id="nSend">Send to all families</button></div>', true);
+  var cnt=document.getElementById('nCount');
+  if(state.demo){ cnt.textContent='Will go to 2 families (3 players) — demo'; }
+  else api('/api/notify?session='+encodeURIComponent(sid)).then(function(r){ return r.json(); }).then(function(d){
+    if(!d||!d.ok){ cnt.textContent='Could not count families ('+((d&&d.error)||'error')+').'; return; }
+    cnt.textContent='Will go to '+d.families+' famil'+(d.families===1?'y':'ies')+' ('+d.players+' player'+(d.players===1?'':'s')+')'+(d.email_ready?'':' — ⚠ email isn\'t configured on the server');
+  }).catch(function(){ cnt.textContent='Could not count families.'; });
+  Array.prototype.forEach.call(document.querySelectorAll('input[name=ntype]'), function(r){ r.addEventListener('change', function(){
+    var c=r.value==='cancel', tt=noticeTemplate(sid, c);
+    document.getElementById('nSubject').value=tt.subject; document.getElementById('nMsg').value=tt.message;
+    var cb=document.getElementById('nCancel'); if(!cb.disabled) cb.checked=c;
+  }); });
+  document.getElementById('nSend').addEventListener('click', function(){ sendNotice(sid); });
+  var rb=document.getElementById('nReopen'); if(rb) rb.addEventListener('click', function(){ reopenSession(sid); });
+}
+function sendNotice(sid){
+  var when='Sun, '+(SESSION_LABELS[sid]||sid);
+  var subject=document.getElementById('nSubject').value.trim(), message=document.getElementById('nMsg').value.trim();
+  var cb=document.getElementById('nCancel'), cancel=!!(cb&&cb.checked&&!cb.disabled);
+  var st=document.getElementById('nStatus'), btn=document.getElementById('nSend');
+  if(!message){ st.textContent='Write a message first.'; return; }
+  if(/\[[^\]]*\]/.test(message) && !confirm('Your message still has [bracketed] text to fill in. Send it anyway?')) return;
+  if(!confirm('Send this email to EVERY family registered for '+when+(cancel?', and mark that Sunday cancelled':'')+'?')) return;
+  btn.disabled=true; st.textContent='Sending…';
+  if(state.demo){ setTimeout(function(){ st.textContent='Demo — would have sent to 2 families.'; btn.textContent='Done'; }, 500); return; }
+  api('/api/notify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session:sid,subject:subject,message:message,cancel:cancel})})
+    .then(function(r){ return r.json().then(function(d){ return {ok:r.ok,d:d}; }); })
+    .then(function(x){
+      if(!x.ok||!x.d||!x.d.ok) throw new Error((x.d&&x.d.error)||('http '+(x.d?x.d.status:'')));
+      st.textContent='Sent to '+x.d.sent+' famil'+(x.d.sent===1?'y':'ies')+(x.d.failed?' · '+x.d.failed+' failed':'')+(x.d.canceled?' · Sunday marked cancelled':'');
+      btn.textContent='Done'; load();
+    })
+    .catch(function(e){ st.textContent='Could not send: '+e.message+(e.message==='email_not_configured'&&cancel?' (the Sunday WAS marked cancelled)':''); btn.disabled=false; });
+}
+function reopenSession(sid){
+  if(!confirm('Reopen Sun, '+(SESSION_LABELS[sid]||sid)+'? It goes back on the registration form and the reminder resumes. (No email is sent.)')) return;
+  if(state.demo){ closeModal(); return; }
+  api('/api/notify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session:sid,reopen:true})})
+    .then(function(r){ return r.json(); }).then(function(d){ if(!d||!d.ok) throw new Error((d&&d.error)||'failed'); closeModal(); load(); })
+    .catch(function(e){ alert('Could not reopen: '+e.message); });
 }
 // Tap-to-check-in from the roster modal. Saves via /api/checkin (local-only in demo mode).
 function toggleCheckin(rid, sid, pi, present){

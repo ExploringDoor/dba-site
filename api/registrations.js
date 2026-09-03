@@ -32,8 +32,10 @@ export default async function handler(req, res) {
   if (!fbConfigured() || !fbAdminConfigured()) return res.status(503).json({ error: 'db_not_configured' });
 
   const raw = await fsList('registrations');
-  // Reserved `_`-prefixed docs are internal (the reconcile cron's heartbeat) — never list them.
+  // Reserved `_`-prefixed docs are internal (cron heartbeat, per-session status) — never list them.
   const cronDoc = raw.find((r) => r.id === '_cron_reconcile') || null;
+  const statusDoc = raw.find((r) => r.id === '_sessions') || {};
+  const sessionsStatus = Object.fromEntries(Object.entries(statusDoc).filter(([k]) => k !== 'id'));
   const all = raw.filter((r) => !String(r.id || '').startsWith('_'));
   // newest first
   all.sort((a, b) => String(b.created || '').localeCompare(String(a.created || '')));
@@ -61,6 +63,7 @@ export default async function handler(req, res) {
       perSession,
     },
     cron: cronDoc ? { last_run: cronDoc.last_run || '', pending: cronDoc.pending || 0, finalized: cronDoc.finalized || 0, abandoned: cronDoc.abandoned || 0 } : null,
+    sessions_status: sessionsStatus, // { s2: { canceled:true, canceled_at, subject } }
     registrations: all,
   });
 }

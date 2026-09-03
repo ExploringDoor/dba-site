@@ -15,6 +15,7 @@
 
 import { fbConfigured, fbAdminConfigured, fsGet, fsList, fsPatchVerified } from './_firestore.js';
 import { SESSIONS, SESSION_IDS, cleanSessions } from './_clinic.js';
+import { sessionStatus, isCanceled } from './_status.js';
 
 function ctEq(a, b) {
   a = String(a || ''); b = String(b || '');
@@ -48,7 +49,10 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     const sid = String((req.query && req.query.session) || '');
-    if (!sid) return res.status(200).json({ ok: true, sessions: SESSIONS.map((s) => ({ id: s.id, label: shortLabel(s), date: s.date })) });
+    if (!sid) {
+      const st = await sessionStatus(); // {} when the DB isn't configured — the list still works
+      return res.status(200).json({ ok: true, sessions: SESSIONS.map((s) => ({ id: s.id, label: shortLabel(s), date: s.date, canceled: isCanceled(st, s.id) })) });
+    }
     if (!SESSION_IDS.includes(sid)) return res.status(400).json({ error: 'bad_session' });
     if (!fbConfigured() || !fbAdminConfigured()) return res.status(503).json({ error: 'db_not_configured' });
 

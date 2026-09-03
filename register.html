@@ -82,6 +82,10 @@ select.inp{appearance:none;cursor:pointer}
 .all6 input{width:18px;height:18px;accent-color:var(--pink)}
 .all6 .a-label{flex:1;font-weight:600}
 .all6 .a-save{font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--pink);letter-spacing:1px}
+/* A Sunday the admin has cancelled (weather / gym closure) — shown, but not selectable. */
+.sess.canceled,.all6.canceled{opacity:.55;cursor:not-allowed}
+.sess.canceled .s-label{text-decoration:line-through}
+.s-tag{font-family:'IBM Plex Mono',monospace;font-size:.62rem;letter-spacing:1.5px;color:var(--err);border:1px solid rgba(255,107,107,.5);border-radius:6px;padding:2px 6px;white-space:nowrap}
 .hp{position:absolute!important;left:-9999px!important;width:1px;height:1px;overflow:hidden}
 
 /* PLAYERS repeater */
@@ -329,6 +333,7 @@ var ERR_TEXT = {
   too_many_players: 'You can register up to 8 players at once — email aceshoops@gmail.com for a larger group.',
   waiver_required: 'Please agree to the waiver and type your name to sign.',
   already_registered: 'This player is already registered for one of those Sundays — check your email for the receipt, or email aceshoops@gmail.com to make changes.',
+  session_canceled: 'One of the Sundays you picked has been cancelled — please unselect it and try again.',
   spam: 'We couldn\'t submit the form.' + HELP,
   not_configured: 'Online payment isn\'t switched on yet. Please email aceshoops@gmail.com to hold your spot.',
   checkout_unavailable: 'Checkout is temporarily unavailable — please try again in a minute.' + HELP,
@@ -444,10 +449,27 @@ function restoreDraft(){
 // cache with the button still greyed out — un-stick it.
 window.addEventListener('pageshow', function(e){ if(e.persisted) resetPay(); });
 
+/* ── A cancelled Sunday (weather / gym closure) stays visible but can't be picked ── */
+function markCanceled(ids){
+  if(!ids || !ids.length) return;
+  ids.forEach(function(id){
+    var l = sessionList.querySelector('.sess[data-id="'+id+'"]'); if(!l) return;
+    var c = l.querySelector('input'); c.checked = false; c.disabled = true;
+    l.classList.add('canceled');
+    var p = l.querySelector('.s-price'); if(p) p.innerHTML = '<span class="s-tag">CANCELLED</span>';
+  });
+  // With a Sunday gone the 6-session package no longer exists.
+  all6.checked = false; all6.disabled = true;
+  var row = document.getElementById('all6row'); row.classList.add('canceled');
+  var save = row.querySelector('.a-save'); if(save) save.innerHTML = '<span class="s-tag">NOT AVAILABLE</span>';
+  syncSessRows(); recalc();
+}
+
 /* ── Ask the server if payments are ready; show the "opens soon" banner only if NOT ── */
 fetch('/api/checkout').then(function(r){ return r.json(); }).then(function(d){
   if(d && d.ready){ TEST_MODE=false; }
   else if(d && d.ready===false){ document.getElementById('testNotice').style.display='block'; }
+  if(d && d.canceled) markCanceled(d.canceled);
 }).catch(function(){});
 
 restoreDraft();

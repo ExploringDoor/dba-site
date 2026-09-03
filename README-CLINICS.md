@@ -24,6 +24,8 @@ agnostic: **Stripe or Square**, flipped with one env var. No build step, no SDKs
 | `cancel.js` | Admin: mark a registration canceled. |
 | `registrations.js` | Admin: list registrations + rollup for the dashboard. |
 | `checkin.js` | Staff/Admin: a session's roster (door-side fields only) + record/clear a check-in. Accepts `CHECKIN_PASSWORD` **or** `ADMIN_PASSWORD`. |
+| `notify.js` | Admin: email every family registered for one Sunday (cancellation or update) in one SendGrid call; a cancellation also flags the date in `registrations/_sessions` so checkout refuses it, the reminder skips it, and check-in labels it. `reopen:true` clears the flag. |
+| `_status.js` | Per-session status helpers (`sessionStatus`, `isCanceled`, `setSessionStatus`) over the reserved `registrations/_sessions` doc. |
 | `remind.js` | Cron (daily, 4 PM ET): "clinic tomorrow" reminder email to each paid family, once per session. |
 | `webhook-stripe.js` | Stripe webhook (signature-verified): finalizes a paid registration the moment Stripe confirms it, even if the parent never returns. |
 | `_clinic.js` | **Authoritative** pricing (`expectedCents`) + validation (`normalizeRegistration`). |

@@ -12,6 +12,7 @@
 import { fbConfigured, fbAdminConfigured, fsList, fsPatch } from './_firestore.js';
 import { SESSIONS, cleanSessions } from './_clinic.js';
 import { sendMail, buildReminderEmail, emailConfigured } from './_email.js';
+import { sessionStatus, isCanceled } from './_status.js';
 
 // YYYY-MM-DD of the calendar day AFTER `now`, in Eastern time. We take today's ET date
 // first, then add one day as a date-only value (in UTC) so DST changes can't skew it.
@@ -40,6 +41,8 @@ export default async function handler(req, res) {
   const tomorrow = nextDayET();
   const session = sessionOn(tomorrow);
   if (!session) return res.status(200).json({ ok: true, tomorrow, session: null, sent: 0 });
+  // A Sunday the admin cancelled (via /api/notify) must never get a "see you tomorrow" reminder.
+  if (isCanceled(await sessionStatus(), session.id)) return res.status(200).json({ ok: true, tomorrow, session: session.id, sent: 0, skipped: 'session_canceled' });
   if (!emailConfigured()) return res.status(200).json({ ok: true, tomorrow, session: session.id, sent: 0, skipped: 'email_not_configured' });
 
   const flag = `reminded_${session.id}`;

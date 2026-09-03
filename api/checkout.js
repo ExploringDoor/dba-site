@@ -15,6 +15,7 @@
 
 import { fbConfigured, fbAdminConfigured, fsCreate, fsPatch, fsPatchVerified, fsQuery } from './_firestore.js';
 import { normalizeRegistration, expectedCents, cleanSessions, CLINIC } from './_clinic.js';
+import { sessionStatus, isCanceled, canceledIds } from './_status.js';
 
 const PROVIDER = (process.env.PAYMENT_PROVIDER || '').toLowerCase();
 
@@ -105,7 +106,13 @@ async function createSquareCheckout({ regId, reg, cents, base }) {
 export default async function handler(req, res) {
   // Same-origin only — no CORS headers, so another site can't drive this
   // state-changing endpoint (it creates registrations + provider sessions once live).
-  if (req.method === 'GET') return res.status(200).json({ ready: ready(), provider: PROVIDER || null });
+  if (req.method === 'GET') {
+    // `canceled` lists any Sunday the admin has cancelled (register.html greys it out).
+    let canceled = [];
+    try { canceled = canceledIds(await sessionStatus()); } catch (e) { /* best-effort */ }
+    res.setHeader('Cache-Control', 'no-store');
+    return res.status(200).json({ ready: ready(), provider: PROVIDER || null, canceled });
+  }
   if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
 
   // Validate + sanitize (rejects tampered/incomplete data).
@@ -119,6 +126,13 @@ export default async function handler(req, res) {
 
   // If payments/DB aren't wired yet, tell the page so it shows "opens soon".
   if (!ready()) return res.status(503).json({ error: 'not_configured' });
+
+  // Never sell a Sunday the admin has cancelled (the form hides it, but the server is the authority).
+  try {
+    const st = await sessionStatus();
+    const dead = reg.sessions.filter((s) => isCanceled(st, s));
+    if (dead.length) return res.status(400).json({ error: 'session_canceled', sessions: dead });
+  } catch (e) { /* if the status read fails, don't block a real signup */ }
 
   // 0) Duplicate guard: the same family paying twice for the same child + Sunday (a re-submit
   //    after Back from Stripe, or two parents registering the same kid). Blocks only when an

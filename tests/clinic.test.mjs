@@ -9,6 +9,9 @@ import { buildRefundEmail, buildReminderEmail } from '../api/_email.js';
 import { nextDayET, sessionOn } from '../api/remind.js';
 import webhook, { verifySignature } from '../api/webhook-stripe.js';
 import checkin from '../api/checkin.js';
+import notify from '../api/notify.js';
+import { isCanceled, canceledIds } from '../api/_status.js';
+import { buildNoticeEmail } from '../api/_email.js';
 import { createHmac } from 'node:crypto';
 
 let pass = 0, fail = 0;
@@ -203,6 +206,37 @@ await test('checkin POST validates rid / session / player before touching the DB
   assert.equal(res.statusCode, 400); assert.equal(res.body.error, 'bad_session');
   res = mockRes(); await checkin(mockReq({ method: 'POST', headers: { 'x-admin-key': 'secret-pass' }, body: { rid: 'abc', session: 's1', player: -1, present: true } }), res);
   assert.equal(res.statusCode, 400); assert.equal(res.body.error, 'bad_player');
+});
+
+// ── /api/notify (session cancellation / notices) ──
+await test('notify → 401 with a wrong key (the coach passcode does NOT open it)', async () => {
+  process.env.CHECKIN_PASSWORD = 'coach-pass';
+  const res = mockRes(); await notify(mockReq({ method: 'POST', headers: { 'x-admin-key': 'coach-pass' }, body: { session: 's1', message: 'x' } }), res);
+  assert.equal(res.statusCode, 401);
+  delete process.env.CHECKIN_PASSWORD;
+});
+await test('notify validates session + message before touching the DB', async () => {
+  let res = mockRes(); await notify(mockReq({ method: 'POST', headers: { 'x-admin-key': 'secret-pass' }, body: { session: 's9', message: 'x' } }), res);
+  assert.equal(res.statusCode, 400); assert.equal(res.body.error, 'bad_session');
+  res = mockRes(); await notify(mockReq({ method: 'POST', headers: { 'x-admin-key': 'secret-pass' }, body: { session: 's2', message: '   ' } }), res);
+  assert.equal(res.statusCode, 400); assert.equal(res.body.error, 'bad_message');
+  res = mockRes(); await notify(mockReq({ method: 'POST', headers: { 'x-admin-key': 'secret-pass' }, body: { session: 's2', message: 'Cancelled for snow', cancel: true } }), res);
+  assert.equal(res.statusCode, 503); assert.equal(res.body.error, 'db_not_configured'); // valid → got as far as the DB
+});
+await test('session status helpers', () => {
+  const st = { s2: { canceled: true, canceled_at: '2026-10-03T12:00:00Z' }, s3: { canceled: false } };
+  assert.equal(isCanceled(st, 's2'), true); assert.equal(isCanceled(st, 's3'), false); assert.equal(isCanceled(st, 's1'), false); assert.equal(isCanceled(null, 's1'), false);
+  assert.deepEqual(canceledIds(st), ['s2']); assert.deepEqual(canceledIds({}), []);
+});
+await test('buildNoticeEmail: cancellation banner, escaped message, per-family greeting tag, text part', () => {
+  const m = buildNoticeEmail({ id: 's2', label: 'Session 2 — Sun, Oct 4', date: '2026-10-04' }, { cancel: true, message: 'Gym is closed <today>.\nSee you Oct 11!' });
+  assert.equal(m.subject, 'Clinic cancelled — Sun, Oct 4');
+  assert.ok(m.html.includes('SESSION CANCELLED') && m.html.includes('Sun, Oct 4 clinic is cancelled'));
+  assert.ok(m.html.includes('&lt;today&gt;') && !m.html.includes('<today>'), 'message is HTML-escaped');
+  assert.ok(m.html.includes('See you Oct 11!') && m.html.includes('<br>'), 'line breaks preserved');
+  assert.ok(m.html.includes('Hi -parent-,') && m.text.includes('Hi -parent-,'), 'greeting uses the substitution tag');
+  const g = buildNoticeEmail({ id: 's3', label: 'Session 3 — Sun, Oct 11' }, { subject: 'Bring a jacket', message: 'Gym is chilly.' });
+  assert.equal(g.subject, 'Bring a jacket'); assert.ok(g.html.includes('CLINIC UPDATE') && !g.html.includes('cancelled'));
 });
 
 console.log(`\n${pass} passed, ${fail} failed\n`);

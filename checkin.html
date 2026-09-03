@@ -28,6 +28,7 @@ h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:1.5rem;margin-
 .sess{display:flex;gap:8px;overflow-x:auto;padding:4px 0 10px;-webkit-overflow-scrolling:touch}
 .sess button{flex:0 0 auto;padding:10px 14px;border-radius:10px;border:1px solid var(--glass-b);background:#fff;font-weight:600;font-size:.9rem;min-height:44px;font-family:inherit;color:var(--txt-m);cursor:pointer}
 .sess button.on{background:var(--mrn);border-color:var(--mrn);color:#fff}
+.sess button.off{text-decoration:line-through;opacity:.6}
 .count{display:flex;justify-content:space-between;align-items:center;margin:6px 0 10px;font-size:.95rem}
 .count b{font-family:'DM Serif Display',serif;font-size:1.6rem;color:var(--pink)}
 .row{background:#fff;border:1px solid var(--glass-b);border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px}
@@ -92,7 +93,7 @@ function loadRoster(){
 }
 function renderSess(){
   document.getElementById('sess').innerHTML=state.sessions.map(function(s){
-    return '<button data-sid="'+esc(s.id)+'" class="'+(s.id===state.sid?'on':'')+'" aria-pressed="'+(s.id===state.sid)+'">'+esc(s.label)+'</button>';
+    return '<button data-sid="'+esc(s.id)+'" class="'+(s.id===state.sid?'on':'')+(s.canceled?' off':'')+'" aria-pressed="'+(s.id===state.sid)+'">'+esc(s.label)+(s.canceled?' · cancelled':'')+'</button>';
   }).join('');
 }
 function renderList(){
