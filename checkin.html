@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#8B1A2B">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🏀%3C/text%3E%3C/svg%3E">
+<title>Clinic Check-in — Downer Basketball Academy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Outfit:wght@400;600;700&family=Saira+Condensed:wght@800&display=swap" rel="stylesheet">
+<style>
+/* Staff-only page: light theme like admin, built for a phone at the gym door. */
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--mrn:#8B1A2B;--pink:#A82E52;--bg:#eef1f5;--bg2:#ffffff;--glass-b:#e2e6ea;--txt:#1b2027;--txt-m:#454b54;--dim:#6b7280;--ok:#2f9e4f;--r:14px}
+body{font-family:'Outfit',system-ui,sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;-webkit-font-smoothing:antialiased}
+.top{background:var(--bg2);border-bottom:1px solid var(--glass-b);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:5}
+.brand{font-family:'Saira Condensed',sans-serif;font-weight:800;letter-spacing:3px;font-size:15px}.brand span{color:var(--pink)}
+.wrap{max-width:720px;margin:0 auto;padding:16px}
+.card{background:var(--bg2);border:1px solid var(--glass-b);border-radius:var(--r);padding:20px}
+h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:1.5rem;margin-bottom:6px}
+.muted{color:var(--dim);font-size:.88rem}
+.inp{width:100%;font-size:16px;padding:14px;border:1px solid var(--glass-b);border-radius:10px;background:#fff;color:var(--txt);font-family:inherit}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:14px 18px;border-radius:12px;font-weight:700;font-size:1rem;border:1px solid var(--glass-b);background:#fff;color:var(--txt);cursor:pointer;min-height:48px;font-family:inherit}
+.btn.primary{background:var(--mrn);border-color:var(--mrn);color:#fff}
+.btn.sm{padding:8px 12px;font-size:.82rem;min-height:36px;border-radius:9px;font-weight:600}
+.sess{display:flex;gap:8px;overflow-x:auto;padding:4px 0 10px;-webkit-overflow-scrolling:touch}
+.sess button{flex:0 0 auto;padding:10px 14px;border-radius:10px;border:1px solid var(--glass-b);background:#fff;font-weight:600;font-size:.9rem;min-height:44px;font-family:inherit;color:var(--txt-m);cursor:pointer}
+.sess button.on{background:var(--mrn);border-color:var(--mrn);color:#fff}
+.count{display:flex;justify-content:space-between;align-items:center;margin:6px 0 10px;font-size:.95rem}
+.count b{font-family:'DM Serif Display',serif;font-size:1.6rem;color:var(--pink)}
+.row{background:#fff;border:1px solid var(--glass-b);border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px}
+.row.on{border-color:rgba(47,158,79,.5);background:#f3faf5}
+.who{flex:1;min-width:0}
+.name{font-weight:700;font-size:1.05rem}
+.meta{font-size:.82rem;color:var(--dim);margin-top:2px}.meta a{color:var(--txt-m)}
+.med{font-size:.8rem;color:#b02a2a;margin-top:4px;font-weight:600}
+.more{font-size:.78rem;color:var(--dim);margin-top:4px}
+.chk{flex:0 0 auto;min-width:112px;min-height:48px;border-radius:12px;border:1px solid var(--glass-b);background:#fff;font-weight:700;font-size:.95rem;font-family:inherit;cursor:pointer;color:var(--txt)}
+.chk.on{background:var(--ok);border-color:var(--ok);color:#fff}
+.err{color:#b02a2a;font-size:.88rem;margin-top:10px;min-height:1.2em}
+.empty{text-align:center;color:var(--dim);padding:28px 10px}
+.hint{font-size:.78rem;color:var(--dim);text-align:center;margin-top:14px}
+</style>
+</head>
+<body>
+<div class="top"><div class="brand">DOWNER · <span>CHECK-IN</span></div><button class="btn sm" id="logoutBtn" style="display:none">Log out</button></div>
+<div class="wrap">
+
+  <div class="card" id="loginWrap">
+    <h1>Clinic Check-in</h1>
+    <p class="muted" style="margin-bottom:14px">Enter the check-in passcode to see today's roster.</p>
+    <form id="loginForm">
+      <input class="inp" id="pw" type="password" placeholder="Check-in passcode" autocomplete="current-password" aria-label="Check-in passcode">
+      <div style="margin-top:10px"><button class="btn primary" style="width:100%" type="submit">Open roster →</button></div>
+      <div class="err" id="loginErr" role="alert"></div>
+    </form>
+  </div>
+
+  <div id="app" style="display:none">
+    <div class="sess" id="sess" aria-label="Session"></div>
+    <div class="count"><div><b id="cPresent">0</b> <span class="muted">of</span> <b id="cTotal">0</b> <span class="muted">checked in</span></div><button class="btn sm" id="refreshBtn">↻ Refresh</button></div>
+    <input class="inp" id="q" placeholder="Search player or parent…" aria-label="Search" style="margin-bottom:10px">
+    <div id="list"></div>
+    <p class="hint">Tap <b>Check in</b> when a player arrives · tap again to undo</p>
+  </div>
+
+</div>
+<script>
+var KEY_STORE='dba_checkin_key';
+var state={ key:'', sessions:[], sid:'', players:[], q:'' };
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];}); }
+function api(path, opts){ opts=opts||{}; opts.headers=Object.assign({'x-checkin-key':state.key}, opts.headers||{}); return fetch(path, opts); }
+function todayET(){ return new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()); }
+// Default to today's session; otherwise the next upcoming one; otherwise the last.
+function pickDefault(sessions){
+  var t=todayET();
+  var today=sessions.filter(function(s){return s.date===t;})[0]; if(today) return today.id;
+  var next=sessions.filter(function(s){return s.date>t;})[0];
+  return (next||sessions[sessions.length-1]||{}).id||'';
+}
+function loadSessions(){
+  return api('/api/checkin').then(function(r){
+    if(r.status===401) throw {code:'auth'}; if(r.status===503) throw {code:'config'}; return r.json();
+  }).then(function(d){ state.sessions=d.sessions||[]; if(!state.sid) state.sid=pickDefault(state.sessions); renderSess(); return loadRoster(); });
+}
+function loadRoster(){
+  if(!state.sid) return Promise.resolve();
+  return api('/api/checkin?session='+encodeURIComponent(state.sid)).then(function(r){ if(r.status===401) throw {code:'auth'}; return r.json(); })
+    .then(function(d){ state.players=d.players||[]; renderList(); });
+}
+function renderSess(){
+  document.getElementById('sess').innerHTML=state.sessions.map(function(s){
+    return '<button data-sid="'+esc(s.id)+'" class="'+(s.id===state.sid?'on':'')+'" aria-pressed="'+(s.id===state.sid)+'">'+esc(s.label)+'</button>';
+  }).join('');
+}
+function renderList(){
+  var q=state.q;
+  var rows=state.players.filter(function(p){ return !q || (p.first+' '+p.last+' '+p.parent_name).toLowerCase().indexOf(q)>=0; });
+  document.getElementById('cPresent').textContent=state.players.filter(function(p){return p.present;}).length;
+  document.getElementById('cTotal').textContent=state.players.length;
+  document.getElementById('list').innerHTML=rows.map(function(p){
+    var tel=p.parent_phone?p.parent_phone.replace(/[^\d+]/g,''):'';
+    var more=[];
+    if(p.emerg_name) more.push('Emergency: '+esc(p.emerg_name)+(p.emerg_phone?' '+esc(p.emerg_phone):''));
+    if(p.pickup_name) more.push('Pickup: '+esc(p.pickup_name)+(p.pickup_phone?' '+esc(p.pickup_phone):''));
+    return '<div class="row'+(p.present?' on':'')+'">'+
+      '<div class="who"><div class="name">'+esc(p.first+' '+p.last)+'</div>'+
+        '<div class="meta">'+esc(p.parent_name)+(tel?' · <a href="tel:'+esc(tel)+'">'+esc(p.parent_phone)+'</a>':'')+'</div>'+
+        (p.medical?'<div class="med">⚠ '+esc(p.medical)+'</div>':'')+
+        (more.length?'<div class="more">'+more.join(' · ')+'</div>':'')+
+      '</div>'+
+      '<button class="chk'+(p.present?' on':'')+'" data-rid="'+esc(p.rid)+'" data-pi="'+p.pi+'" data-present="'+(p.present?1:0)+'" aria-pressed="'+!!p.present+'">'+(p.present?'✓ In':'Check in')+'</button>'+
+    '</div>';
+  }).join('') || '<div class="empty">'+(state.players.length?'No matches.':'No players registered for this session yet.')+'</div>';
+}
+// Optimistic toggle; rolls back if the save fails.
+function toggle(rid, pi, present){
+  var p=state.players.filter(function(x){return x.rid===rid&&x.pi===pi;})[0]; if(!p) return;
+  var was=p.present; p.present=present; renderList();
+  api('/api/checkin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rid:rid,session:state.sid,player:pi,present:present})})
+    .then(function(r){ return r.json().then(function(d){ if(!r.ok||!d.ok) throw new Error(d.error||('http '+r.status)); }); })
+    .catch(function(e){ p.present=was; renderList(); alert('Could not save that check-in — check your connection and try again. ('+e.message+')'); });
+}
+function enterApp(){
+  document.getElementById('loginWrap').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('logoutBtn').style.display='inline-flex';
+}
+document.getElementById('loginForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  state.key=document.getElementById('pw').value.trim();
+  var err=document.getElementById('loginErr'); err.textContent='';
+  if(!state.key){ err.textContent='Enter the passcode.'; return; }
+  loadSessions().then(function(){ try{ sessionStorage.setItem(KEY_STORE, state.key); }catch(_){ } enterApp(); })
+    .catch(function(x){ err.textContent=(x&&x.code==='config')?'Check-in isn\'t set up yet — ask the admin.':'Wrong passcode — try again.'; state.key=''; });
+});
+document.getElementById('logoutBtn').addEventListener('click', function(){ state.key=''; try{ sessionStorage.removeItem(KEY_STORE); }catch(_){ } location.reload(); });
+document.getElementById('sess').addEventListener('click', function(e){ var b=e.target.closest('[data-sid]'); if(!b) return; state.sid=b.dataset.sid; renderSess(); loadRoster(); });
+document.getElementById('list').addEventListener('click', function(e){ var b=e.target.closest('button.chk'); if(!b) return; toggle(b.dataset.rid, parseInt(b.dataset.pi,10), b.dataset.present!=='1'); });
+document.getElementById('q').addEventListener('input', function(){ state.q=this.value.trim().toLowerCase(); renderList(); });
+document.getElementById('refreshBtn').addEventListener('click', function(){ loadRoster(); });
+// Stay signed in for this tab.
+try{ var k=sessionStorage.getItem(KEY_STORE); if(k){ state.key=k; loadSessions().then(enterApp).catch(function(){ state.key=''; }); } }catch(_){ }
+</script>
+</body>
+</html>

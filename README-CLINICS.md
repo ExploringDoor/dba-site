@@ -11,7 +11,8 @@ agnostic: **Stripe or Square**, flipped with one env var. No build step, no SDKs
 | `clinics.html` | Public | Fall-clinic landing page (info, pricing, CTA). |
 | `register.html` | Public | Registration form → posts to `/api/checkout`. Shows "opens soon" until configured. |
 | `register-success.html` | Public | Post-payment confirmation; calls `/api/confirm`. |
-| `admin.html` | Admin | Dashboard (passcode-gated). `?demo=1` shows sample data, no backend. |
+| `admin.html` | Admin | Dashboard (passcode-gated). `?demo=1` shows sample data, no backend. Click a session chip for its roster + tap-to-check-in; **📊 Season report** = attendance by session/player, totals, print + CSV. |
+| `checkin.html` | Staff | Clinic-day check-in for coaches/managers. Opens with `CHECKIN_PASSWORD` (or the admin passcode). Roster, parent/emergency/pickup phones, medical notes, tap-to-check-in — no payments or emails. |
 
 ## API (`/api`)
 | File | Purpose |
@@ -22,6 +23,9 @@ agnostic: **Stripe or Square**, flipped with one env var. No build step, no SDKs
 | `refund.js` | Admin: full/partial refund via the original provider. |
 | `cancel.js` | Admin: mark a registration canceled. |
 | `registrations.js` | Admin: list registrations + rollup for the dashboard. |
+| `checkin.js` | Staff/Admin: a session's roster (door-side fields only) + record/clear a check-in. Accepts `CHECKIN_PASSWORD` **or** `ADMIN_PASSWORD`. |
+| `remind.js` | Cron (8 PM ET nightly): "clinic tomorrow" reminder email to each paid family, once per session. |
+| `webhook-stripe.js` | Stripe webhook (signature-verified): finalizes a paid registration the moment Stripe confirms it, even if the parent never returns. |
 | `_clinic.js` | **Authoritative** pricing (`expectedCents`) + validation (`normalizeRegistration`). |
 | `_firestore.js` | Firestore REST helper; server signs in as one admin user (no key file). |
 | `_finalize.js` | Shared verify + mark-paid + confirmation-email logic (used by confirm + reconcile). |
@@ -40,6 +44,8 @@ agnostic: **Stripe or Square**, flipped with one env var. No build step, no SDKs
 ## Data
 Firestore collection `registrations/{id}`. Browsers never touch Firestore directly — all reads/
 writes go through the server's admin token. `firestore.rules` locks everything to that admin user.
+Attendance lives on each registration as `attendance[sessionId][playerIndex] = ISO timestamp`
+(written only by `/api/checkin`); the season report is computed from it in the browser.
 
 ## Config (Vercel env vars)
 See `CLINIC-SETUP.md` for the full go-live checklist. Switch is `PAYMENT_PROVIDER=stripe|square`.

@@ -8,6 +8,7 @@ import { expectedCents, normalizeRegistration, cleanSessions, PRICE, SESSION_IDS
 import { buildRefundEmail, buildReminderEmail } from '../api/_email.js';
 import { nextDayET, sessionOn } from '../api/remind.js';
 import webhook, { verifySignature } from '../api/webhook-stripe.js';
+import checkin from '../api/checkin.js';
 import { createHmac } from 'node:crypto';
 
 let pass = 0, fail = 0;
@@ -164,6 +165,34 @@ await test('webhook → 400 bad_signature on an unsigned call (forgery blocked)'
   const res = mockRes(); await webhook(mockReq({ method: 'POST', body: '{}' }), res);
   assert.equal(res.statusCode, 400); assert.equal(res.body.error, 'bad_signature');
   delete process.env.STRIPE_WEBHOOK_SECRET;
+});
+
+// ── /api/checkin (coach check-in) ──
+await test('checkin → 401 with a wrong key', async () => {
+  const res = mockRes(); await checkin(mockReq({ method: 'GET', headers: { 'x-checkin-key': 'wrong' }, query: { session: 's1' } }), res);
+  assert.equal(res.statusCode, 401);
+});
+await test('checkin accepts the ADMIN passcode too (auth passes → 400 bad_session, not 401)', async () => {
+  const res = mockRes(); await checkin(mockReq({ method: 'GET', headers: { 'x-admin-key': 'secret-pass' }, query: { session: 'nope' } }), res);
+  assert.equal(res.statusCode, 400); assert.equal(res.body.error, 'bad_session');
+});
+await test('checkin accepts a separate CHECKIN_PASSWORD via x-checkin-key (coach role)', async () => {
+  process.env.CHECKIN_PASSWORD = 'coach-pass';
+  const res = mockRes(); await checkin(mockReq({ method: 'GET', headers: { 'x-checkin-key': 'coach-pass' }, query: { session: 's1' } }), res);
+  assert.equal(res.statusCode, 503); assert.equal(res.body.error, 'db_not_configured'); // got past auth + validation
+  delete process.env.CHECKIN_PASSWORD;
+});
+await test('checkin GET with no session lists the 6 sessions without needing the DB', async () => {
+  const res = mockRes(); await checkin(mockReq({ method: 'GET', headers: { 'x-admin-key': 'secret-pass' } }), res);
+  assert.equal(res.statusCode, 200); assert.equal(res.body.sessions.length, 6); assert.equal(res.body.sessions[0].date, '2026-09-27');
+});
+await test('checkin POST validates rid / session / player before touching the DB', async () => {
+  let res = mockRes(); await checkin(mockReq({ method: 'POST', headers: { 'x-admin-key': 'secret-pass' }, body: { rid: '../admins/x', session: 's1', player: 0, present: true } }), res);
+  assert.equal(res.statusCode, 400); assert.equal(res.body.error, 'bad_rid');
+  res = mockRes(); await checkin(mockReq({ method: 'POST', headers: { 'x-admin-key': 'secret-pass' }, body: { rid: 'abc', session: 's9', player: 0, present: true } }), res);
+  assert.equal(res.statusCode, 400); assert.equal(res.body.error, 'bad_session');
+  res = mockRes(); await checkin(mockReq({ method: 'POST', headers: { 'x-admin-key': 'secret-pass' }, body: { rid: 'abc', session: 's1', player: -1, present: true } }), res);
+  assert.equal(res.statusCode, 400); assert.equal(res.body.error, 'bad_player');
 });
 
 console.log(`\n${pass} passed, ${fail} failed\n`);

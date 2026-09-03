@@ -79,6 +79,9 @@ tr:hover td{background:rgba(0,0,0,.03)}
 .modal-bg.on{display:flex}
 .modal{background:var(--bg2);border:1px solid var(--glass-b);border-radius:var(--r);max-width:460px;width:100%;padding:26px;max-height:85vh;overflow-y:auto}
 .modal.wide{max-width:640px}
+.modal.xwide{max-width:980px}
+.chk{padding:6px 12px;border-radius:8px;border:1px solid var(--glass-b);background:var(--glass);color:var(--txt);font-family:inherit;font-weight:600;font-size:.75rem;cursor:pointer;min-width:84px}
+.chk.on{background:rgba(47,158,79,.14);border-color:rgba(47,158,79,.5);color:#1f7a38}
 .who .nm[data-act]{cursor:pointer}
 .who .nm[data-act]:hover{color:var(--pink);text-decoration:underline}
 .modal h3{font-family:'DM Serif Display',serif;font-weight:400;font-size:1.3rem;margin-bottom:14px}
@@ -130,6 +133,7 @@ tr:hover td{background:rgba(0,0,0,.03)}
     <button class="btn sm" id="refreshBtn">↻ Refresh</button>
     <button class="btn sm" id="csvBtn">⬇ Export CSV</button>
     <button class="btn sm" id="rostersBtn">🖨 Session sheets</button>
+    <button class="btn sm" id="reportBtn">📊 Season report</button>
   </div>
   <div class="tbl-wrap">
     <table>
@@ -148,6 +152,7 @@ tr:hover td{background:rgba(0,0,0,.03)}
 <script>
 var KEY_STORE='dba_admin_key';
 var SESSION_LABELS={s1:'Sep 27',s2:'Oct 4',s3:'Oct 11',s4:'Oct 18',s5:'Oct 25',s6:'Nov 1'};
+var SESSION_DATES={s1:'2026-09-27',s2:'2026-10-04',s3:'2026-10-11',s4:'2026-10-18',s5:'2026-10-25',s6:'2026-11-01'}; // keep in sync with api/_clinic.js
 var state={ key:'', data:[], summary:{}, filter:'all', q:'' };
 
 function money(c){ return '$'+((c||0)/100).toFixed(2); }
@@ -283,7 +288,7 @@ function act(kind, rid){
   if(kind==='refund') return doRefund(r);
   if(kind==='cancel') return doCancel(r);
 }
-function modal(html, wide){ var m=document.getElementById('modal'); m.innerHTML=html; m.classList.toggle('wide', !!wide); document.getElementById('modalBg').classList.add('on'); }
+function modal(html, wide){ var m=document.getElementById('modal'); m.innerHTML=html; m.classList.toggle('wide', !!wide); m.classList.toggle('xwide', wide==='xwide'); document.getElementById('modalBg').classList.add('on'); }
 function closeModal(){ document.getElementById('modalBg').classList.remove('on'); }
 document.getElementById('modalBg').addEventListener('click', function(e){ if(e.target.id==='modalBg') closeModal(); });
 
@@ -444,34 +449,42 @@ function kv(k,v){ return '<div class="kv"><span class="k">'+k+'</span><span clas
 function fmtDateTime(iso){ if(!iso) return '—'; var d=new Date(iso); return isNaN(d)?'—':d.toLocaleString(); }
 
 /* ── CSV export ── */
-/* ── Per-session check-in rosters (click a session chip; or print all) ── */
+/* ── Per-session rosters: click a session chip → tap to check players in; or print all ── */
+function attendanceOf(r,sid){ return (r&&r.attendance&&r.attendance[sid])||{}; }
 function sessionRoster(sid){
   var rows=[];
   state.data.forEach(function(r){
     if(r.status!=='paid') return;
     if(cleanSess(r).indexOf(sid)<0) return;
-    (r.players||[]).forEach(function(p){
-      rows.push({ player:(p.first+' '+p.last).trim(), parent:r.parent_name||'', phone:r.parent_phone||'', med:medicalSummary(r) });
+    var att=attendanceOf(r,sid);
+    (r.players||[]).forEach(function(p,i){
+      rows.push({ rid:r.id, pi:i, player:(p.first+' '+p.last).trim(), parent:r.parent_name||'', phone:r.parent_phone||'', med:medicalSummary(r), present:!!att[String(i)] });
     });
   });
   rows.sort(function(a,b){ return a.player.localeCompare(b.player); });
   return rows;
 }
-function rosterCard(sid){
+// live=true renders tap-to-check-in buttons (modal); otherwise printable ☑/☐ glyphs that
+// reflect recorded attendance, so a printed sheet matches the digital check-ins.
+function rosterCard(sid, live){
   var label=SESSION_LABELS[sid]||sid;
   var rows=sessionRoster(sid);
+  var present=rows.filter(function(x){return x.present;}).length;
   var body=rows.map(function(x,i){
+    var cell=live
+      ? '<button class="chk'+(x.present?' on':'')+'" data-rid="'+esc(x.rid)+'" data-sid="'+esc(sid)+'" data-pi="'+x.pi+'" data-present="'+(x.present?1:0)+'">'+(x.present?'&#10003; In':'Check in')+'</button>'
+      : (x.present?'&#9745;':'&#9744;');
     return '<tr>'+
       '<td style="padding:6px 8px;border-top:1px solid #eee;color:#888">'+(i+1)+'</td>'+
       '<td style="padding:6px 8px;border-top:1px solid #eee;font-weight:600">'+esc(x.player)+(x.med?' <span style="color:#c0392b">⚠</span>':'')+'</td>'+
       '<td style="padding:6px 8px;border-top:1px solid #eee">'+esc(x.parent)+'</td>'+
       '<td style="padding:6px 8px;border-top:1px solid #eee">'+esc(x.phone)+'</td>'+
       '<td style="padding:6px 8px;border-top:1px solid #eee;font-size:11px;color:#b02a2a">'+esc(x.med)+'</td>'+
-      '<td style="padding:6px 8px;border-top:1px solid #eee;text-align:center;font-size:16px">&#9744;</td>'+
+      '<td style="padding:6px 8px;border-top:1px solid #eee;text-align:center;font-size:16px">'+cell+'</td>'+
     '</tr>';
   }).join('') || '<tr><td colspan="6" style="padding:16px;text-align:center;color:#888">No paid registrations for this session yet.</td></tr>';
   return '<div style="background:#fff;color:#111;border:1px solid #e2e6ea;border-radius:10px;overflow:hidden;font-family:Arial,Helvetica,sans-serif">'+
-    '<div style="background:#8B1A2B;color:#fff;padding:12px 16px"><div style="font-weight:800;font-size:15px">DBA Fall Clinic &mdash; '+esc(label)+'</div><div style="font-size:11px;color:#f0d0d6">Check-in roster &middot; '+rows.length+' player'+(rows.length===1?'':'s')+'</div></div>'+
+    '<div style="background:#8B1A2B;color:#fff;padding:12px 16px"><div style="font-weight:800;font-size:15px">DBA Fall Clinic &mdash; '+esc(label)+'</div><div style="font-size:11px;color:#f0d0d6">Check-in roster &middot; '+rows.length+' player'+(rows.length===1?'':'s')+(rows.length?' &middot; '+present+' checked in':'')+'</div></div>'+
     '<table style="width:100%;border-collapse:collapse;font-size:13px">'+
       '<thead><tr style="background:#f3f4f6;color:#555;font-size:11px;text-transform:uppercase;letter-spacing:.5px">'+
         '<th style="padding:6px 8px;text-align:left">#</th><th style="padding:6px 8px;text-align:left">Player</th><th style="padding:6px 8px;text-align:left">Parent</th><th style="padding:6px 8px;text-align:left">Phone</th><th style="padding:6px 8px;text-align:left">Allergy / Med</th><th style="padding:6px 8px;text-align:center">In</th>'+
@@ -479,9 +492,102 @@ function rosterCard(sid){
   '</div>';
 }
 function showRoster(sid){
-  modal('<h3>'+esc(SESSION_LABELS[sid]||sid)+' — Roster</h3><div style="overflow-x:auto">'+ rosterCard(sid) +'</div>'+
-    '<div class="foot"><button class="btn" id="rosterPrint">🖨 Print sheet</button><button class="btn primary" onclick="closeModal()">Close</button></div>', true);
+  modal('<h3>'+esc(SESSION_LABELS[sid]||sid)+' — Roster</h3><div style="overflow-x:auto">'+ rosterCard(sid,true) +'</div>'+
+    '<div class="foot"><a class="btn" href="checkin.html" target="_blank" rel="noopener" title="Phone-friendly check-in page for coaches">📱 Check-in page</a><button class="btn" id="rosterPrint">🖨 Print sheet</button><button class="btn primary" onclick="closeModal()">Close</button></div>', 'xwide');
   var pb=document.getElementById('rosterPrint'); if(pb) pb.addEventListener('click', function(){ printDoc('Roster '+(SESSION_LABELS[sid]||sid), rosterCard(sid)); });
+}
+// Tap-to-check-in from the roster modal. Saves via /api/checkin (local-only in demo mode).
+function toggleCheckin(rid, sid, pi, present){
+  var r=byId(rid); if(!r) return;
+  function apply(at){
+    r.attendance=r.attendance||{}; r.attendance[sid]=r.attendance[sid]||{};
+    if(present) r.attendance[sid][String(pi)]=at||new Date().toISOString(); else delete r.attendance[sid][String(pi)];
+    showRoster(sid);
+  }
+  if(state.demo){ apply(); return; }
+  api('/api/checkin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rid:rid,session:sid,player:pi,present:present})})
+    .then(function(x){ return x.json().then(function(d){ if(!x.ok||!d.ok) throw new Error(d.error||('http '+x.status)); apply(d.present_at); }); })
+    .catch(function(e){ alert('Could not save check-in: '+e.message); });
+}
+
+/* ── Season report: attendance by session + by player, totals, print + CSV ── */
+function todayET(){ return new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()); }
+function seasonStats(){
+  var paid=state.data.filter(function(r){return r.status==='paid';});
+  var today=todayET(), sids=Object.keys(SESSION_LABELS);
+  var sessions=sids.map(function(sid){
+    var registered=0, attended=0;
+    paid.forEach(function(r){ if(cleanSess(r).indexOf(sid)<0) return; var att=attendanceOf(r,sid); (r.players||[]).forEach(function(p,i){ registered++; if(att[String(i)]) attended++; }); });
+    var past=SESSION_DATES[sid]<=today;
+    return { sid:sid, label:SESSION_LABELS[sid], date:SESSION_DATES[sid], registered:registered, attended:attended, noShow:past?registered-attended:null, past:past };
+  });
+  var players=[];
+  paid.forEach(function(r){
+    (r.players||[]).forEach(function(p,i){
+      var row={ name:(p.first+' '+p.last).trim(), last:(p.last||'').toLowerCase(), parent:r.parent_name||'', cells:{} };
+      sids.forEach(function(sid){ var reg=cleanSess(r).indexOf(sid)>=0; var att=attendanceOf(r,sid)[String(i)]; row.cells[sid]= !reg?'' : att?'✓' : (SESSION_DATES[sid]<=today?'–':'○'); });
+      players.push(row);
+    });
+  });
+  players.sort(function(a,b){ return a.last.localeCompare(b.last)||a.name.localeCompare(b.name); });
+  var collected=paid.reduce(function(s,r){return s+((r.amount_cents||0)-(r.amount_refunded_cents||0));},0);
+  var refunded=state.data.reduce(function(s,r){return s+(r.amount_refunded_cents||0);},0);
+  return { sessions:sessions, players:players, paidRegs:paid.length, playerCount:players.length,
+    allSix:paid.filter(allSix).length, single:paid.filter(function(r){return !allSix(r);}).length,
+    collected:collected, refunded:refunded,
+    refundedRegs:state.data.filter(function(r){return r.status==='refunded';}).length,
+    canceledRegs:state.data.filter(function(r){return r.status==='canceled';}).length };
+}
+function reportCard(){
+  var s=seasonStats(), sids=Object.keys(SESSION_LABELS);
+  var td=function(v,x){ return '<td style="padding:6px 8px;border-top:1px solid #eee;'+(x||'')+'">'+v+'</td>'; };
+  var th=function(v,x){ return '<th style="padding:6px 8px;text-align:left;'+(x||'')+'">'+v+'</th>'; };
+  var pct=function(a,b){ return b?Math.round(a/b*100)+'%':'—'; };
+  var sess=s.sessions.map(function(x){
+    return '<tr>'+td('<b>'+esc(x.label)+'</b>')+td(esc(x.date))+td(x.registered,'text-align:center')+
+      td(x.past?x.attended:(x.attended||'—'),'text-align:center')+td(x.past?x.noShow:'—','text-align:center;color:#b02a2a')+
+      td(x.past?pct(x.attended,x.registered):'<span style="color:#888">upcoming</span>','text-align:center')+'</tr>';
+  }).join('');
+  var grid=s.players.map(function(p){
+    var att=sids.filter(function(sid){return p.cells[sid]==='✓';}).length, reg=sids.filter(function(sid){return p.cells[sid]!=='';}).length;
+    return '<tr>'+td('<b>'+esc(p.name)+'</b>')+td(esc(p.parent),'color:#555')+
+      sids.map(function(sid){ var v=p.cells[sid]; return td(v,'text-align:center;'+(v==='✓'?'color:#1f7a38;font-weight:700':v==='–'?'color:#b02a2a':'color:#999')); }).join('')+
+      td(att+' / '+reg,'text-align:center')+'</tr>';
+  }).join('') || '<tr>'+td('No paid registrations yet.','color:#888')+'</tr>';
+  var kvs=[['Paid registrations',s.paidRegs],['Players',s.playerCount],['All-6 packages',s.allSix],['Single-session regs',s.single],
+    ['Collected (net)',money(s.collected)],['Refunded',money(s.refunded)+(s.refundedRegs?' ('+s.refundedRegs+')':'')],['Canceled',s.canceledRegs]];
+  return '<div style="background:#fff;color:#111;border:1px solid #e2e6ea;border-radius:10px;overflow:hidden;font-family:Arial,Helvetica,sans-serif">'+
+    '<div style="background:#8B1A2B;color:#fff;padding:14px 16px"><div style="font-weight:800;font-size:16px">DBA Fall Clinics 2026 &mdash; Season Report</div><div style="font-size:11px;color:#f0d0d6">Generated '+esc(fmtDateTime(new Date().toISOString()))+' &middot; attendance from check-ins</div></div>'+
+    '<div style="padding:14px 16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;font-size:12px;border-bottom:1px solid #eee">'+
+      kvs.map(function(k){ return '<div style="background:#f6f7f9;border-radius:8px;padding:8px 10px"><div style="color:#777;font-size:10px;text-transform:uppercase;letter-spacing:.5px">'+k[0]+'</div><div style="font-weight:700;font-size:15px">'+k[1]+'</div></div>'; }).join('')+'</div>'+
+    '<div style="padding:12px 16px 4px;font-weight:700;font-size:13px">By session</div>'+
+    '<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#f3f4f6;color:#555;font-size:10px;text-transform:uppercase;letter-spacing:.5px">'+
+      th('Session')+th('Date')+th('Registered','text-align:center')+th('Attended','text-align:center')+th('No-shows','text-align:center')+th('Attendance','text-align:center')+
+    '</tr></thead><tbody>'+sess+'</tbody></table>'+
+    '<div style="padding:14px 16px 4px;font-weight:700;font-size:13px">By player <span style="font-weight:400;color:#777;font-size:11px">&middot; &#10003; attended &middot; &ndash; no-show &middot; &#9675; upcoming</span></div>'+
+    '<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#f3f4f6;color:#555;font-size:10px;text-transform:uppercase;letter-spacing:.5px">'+
+      th('Player')+th('Parent')+sids.map(function(sid){return th(SESSION_LABELS[sid],'text-align:center');}).join('')+th('Att / Reg','text-align:center')+
+    '</tr></thead><tbody>'+grid+'</tbody></table>'+
+  '</div>';
+}
+function showReport(){
+  modal('<h3>Season report</h3><div style="overflow-x:auto">'+reportCard()+'</div>'+
+    '<div class="foot"><button class="btn" id="reportCsv">⬇ CSV</button><button class="btn" id="reportPrint">🖨 Print</button><button class="btn primary" onclick="closeModal()">Close</button></div>', 'xwide');
+  var pb=document.getElementById('reportPrint'); if(pb) pb.addEventListener('click', function(){ printDoc('DBA Fall Clinics — Season Report', reportCard()); });
+  var cb=document.getElementById('reportCsv'); if(cb) cb.addEventListener('click', reportCsv);
+}
+function reportCsv(){
+  var s=seasonStats(), sids=Object.keys(SESSION_LABELS);
+  var q=function(c){ var v=String(c==null?'':c); if(/^[=+\-@\t\r]/.test(v)) v="'"+v; return '"'+v.replace(/"/g,'""')+'"'; };
+  var lines=[['Player','Parent'].concat(sids.map(function(sid){return SESSION_LABELS[sid];})).concat(['Attended','Registered']).map(q).join(',')];
+  s.players.forEach(function(p){
+    var att=sids.filter(function(sid){return p.cells[sid]==='✓';}).length, reg=sids.filter(function(sid){return p.cells[sid]!=='';}).length;
+    lines.push([p.name,p.parent].concat(sids.map(function(sid){ var v=p.cells[sid]; return v==='✓'?'attended':v==='–'?'no-show':v==='○'?'registered':''; })).concat([att,reg]).map(q).join(','));
+  });
+  lines.push(''); lines.push(['Session','Date','Registered','Attended','No-shows'].map(q).join(','));
+  s.sessions.forEach(function(x){ lines.push([x.label,x.date,x.registered,x.past?x.attended:'',x.past?x.noShow:''].map(q).join(',')); });
+  var blob=new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dba-clinic-season-report.csv'; a.click();
 }
 function printAllRosters(){
   var html=Object.keys(SESSION_LABELS).map(function(sid,i){
@@ -514,12 +620,17 @@ document.getElementById('filters').addEventListener('click', function(e){
 document.getElementById('search').addEventListener('input', function(){ state.q=this.value.trim().toLowerCase(); render(); });
 document.getElementById('sessbar').addEventListener('click', function(e){ var el=e.target.closest('[data-sid]'); if(el) showRoster(el.dataset.sid); });
 document.getElementById('rostersBtn').addEventListener('click', printAllRosters);
+document.getElementById('reportBtn').addEventListener('click', showReport);
+document.getElementById('modal').addEventListener('click', function(e){
+  var b=e.target.closest('button.chk'); if(!b) return;
+  toggleCheckin(b.dataset.rid, b.dataset.sid, parseInt(b.dataset.pi,10), b.dataset.present!=='1');
+});
 document.getElementById('refreshBtn').addEventListener('click', function(){ load(); });
 
 /* ── Demo preview (?demo=1) — sample data, no login, no backend ── */
 var SAMPLE_DATA=[
-  {id:'a1',status:'paid',payment_provider:'stripe',paid_via:'Stripe',card_last4:'4242',players:[{first:'Marcus',last:'Avery'},{first:'Maya',last:'Avery'}],sessions:['s1','s2','s3','s4','s5','s6'],all_six:true,session_count:6,amount_cents:32800,amount_refunded_cents:0,parent_name:'Jordan Avery',parent_email:'jordan@example.com',parent_phone:'(610) 555-0100',emerg_name:'Pat Avery',emerg_phone:'(610) 555-0101',pickup_name:'Grandma Ruth',pickup_phone:'(610) 555-0102',allergies:'',medications:'',medical_conditions:'',treat_ok:true,created:'2026-08-30T14:02:00Z',paid_at:'2026-08-30T14:03:00Z',waiver_name:'Jordan Avery',waiver_at:'2026-08-30T14:02:00Z',waiver_ip:'71.x.x.10',stripe_payment_intent:'pi_3abc'},
-  {id:'a2',status:'paid',payment_provider:'stripe',paid_via:'Stripe',card_last4:'1881',stripe_payment_intent:'pi_2',players:[{first:'Noah',last:'Tinker'}],sessions:['s1','s3'],all_six:false,session_count:2,amount_cents:7600,amount_refunded_cents:3800,parent_name:'Sam Tinker',parent_email:'sam@example.com',parent_phone:'(610) 555-0139',emerg_name:'Jo Tinker',emerg_phone:'(610) 555-0140',allergies:'Peanut allergy',medications:'Inhaler (albuterol)',medical_conditions:'Asthma',treat_ok:true,amount_mismatch:true,created:'2026-08-29T09:00:00Z',paid_at:'2026-08-29T09:01:00Z',waiver_name:'Sam Tinker'},
+  {id:'a1',status:'paid',payment_provider:'stripe',paid_via:'Stripe',card_last4:'4242',players:[{first:'Marcus',last:'Avery'},{first:'Maya',last:'Avery'}],sessions:['s1','s2','s3','s4','s5','s6'],all_six:true,session_count:6,amount_cents:32800,amount_refunded_cents:0,parent_name:'Jordan Avery',parent_email:'jordan@example.com',parent_phone:'(610) 555-0100',emerg_name:'Pat Avery',emerg_phone:'(610) 555-0101',pickup_name:'Grandma Ruth',pickup_phone:'(610) 555-0102',allergies:'',medications:'',medical_conditions:'',treat_ok:true,created:'2026-08-30T14:02:00Z',paid_at:'2026-08-30T14:03:00Z',waiver_name:'Jordan Avery',waiver_at:'2026-08-30T14:02:00Z',waiver_ip:'71.x.x.10',stripe_payment_intent:'pi_3abc',attendance:{s1:{'0':'2026-09-27T15:05:00Z','1':'2026-09-27T15:06:00Z'}}},
+  {id:'a2',status:'paid',payment_provider:'stripe',paid_via:'Stripe',card_last4:'1881',stripe_payment_intent:'pi_2',players:[{first:'Noah',last:'Tinker'}],sessions:['s1','s3'],all_six:false,session_count:2,amount_cents:7600,amount_refunded_cents:3800,parent_name:'Sam Tinker',parent_email:'sam@example.com',parent_phone:'(610) 555-0139',emerg_name:'Jo Tinker',emerg_phone:'(610) 555-0140',allergies:'Peanut allergy',medications:'Inhaler (albuterol)',medical_conditions:'Asthma',treat_ok:true,amount_mismatch:true,created:'2026-08-29T09:00:00Z',paid_at:'2026-08-29T09:01:00Z',waiver_name:'Sam Tinker',attendance:{s1:{'0':'2026-09-27T15:10:00Z'}}},
   {id:'a3',status:'pending',payment_provider:'square',players:[{first:'Leo',last:'Blitz'}],sessions:['s2'],session_count:1,amount_cents:3800,amount_refunded_cents:0,parent_name:'Dana Blitz',parent_email:'dana@example.com',parent_phone:'(610) 555-0170',created:'2026-08-31T18:20:00Z'},
   {id:'a4',status:'refunded',payment_provider:'square',paid_via:'Square',card_last4:'0002',square_payment_id:'sq_4',players:[{first:'Maggie',last:'Joyce'}],sessions:['s4','s5'],session_count:2,amount_cents:7600,amount_refunded_cents:7600,parent_name:'Erin Joyce',parent_email:'erin@example.com',parent_phone:'(610) 555-0188',emerg_name:'Ed Joyce',emerg_phone:'(610) 555-0189',created:'2026-08-25T12:00:00Z',paid_at:'2026-08-25T12:01:00Z',waiver_name:'Erin Joyce'},
   {id:'a5',status:'canceled',payment_provider:'stripe',paid_via:'Stripe',card_last4:'3333',stripe_payment_intent:'pi_5',players:[{first:'Ivy',last:'Nguyen'}],sessions:['s2','s3'],session_count:2,amount_cents:7600,amount_refunded_cents:0,parent_name:'Minh Nguyen',parent_email:'minh@example.com',parent_phone:'(610) 555-0200',emerg_name:'Lan Nguyen',emerg_phone:'(610) 555-0201',created:'2026-08-22T10:00:00Z',paid_at:'2026-08-22T10:01:00Z',canceled_at:'2026-08-23T08:00:00Z',waiver_name:'Minh Nguyen'},

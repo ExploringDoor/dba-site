@@ -65,14 +65,19 @@ branded "You're registered!" email.
 
 Pick any passcode you'll type to open `admin.html`.
 - Env: `ADMIN_PASSWORD` = something long you'll remember
+- Env: `CHECKIN_PASSWORD` = a *different*, simpler passcode for coaches/managers. It opens
+  **only** `checkin.html` (clinic-day attendance: roster, parent phones, medical notes,
+  tap-to-check-in) — never the full admin, payments, or emails. Your admin passcode works
+  there too, so this is optional until you hand check-in duty to someone else.
 
 ---
 
 ## 5. Optional
 
-- `SITE_URL` = `https://www.downerbasketballacademy.com` (makes the after-payment redirect
+- `SITE_URL` = `https://www.greggdownerbasketball.com` (makes the after-payment redirect
   rock-solid; if you skip it we derive the address automatically).
-- `CRON_SECRET` = any long random string. Powers the **reconcile safety net** — a job that
+- `CRON_SECRET` = any long random string — **required** (it also unlocks the nightly
+  reminder-email cron). Powers the **reconcile safety net** — a job that
   runs every 15 min (configured in `vercel.json`) and finalizes any payment where the parent
   paid but closed the tab before the confirmation page loaded. Highly recommended so no paid
   registration is ever missed. (Set the same value in Vercel; Vercel sends it automatically.)
@@ -114,6 +119,7 @@ MAIL_FROM                 (optional)
 MAIL_FROM_NAME            (optional)
 ADMIN_EMAIL               (optional)
 ADMIN_PASSWORD
+CHECKIN_PASSWORD          (optional — coach check-in page only)
 SITE_URL                  (optional)
-CRON_SECRET               (optional but recommended — powers the reconcile safety net)
+CRON_SECRET               (required — powers the payment safety net + reminder emails)
 ```
