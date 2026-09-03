@@ -19,13 +19,13 @@ export const SESSIONS = [
 export const SESSION_IDS = SESSIONS.map((s) => s.id);
 
 // All-in prices (what the parent pays), in cents. Matches the RYZER model:
-// $30 base + $8 processing = $38/session; $150 + $14 = $164 for all six.
+// $30 base + $5 processing = $35/session; $150 + $14 = $164 for all six.
 // We charge the all-in amount; the base/fee split is stored only for reporting.
 export const PRICE = {
-  perSessionCents: 3800,
+  perSessionCents: 3500,
   allSixCents: 16400,
   baseSessionCents: 3000,
-  feeSessionCents: 800,
+  feeSessionCents: 500,
   baseAllSixCents: 15000,
   feeAllSixCents: 1400,
   currency: 'USD',

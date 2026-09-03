@@ -491,7 +491,7 @@ export const stripe = {
     return s;
   },
   // Seed a session that was created "earlier" (for regs seeded straight into Firestore).
-  seedSession({ id, pi, rid = '', amount = 3800, paid = false, last4 = '4242' } = {}) {
+  seedSession({ id, pi, rid = '', amount = 3500, paid = false, last4 = '4242' } = {}) {
     const sid = id || ('cs_test_' + (++state.ids.cs));
     const intent = newIntent({ id: pi, amount, metadata: rid ? { rid } : {} });
     const s = { id: sid, object: 'checkout.session', mode: 'payment', status: 'open', payment_status: 'unpaid', amount_total: amount, currency: 'usd', url: `https://checkout.stripe.com/c/pay/${sid}`, payment_intent: intent.id, customer_email: null, client_reference_id: rid || null, metadata: rid ? { rid } : {}, success_url: `${process.env.SITE_URL}/register-success.html?rid=${rid}&provider=stripe`, cancel_url: `${process.env.SITE_URL}/register.html`, expires_at: null, line_item_name: '' };

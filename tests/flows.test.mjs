@@ -110,7 +110,7 @@ await test('POST /api/checkout → 200 {url, rid}; PENDING doc stored with the S
   assert.ok(exp >= now + 3500 && exp <= now + 3600, 'checkout link expires in ~1h');
   const s = fake.stripe.session('cs_test_1');
   assert.equal(s.payment_status, 'unpaid');
-  assert.equal(s.amount_total, 7600);
+  assert.equal(s.amount_total, 7000);
   assert.equal(fake.mails().length, 0, 'no email before payment');
 });
 await test('GET /api/confirm before the parent pays → ok:false, doc stays pending, no email', async () => {
@@ -130,9 +130,9 @@ await test('GET /api/confirm after Stripe marks it paid → paid, card_last4 424
   assert.equal(res.body.status, 'paid');
   assert.equal(res.body.card_last4, '4242');
   assert.equal(res.body.paid_via, 'Stripe');
-  assert.equal(res.body.amount, '76.00');
+  assert.equal(res.body.amount, '70.00');
   assert.equal(res.body.base, '60.00');
-  assert.equal(res.body.processing, '16.00');
+  assert.equal(res.body.processing, '10.00');
   assert.equal(res.body.reg_id, rid1);
   assert.deepEqual(res.body.players, ['Kobe B']);
   assert.deepEqual(res.body.sessions_labels, ['Sun, Sep 27', 'Sun, Oct 4']);
@@ -142,7 +142,7 @@ await test('GET /api/confirm after Stripe marks it paid → paid, card_last4 424
   assert.equal(d.card_last4, '4242');
   assert.equal(d.paid_via, 'Stripe');
   assert.equal(d.stripe_payment_intent, 'pi_1');
-  assert.equal(d.amount_captured_cents, 7600);
+  assert.equal(d.amount_captured_cents, 7000);
   assert.equal(d.amount_mismatch, undefined, 'captured == expected → no mismatch flag');
   assert.equal(d.confirm_email_sent, true);
   assert.ok(d.paid_at && d.confirm_email_at);
@@ -152,7 +152,7 @@ await test('GET /api/confirm after Stripe marks it paid → paid, card_last4 424
   assert.deepEqual(m[0].personalizations[0].bcc, [{ email: ADMIN_EMAIL }]);
   assert.equal(m[0].from.email, process.env.MAIL_FROM);
   assert.match(m[0].subject, /You're registered/);
-  assert.ok(m[0].html.includes(rid1) && m[0].html.includes('4242') && m[0].html.includes('$76.00') && m[0].html.includes('Kobe B'), 'receipt names the rid, card, total, player');
+  assert.ok(m[0].html.includes(rid1) && m[0].html.includes('4242') && m[0].html.includes('$70.00') && m[0].html.includes('Kobe B'), 'receipt names the rid, card, total, player');
   assert.ok(m[0].text.length > 50 && !/<[a-z]/i.test(m[0].text), 'plain-text part is real text');
   // Verification went session → payment_intent → charge (Stripe returned bare ids for the expand).
   assert.equal(fake.calls({ host: 'api.stripe.com', path: '/v1/checkout/sessions/cs_test_1' }).length, sBefore + 1);
@@ -175,7 +175,7 @@ await test('second GET /api/confirm is idempotent: same receipt, still ONE email
 await test('verify also captures last4 when Stripe honours the expand (nested payment_intent.latest_charge) — one Stripe call', async () => {
   fake.reset();
   fake.state.opts.stripeNestExpand = true;
-  const s = fake.stripe.seedSession({ id: 'cs_nest', paid: true, amount: 3800, last4: '1881' });
+  const s = fake.stripe.seedSession({ id: 'cs_nest', paid: true, amount: 3500, last4: '1881' });
   const rid = fake.seedReg({ status: 'pending', stripe_session_id: 'cs_nest', stripe_payment_intent: '', sessions: ['s1'] });
   const res = await call(confirm, { method: 'GET', query: { rid } });
   assert.equal(res.body.ok, true);
@@ -199,7 +199,7 @@ await test('a captured amount that differs from our price is still marked paid b
 });
 await test('a terminal-state confirm never flips back to paid — but money that arrived after a cancel is FLAGGED (paid_after_cancel) so admin can refund it', async () => {
   fake.reset();
-  fake.stripe.seedSession({ id: 'cs_t', paid: true, amount: 3800 });
+  fake.stripe.seedSession({ id: 'cs_t', paid: true, amount: 3500 });
   for (const status of ['canceled', 'refunded', 'abandoned', 'error']) {
     const rid = fake.seedReg({ status, stripe_session_id: 'cs_t', confirm_email_sent: false });
     const res = await call(confirm, { method: 'GET', query: { rid } });
@@ -218,7 +218,7 @@ for (const variant of ['webhook first', 'confirm first', 'no event-loop latency 
   await test(`${variant}: status paid, exactly ONE receipt, losers stopped by the updateTime precondition`, async () => {
     fake.reset();
     if (variant.startsWith('no event-loop')) fake.state.opts.latency = false;
-    fake.stripe.seedSession({ id: 'cs_race', paid: true, amount: 3800 });
+    fake.stripe.seedSession({ id: 'cs_race', paid: true, amount: 3500 });
     const rid = fake.seedReg({ status: 'pending', stripe_session_id: 'cs_race', stripe_payment_intent: '', sessions: ['s1'], created: iso(10 * MIN) });
     const raw = stripeEvent(rid, 'cs_race');
     const wres = mockRes(), cres = mockRes(), rres = mockRes();
@@ -260,11 +260,11 @@ let rec = {};
 await test('one pass: paid→finalized(+1 email), stale unpaid→abandoned, fresh/young/outage→untouched; list pagination exercised', async () => {
   fake.reset();
   fake.state.opts.listPageSize = 2; // force several pages so fsList's pageToken loop is actually walked
-  fake.stripe.seedSession({ id: 'cs_A', paid: false, amount: 3800 });
-  fake.stripe.seedSession({ id: 'cs_B', paid: true, amount: 3800 });
-  fake.stripe.seedSession({ id: 'cs_C', paid: false, amount: 3800 });
-  fake.stripe.seedSession({ id: 'cs_D', paid: false, amount: 3800 });
-  fake.stripe.seedSession({ id: 'cs_E', paid: false, amount: 3800 });
+  fake.stripe.seedSession({ id: 'cs_A', paid: false, amount: 3500 });
+  fake.stripe.seedSession({ id: 'cs_B', paid: true, amount: 3500 });
+  fake.stripe.seedSession({ id: 'cs_C', paid: false, amount: 3500 });
+  fake.stripe.seedSession({ id: 'cs_D', paid: false, amount: 3500 });
+  fake.stripe.seedSession({ id: 'cs_E', paid: false, amount: 3500 });
   fake.state.stripe.failSessions.add('cs_E'); // Stripe 503 for this one → inconclusive
   rec = {
     A: fake.seedReg({ status: 'pending', stripe_session_id: 'cs_A', stripe_payment_intent: '', created: iso(3 * DAY), parent_email: 'a@x.com' }),
@@ -594,8 +594,8 @@ await test('the admin passcode works at the door too; a wrong key does not', asy
 // ═════════════════════════════════════════════════════════════════════════
 group('8. Refund — through Stripe, tracked on the doc, receipt emailed once per refund');
 let rr = '';
-await test('partial refund $30 of $76 → Stripe refund call, amount_refunded_cents 3000, status stays paid, ONE refund receipt (BCC admin)', async () => {
-  fake.stripe.seedSession({ id: 'cs_ref', pi: 'pi_ref', paid: true, amount: 7600 });
+await test('partial refund $30 of $70 → Stripe refund call, amount_refunded_cents 3000, status stays paid, ONE refund receipt (BCC admin)', async () => {
+  fake.stripe.seedSession({ id: 'cs_ref', pi: 'pi_ref', paid: true, amount: 7000 });
   rr = fake.seedReg({ status: 'paid', sessions: ['s1', 's2'], stripe_session_id: 'cs_ref', stripe_payment_intent: 'pi_ref' });
   const res = await call(refund, { method: 'POST', headers: ADMIN, body: { rid: rr, amount_cents: 3000 } });
   assert.equal(res.statusCode, 200, JSON.stringify(res.body));
@@ -611,20 +611,20 @@ await test('partial refund $30 of $76 → Stripe refund call, amount_refunded_ce
   assert.equal(m.length, 1);
   assert.deepEqual(m[0].to, ['jane@x.com']); assert.deepEqual(m[0].bcc, [ADMIN_EMAIL]);
   assert.match(m[0].subject, /Refund processed/);
-  assert.ok(m[0].html.includes('$30.00') && m[0].html.includes('Partial refund') && m[0].html.includes('$30.00 of $76.00') && m[0].html.includes('4242'));
+  assert.ok(m[0].html.includes('$30.00') && m[0].html.includes('Partial refund') && m[0].html.includes('$30.00 of $70.00') && m[0].html.includes('4242'));
 });
-await test('over-refund attempt (amount_cents 999999) is clamped to the remaining $46 → fully refunded, status refunded, second receipt', async () => {
+await test('over-refund attempt (amount_cents 999999) is clamped to the remaining $40 → fully refunded, status refunded, second receipt', async () => {
   const res = await call(refund, { method: 'POST', headers: ADMIN, body: { rid: rr, amount_cents: 999999 } });
   assert.equal(res.statusCode, 200, JSON.stringify(res.body));
-  assert.deepEqual(res.body, { ok: true, refunded_cents: 7600, refunded: '76.00', status: 'refunded' });
+  assert.deepEqual(res.body, { ok: true, refunded_cents: 7000, refunded: '70.00', status: 'refunded' });
   const calls = fake.calls({ host: 'api.stripe.com', method: 'POST', path: '/v1/refunds' });
   assert.equal(calls.length, 2);
-  assert.equal(calls[1].body.amount, '4600');
+  assert.equal(calls[1].body.amount, '4000');
   assert.equal(fake.stripe.charge('ch_1').refunded, true);
   const d = fake.doc(`registrations/${rr}`);
-  assert.equal(d.amount_refunded_cents, 7600); assert.equal(d.status, 'refunded'); assert.equal(d.last_refund_id, 're_2');
+  assert.equal(d.amount_refunded_cents, 7000); assert.equal(d.status, 'refunded'); assert.equal(d.last_refund_id, 're_2');
   assert.equal(fake.mails().length, 2);
-  assert.ok(fake.mails()[1].html.includes('$46.00') && !fake.mails()[1].html.includes('Partial refund'));
+  assert.ok(fake.mails()[1].html.includes('$40.00') && !fake.mails()[1].html.includes('Partial refund'));
 });
 await test('a third attempt → 400 already_fully_refunded; Stripe not called, no email', async () => {
   const res = await call(refund, { method: 'POST', headers: ADMIN, body: { rid: rr } });
@@ -641,7 +641,7 @@ await test('refusals: pending reg (no payment) → not_refundable; zero/negative
   const pending = fake.seedReg({ status: 'pending' });
   let res = await call(refund, { method: 'POST', headers: ADMIN, body: { rid: pending } });
   assert.equal(res.statusCode, 400); assert.equal(res.body.error, 'not_refundable');
-  fake.stripe.seedSession({ id: 'cs_ok', pi: 'pi_ok', paid: true, amount: 3800 });
+  fake.stripe.seedSession({ id: 'cs_ok', pi: 'pi_ok', paid: true, amount: 3500 });
   const paid = fake.seedReg({ status: 'paid', stripe_session_id: 'cs_ok', stripe_payment_intent: 'pi_ok' });
   res = await call(refund, { method: 'POST', headers: ADMIN, body: { rid: paid, amount_cents: 0 } });
   assert.equal(res.statusCode, 400); assert.equal(res.body.error, 'bad_amount');
@@ -654,7 +654,7 @@ await test('refusals: pending reg (no payment) → not_refundable; zero/negative
 });
 await test('if Stripe refuses (our doc says $99.99 but Stripe only captured $38) → 502 refund_failed, doc untouched, no email', async () => {
   fake.reset();
-  fake.stripe.seedSession({ id: 'cs_bad', pi: 'pi_bad', paid: true, amount: 3800 });
+  fake.stripe.seedSession({ id: 'cs_bad', pi: 'pi_bad', paid: true, amount: 3500 });
   const rid = fake.seedReg({ status: 'paid', stripe_session_id: 'cs_bad', stripe_payment_intent: 'pi_bad', amount_cents: 9999 });
   const res = await call(refund, { method: 'POST', headers: ADMIN, body: { rid } });
   assert.equal(res.statusCode, 502); assert.equal(res.body.error, 'refund_failed');
@@ -665,17 +665,17 @@ await test('if Stripe refuses (our doc says $99.99 but Stripe only captured $38)
 });
 await test('a canceled-but-paid reg can still be refunded; a partial keeps status canceled', async () => {
   fake.reset();
-  fake.stripe.seedSession({ id: 'cs_cx', pi: 'pi_cx', paid: true, amount: 7600 });
+  fake.stripe.seedSession({ id: 'cs_cx', pi: 'pi_cx', paid: true, amount: 7000 });
   const rid = fake.seedReg({ status: 'canceled', sessions: ['s1', 's2'], stripe_session_id: 'cs_cx', stripe_payment_intent: 'pi_cx', canceled_at: '2026-09-02T00:00:00Z' });
-  const res = await call(refund, { method: 'POST', headers: ADMIN, body: { rid, amount_cents: 3800 } });
-  assert.deepEqual(res.body, { ok: true, refunded_cents: 3800, refunded: '38.00', status: 'canceled' });
+  const res = await call(refund, { method: 'POST', headers: ADMIN, body: { rid, amount_cents: 3500 } });
+  assert.deepEqual(res.body, { ok: true, refunded_cents: 3500, refunded: '35.00', status: 'canceled' });
   assert.equal(fake.doc(`registrations/${rid}`).status, 'canceled');
 });
 
 // ═════════════════════════════════════════════════════════════════════════
 group('9. Stripe webhook — signature, replay, tampering, finalize');
 await test('replayed valid event for an already-paid reg → 200 {already:"paid"}, no second email, no Stripe call', async () => {
-  fake.stripe.seedSession({ id: 'cs_w1', paid: true, amount: 3800 });
+  fake.stripe.seedSession({ id: 'cs_w1', paid: true, amount: 3500 });
   const rid = fake.seedReg({ status: 'paid', stripe_session_id: 'cs_w1' });
   const raw = stripeEvent(rid, 'cs_w1');
   for (const stream of [false, true]) {
@@ -703,9 +703,9 @@ await test('tampered body (signature computed over the original) → 400 bad_sig
   assert.equal(fake.doc(`registrations/${rid}`).status, 'pending');
 });
 await test('valid event, but Stripe says the session is still unpaid → 200 {pending:true}, no change (never trusts the event body)', async () => {
-  fake.stripe.seedSession({ id: 'cs_w3', paid: false, amount: 3800 });
+  fake.stripe.seedSession({ id: 'cs_w3', paid: false, amount: 3500 });
   const rid = fake.seedReg({ status: 'pending', stripe_session_id: 'cs_w3', stripe_payment_intent: '' });
-  const raw = stripeEvent(rid, 'cs_w3', { payment_status: 'paid', amount_total: 3800 });
+  const raw = stripeEvent(rid, 'cs_w3', { payment_status: 'paid', amount_total: 3500 });
   const res = mockRes(); await webhook(webhookReq(raw, sign(raw), { stream: true }), res);
   assert.equal(res.statusCode, 200);
   assert.deepEqual(res.body, { ok: true, pending: true });
@@ -713,7 +713,7 @@ await test('valid event, but Stripe says the session is still unpaid → 200 {pe
   assert.equal(fake.mails().length, 0);
 });
 await test('valid event for a pending reg whose session IS paid → finalized + ONE email; Stripe retry of the same event → already paid', async () => {
-  fake.stripe.seedSession({ id: 'cs_w4', paid: true, amount: 3800, last4: '0005' });
+  fake.stripe.seedSession({ id: 'cs_w4', paid: true, amount: 3500, last4: '0005' });
   const rid = fake.seedReg({ status: 'pending', stripe_session_id: 'cs_w4', stripe_payment_intent: '', parent_email: 'hook@x.com' });
   const raw = stripeEvent(rid, 'cs_w4');
   let res = mockRes(); await webhook(webhookReq(raw, sign(raw), { stream: true }), res);
@@ -745,7 +745,7 @@ await test('other event types, unknown rids, and terminal regs are acknowledged 
   assert.equal(fake.mails().length, before);
 });
 await test('a Stripe outage during verification → 500 (so Stripe retries later); reg untouched', async () => {
-  fake.stripe.seedSession({ id: 'cs_w5', paid: true, amount: 3800 });
+  fake.stripe.seedSession({ id: 'cs_w5', paid: true, amount: 3500 });
   fake.state.stripe.failSessions.add('cs_w5');
   const rid = fake.seedReg({ status: 'pending', stripe_session_id: 'cs_w5', stripe_payment_intent: '' });
   const raw = stripeEvent(rid, 'cs_w5');
@@ -760,7 +760,7 @@ await test('a Stripe outage during verification → 500 (so Stripe retries later
 group('10. Receipt email failure — payment is still recorded, the claim is released, and a retry sends it');
 let rid10 = '';
 await test('SendGrid 500 during confirm → status paid, confirm_email_sent false + confirm_email_error, zero emails, page still gets ok:true', async () => {
-  fake.stripe.seedSession({ id: 'cs_sg', paid: true, amount: 3800 });
+  fake.stripe.seedSession({ id: 'cs_sg', paid: true, amount: 3500 });
   rid10 = fake.seedReg({ status: 'pending', stripe_session_id: 'cs_sg', stripe_payment_intent: '' });
   fake.state.opts.fail.sendgrid = 500;
   const res = await call(confirm, { method: 'GET', query: { rid: rid10 } });
