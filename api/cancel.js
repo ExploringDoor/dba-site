@@ -18,10 +18,7 @@ function authed(req) {
 function safeId(id) { return /^[A-Za-z0-9_-]{1,128}$/.test(String(id || '')); }
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-admin-key');
-  if (req.method === 'OPTIONS') return res.status(200).end();
+  res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
   if (!process.env.ADMIN_PASSWORD) return res.status(503).json({ error: 'admin_not_configured' });
   if (!authed(req)) return res.status(401).json({ error: 'unauthorized' });
@@ -32,7 +29,20 @@ export default async function handler(req, res) {
   const reg = await fsGet(`registrations/${b.rid}`);
   if (!reg) return res.status(404).json({ error: 'not_found' });
 
-  const patch = { status: 'canceled', canceled_at: new Date().toISOString() };
+  // A pending registration still has a LIVE Stripe Checkout link (good for up to an hour). Kill it
+  // first, so the parent can't pay into a record we've just declared dead. Best-effort: if Stripe
+  // is unreachable we still cancel, and the webhook/confirm paths flag any late payment as
+  // `paid_after_cancel` so it shows up in admin with a Refund button.
+  let link_expired = false;
+  if (reg.status === 'pending' && reg.stripe_session_id && process.env.STRIPE_SECRET_KEY) {
+    try {
+      const r = await fetch(`https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(reg.stripe_session_id)}/expire`, {
+        method: 'POST', headers: { Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}` },
+      });
+      link_expired = r.ok;
+    } catch (e) { /* best-effort */ }
+  }
+  const patch = { status: 'canceled', canceled_at: new Date().toISOString(), ...(link_expired ? { checkout_link_expired: true } : {}) };
   const w = await fsPatchVerified(`registrations/${b.rid}`, patch);
   if (!w.ok) return res.status(502).json({ error: 'update_failed' });
   const owed = (reg.status === 'paid') ? ((reg.amount_cents || 0) - (reg.amount_refunded_cents || 0)) : 0;

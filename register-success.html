@@ -149,7 +149,8 @@ function check(){
       if(d.ok && d.status === 'paid'){
         try{ sessionStorage.removeItem('dba_regform'); }catch(e){} // the saved form draft is no longer needed
         renderRecap(d); show('paid');
-        try{ if(window.gtag) gtag('event','purchase',{transaction_id:String(d.reg_id||''),value:parseFloat(d.amount||'0')||0,currency:'USD'}); }catch(e){}
+        // Analytics gets only a stub of the receipt id — the full id is the key to this receipt.
+        try{ if(window.gtag) gtag('event','purchase',{transaction_id:'dba-'+String(d.reg_id||'').slice(-6),value:parseFloat(d.amount||'0')||0,currency:'USD'}); }catch(e){}
         return;
       }
       if(d.status === 'canceled' || d.status === 'refunded' || d.status === 'error'){ show('error'); return; }

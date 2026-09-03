@@ -13,7 +13,7 @@
 // full admin passcode also works here, while a coach's check-in passcode works ONLY here.
 // Attendance lives on the registration as attendance[sessionId][playerIndex] = ISO timestamp.
 
-import { fbConfigured, fbAdminConfigured, fsGet, fsList, fsPatchVerified } from './_firestore.js';
+import { fbConfigured, fbAdminConfigured, fsGet, fsGetMeta, fsList, fsPatchVerified } from './_firestore.js';
 import { SESSIONS, SESSION_IDS, cleanSessions } from './_clinic.js';
 import { sessionStatus, isCanceled } from './_status.js';
 
@@ -96,13 +96,20 @@ export default async function handler(req, res) {
   if (!reg) return res.status(404).json({ error: 'not_found' });
   if (reg.status !== 'paid' || !attends(reg, sid) || pi >= (reg.players || []).length) return res.status(400).json({ error: 'not_on_roster' });
 
-  // Read-modify-write the whole attendance map so other sessions' check-ins are preserved.
-  const attendance = Object.assign({}, reg.attendance || {});
-  const day = Object.assign({}, attendance[sid] || {});
-  const now = new Date().toISOString();
-  if (present) day[String(pi)] = now; else delete day[String(pi)];
-  attendance[sid] = day;
-  const w = await fsPatchVerified(`registrations/${b.rid}`, { attendance });
+  // Read-modify-write the whole attendance map (so other sessions' check-ins are preserved) as a
+  // CONDITIONAL write with a short retry — two coaches tapping two siblings on the same
+  // registration at the same moment can't overwrite each other's check-in.
+  let w = { ok: false }, now = '';
+  for (let i = 0; i < 3 && !w.ok; i++) {
+    const cur = await fsGetMeta(`registrations/${b.rid}`);
+    if (!cur) return res.status(404).json({ error: 'not_found' });
+    const attendance = Object.assign({}, cur.doc.attendance || {});
+    const day = Object.assign({}, attendance[sid] || {});
+    now = new Date().toISOString();
+    if (present) day[String(pi)] = now; else delete day[String(pi)];
+    attendance[sid] = day;
+    w = await fsPatchVerified(`registrations/${b.rid}`, { attendance }, 2, { ifUpdateTime: cur.updateTime });
+  }
   if (!w.ok) return res.status(502).json({ error: 'write_failed' });
   return res.status(200).json({ ok: true, rid: b.rid, session: sid, player: pi, present, present_at: present ? now : '' });
 }

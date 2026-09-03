@@ -10,17 +10,26 @@
 // Env: CRON_SECRET (for the cron), ADMIN_PASSWORD (for manual), + Firestore/provider vars.
 
 import { fbConfigured, fbAdminConfigured, fsList, fsPatch, fsPatchVerified } from './_firestore.js';
-import { verifyPayment, finalizePaid } from './_finalize.js';
+import { verifyPayment, finalizePaid, maybeSendConfirmation } from './_finalize.js';
 
 const PENDING_GRACE_MS = 2 * 60 * 1000;        // don't touch anything younger than 2 min (still checking out)
 const ABANDON_AFTER_MS = 2 * 24 * 60 * 60 * 1000; // give up after 2 days unpaid
+const MAX_PENDING_PER_RUN = 60;                 // bound the work per run (a spam flood can't make the cron time out) — oldest first, rest next run
+const EMAIL_RETRY_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+const MAX_EMAIL_RETRIES_PER_RUN = 20;
 
+function ctEq(a, b) {
+  a = String(a || ''); b = String(b || '');
+  if (a.length !== b.length) return false;
+  let r = 0;
+  for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return r === 0;
+}
 function authed(req) {
-  const cron = process.env.CRON_SECRET;
-  const auth = req.headers['authorization'] || '';
-  if (cron && auth === `Bearer ${cron}`) return true;
-  const admin = process.env.ADMIN_PASSWORD;
-  return !!admin && (req.headers['x-admin-key'] || '') === admin;
+  const cron = process.env.CRON_SECRET || '';
+  if (cron && ctEq(req.headers['authorization'] || '', `Bearer ${cron}`)) return true;
+  const admin = process.env.ADMIN_PASSWORD || '';
+  return !!admin && ctEq(req.headers['x-admin-key'] || '', admin);
 }
 
 export default async function handler(req, res) {
@@ -28,8 +37,11 @@ export default async function handler(req, res) {
   if (!fbConfigured() || !fbAdminConfigured()) return res.status(503).json({ error: 'db_not_configured' });
 
   const now = Date.now();
+  // fsList THROWS if Firestore can't be read (→ 500, no heartbeat) — a failed read must never
+  // paint the dashboard's green "safety-net running" light.
   const all = await fsList('registrations');
-  const pending = all.filter((r) => r.status === 'pending');
+  const allPending = all.filter((r) => r.status === 'pending').sort((a, b) => String(a.created || '').localeCompare(String(b.created || '')));
+  const pending = allPending.slice(0, MAX_PENDING_PER_RUN);
 
   let finalized = 0, abandoned = 0, checked = 0, inconclusive = 0;
   for (const reg of pending) {
@@ -51,7 +63,17 @@ export default async function handler(req, res) {
     }
   }
 
-  const result = { ok: true, pending: pending.length, checked, finalized, abandoned, inconclusive };
+  // Second pass: PAID registrations whose receipt email never went out (SendGrid blip at payment
+  // time released the claim) — retry, bounded, for up to 30 days. maybeSendConfirmation's
+  // claim-before-send keeps this from ever double-sending.
+  let emailed = 0;
+  const unmailed = all.filter((r) => r.status === 'paid' && !r.confirm_email_sent && r.parent_email
+    && (now - new Date(r.paid_at || r.created || 0).getTime()) < EMAIL_RETRY_WINDOW_MS).slice(0, MAX_EMAIL_RETRIES_PER_RUN);
+  for (const reg of unmailed) {
+    try { if (await maybeSendConfirmation(reg.id, reg)) emailed++; } catch (e) { /* next run */ }
+  }
+
+  const result = { ok: true, pending: allPending.length, checked, finalized, abandoned, inconclusive, emailed, deferred: Math.max(0, allPending.length - pending.length) };
   // Heartbeat the admin dashboard can see. Lives under the (admin-writable) registrations
   // collection as a reserved `_`-prefixed doc; /api/registrations filters it out of the list.
   try { await fsPatch('registrations/_cron_reconcile', { last_run: new Date().toISOString(), ...result }); } catch (e) { /* never fail the cron on a heartbeat */ }

@@ -57,7 +57,8 @@ export default async function handler(req, res) {
   if (req.method === 'POST' && !reopen && (!message || message.length > 4000)) return res.status(400).json({ error: 'bad_message' });
   if (!fbConfigured() || !fbAdminConfigured()) return res.status(503).json({ error: 'db_not_configured' });
 
-  const status = await sessionStatus();
+  let status;
+  try { status = await sessionStatus(); } catch (e) { return res.status(503).json({ error: 'status_unavailable' }); }
   const now = new Date().toISOString();
 
   if (req.method === 'GET') {
@@ -88,8 +89,10 @@ export default async function handler(req, res) {
   const f = await families(sid);
   const mail = buildNoticeEmail(session, { subject, message, cancel });
   const out = await sendBulk({ recipients: f.recipients, subject: mail.subject, html: mail.html, text: mail.text, bcc: ADMIN_EMAIL });
+  // Audit log of what went to whom. Kept as a reserved `_notice_<ts>` doc INSIDE registrations
+  // (the only collection the Firestore rules allow the server to write); every lister skips `_` docs.
   try {
-    await fsCreate('notices', { session: sid, subject: mail.subject, message, cancel, families: f.recipients.length, players: f.players, sent: out.sent, failed: out.failed, error: out.error || '', at: now });
+    await fsCreate('registrations', { session: sid, subject: mail.subject, message, cancel, families: f.recipients.length, players: f.players, sent: out.sent, failed: out.failed, error: out.error || '', at: now, recipients: f.recipients.map((r) => r.email) }, `_notice_${Date.now()}`);
   } catch (e) { /* the log is best-effort */ }
   return res.status(200).json({ ok: true, session: sid, families: f.recipients.length, players: f.players, sent: out.sent, failed: out.failed, error: out.error || '', canceled: cancel || isCanceled(status, sid) });
 }

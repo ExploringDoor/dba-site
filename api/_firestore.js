@@ -113,10 +113,16 @@ export async function fsGet(path) {
 }
 // Like fsGet, but also returns Firestore's `updateTime` so a caller can make a conditional
 // write (see fsPatchVerified's `ifUpdateTime`) — the building block for "claim before send".
+// Returns null ONLY when the document doesn't exist. Any other failure (auth blip, 5xx,
+// network) THROWS — so a caller can never mistake "Firestore is down" for "not found"
+// (which would e.g. tell a parent who just paid that their registration doesn't exist, or
+// let checkout sell a cancelled Sunday). Handlers that don't catch return 500, which is the
+// honest answer: the success page keeps polling, Stripe retries the webhook, the cron re-runs.
 export async function fsGetMeta(path) {
   if (!pathSafe(path)) return null;
   const r = await fetch(`${FB_BASE}/${path}?key=${FB_KEY}`, { headers: await authHeader() });
-  if (!r.ok) return null;
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error('firestore_read_failed_' + r.status);
   const d = await r.json();
   if (!d.fields) return null;
   return { doc: { id: String(d.name).split('/').pop(), ...fromFirestore(d.fields) }, updateTime: d.updateTime || '' };
@@ -181,7 +187,9 @@ export async function fsList(collection) {
   do {
     const url = `${FB_BASE}/${collection}?pageSize=300` + (token ? `&pageToken=${encodeURIComponent(token)}` : '') + `&key=${FB_KEY}`;
     const r = await fetch(url, { headers: auth });
-    if (!r.ok) break;
+    // A failed page must not look like "the collection is just short" — the reconcile cron
+    // would then write a green heartbeat having checked nothing. Throw instead.
+    if (!r.ok) throw new Error('firestore_list_failed_' + r.status);
     const d = await r.json();
     (d.documents || []).forEach((doc) => out.push({ id: String(doc.name).split('/').pop(), ...fromFirestore(doc.fields || {}) }));
     token = d.nextPageToken || '';

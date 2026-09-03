@@ -5,7 +5,7 @@
 // not status — so a canceled-but-paid registration can still be refunded.
 // Auth: ADMIN_PASSWORD via the x-admin-key header only (never a URL query param).
 
-import { fbConfigured, fbAdminConfigured, fsGet, fsPatchVerified } from './_firestore.js';
+import { fbConfigured, fbAdminConfigured, fsGetMeta, fsPatchVerified } from './_firestore.js';
 import { sendMail, buildRefundEmail, ADMIN_EMAIL } from './_email.js';
 
 // Constant-time string compare (avoids leaking the passcode via timing).
@@ -21,9 +21,6 @@ function authed(req) {
   return !!want && ctEq(req.headers['x-admin-key'] || '', want);
 }
 function safeId(id) { return /^[A-Za-z0-9_-]{1,128}$/.test(String(id || '')); }
-function nonce() {
-  try { return globalThis.crypto.randomUUID(); } catch (e) { return 'n' + String(process.hrtime.bigint()); }
-}
 
 async function refundStripe(reg, cents, key) {
   if (!reg.stripe_payment_intent) throw new Error('no_payment_intent');
@@ -52,7 +49,7 @@ async function refundSquare(reg, cents, key) {
     method: 'POST',
     headers: { 'Square-Version': '2024-10-17', Authorization: `Bearer ${process.env.SQUARE_ACCESS_TOKEN}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      idempotency_key: key, // unique per attempt so two equal partials don't collide/dedupe
+      idempotency_key: key, // derived from record state — identical concurrent partials collapse into one
       payment_id: reg.square_payment_id,
       amount_money: { amount: cents, currency: 'USD' },
     }),
@@ -64,9 +61,7 @@ async function refundSquare(reg, cents, key) {
 }
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-admin-key');
-  if (req.method === 'OPTIONS') return res.status(200).end();
+  res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
   if (!process.env.ADMIN_PASSWORD) return res.status(503).json({ error: 'admin_not_configured' });
   if (!authed(req)) return res.status(401).json({ error: 'unauthorized' });
@@ -74,8 +69,9 @@ export default async function handler(req, res) {
 
   const b = req.body || {};
   if (!safeId(b.rid)) return res.status(400).json({ error: 'bad_rid' });
-  const reg = await fsGet(`registrations/${b.rid}`);
-  if (!reg) return res.status(404).json({ error: 'not_found' });
+  const meta = await fsGetMeta(`registrations/${b.rid}`);
+  if (!meta) return res.status(404).json({ error: 'not_found' });
+  const reg = meta.doc;
 
   // Refundable when a real payment was captured and money remains un-refunded —
   // regardless of paid / refunded / canceled status.
@@ -89,9 +85,13 @@ export default async function handler(req, res) {
   if (cents <= 0) return res.status(400).json({ error: 'bad_amount' });
   if (cents > maxRefund) cents = maxRefund; // never over-refund
 
+  let out = null;
   try {
-    const key = ('rf_' + reg.id + '_' + nonce()).slice(0, 120);
-    const out = reg.payment_provider === 'square' ? await refundSquare(reg, cents, key) : await refundStripe(reg, cents, key);
+    // Idempotency key derived from the record's STATE, not a random nonce: two admin tabs firing
+    // the same partial within a second collapse into ONE refund at the processor, while a later,
+    // different partial (different `already`) is correctly distinct.
+    const key = `rf_${reg.id}_${already}_${cents}`.slice(0, 120);
+    out = reg.payment_provider === 'square' ? await refundSquare(reg, cents, key) : await refundStripe(reg, cents, key);
     const newRefunded = already + cents;
     const fullyRefunded = newRefunded >= (reg.amount_cents || 0);
     const patch = {
@@ -101,7 +101,16 @@ export default async function handler(req, res) {
       last_refund_id: out.id || '',
       last_refund_at: new Date().toISOString(),
     };
-    await fsPatchVerified(`registrations/${b.rid}`, patch);
+    // Conditional write: if another tab changed this record in the meantime, do NOT overwrite it.
+    const w = await fsPatchVerified(`registrations/${b.rid}`, patch, 4, { ifUpdateTime: meta.updateTime });
+    if (!w.ok) {
+      // MONEY WENT OUT at the processor but our record didn't update. Say so loudly, and don't
+      // email a receipt (the admin must reload and reconcile before doing anything else).
+      return res.status(500).json({
+        error: 'refund_sent_but_record_not_updated', refund_id: out.id || '', refunded_cents: cents,
+        message: `The processor refunded $${(cents / 100).toFixed(2)} (refund ${out.id || ''}), but this registration's record could not be updated — it may have been changed by another admin tab. Reload the dashboard and check the amount before doing anything else. Do NOT refund again.`,
+      });
+    }
 
     // Branded refund receipt to the parent (best-effort — a mail failure must never
     // fail the refund itself, which has already gone through at the processor).
@@ -115,6 +124,9 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ ok: true, refunded_cents: newRefunded, refunded: (newRefunded / 100).toFixed(2), status: patch.status });
   } catch (e) {
+    // If the processor DID refund (out.id set) and something later threw, say so — never let
+    // "refund_failed" tempt the admin into refunding twice.
+    if (out && out.id) return res.status(500).json({ error: 'refund_sent_but_record_not_updated', refund_id: out.id, refunded_cents: cents, message: `The processor refunded $${(cents / 100).toFixed(2)} (refund ${out.id}) but updating the record failed. Reload and check before doing anything else. Do NOT refund again.` });
     return res.status(502).json({ error: 'refund_failed', detail: String(e.message || e).slice(0, 200) });
   }
 }

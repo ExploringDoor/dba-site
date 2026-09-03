@@ -106,6 +106,8 @@ export function normalizeRegistration(body) {
   const sessions = cleanSessions(b.sessions);
   if (!sessions.length) return { ok: false, error: 'no_sessions' };
 
+  // Bound the work BEFORE mapping — a 500k-player body must be rejected in microseconds, not after.
+  if (Array.isArray(b.players) && b.players.length > 8) return { ok: false, error: 'too_many_players' };
   const players = (Array.isArray(b.players) ? b.players : []).map((p) => ({
     first: stripTags(clip(p && p.first, 60)).trim(),
     last: stripTags(clip(p && p.last, 60)).trim(),

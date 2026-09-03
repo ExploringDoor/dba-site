@@ -341,8 +341,16 @@ var ERR_TEXT = {
   save_failed: 'We couldn\'t save your registration — please try again.' + HELP
 };
 function resetPay(){ payBtn.textContent = PAY_LABEL; updatePayState(); }
-// Typo guard only (a mis-typed year); the server applies the same rule. Not an age-eligibility rule.
-function plausibleDob(v){ if(!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false; var y=parseInt(v.slice(0,4),10); return y >= 2007 && y <= 2024; }
+// Typo guard only (a mis-typed year): age 3–18 on the first clinic day (Sep 27, 2026) — the
+// exact rule the server applies, so the form never accepts a date the server will bounce.
+function plausibleDob(v){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+  var d=new Date(v+'T12:00:00Z'); if(isNaN(d)) return false;
+  var ref=new Date('2026-09-27T12:00:00Z');
+  var age=ref.getUTCFullYear()-d.getUTCFullYear(); var m=ref.getUTCMonth()-d.getUTCMonth();
+  if(m<0 || (m===0 && ref.getUTCDate()<d.getUTCDate())) age--;
+  return age>=3 && age<=18;
+}
 document.getElementById('regForm').addEventListener('submit', function(e){
   e.preventDefault();
   var err = document.getElementById('errMsg'); err.style.display='none';

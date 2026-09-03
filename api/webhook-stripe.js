@@ -14,7 +14,7 @@
 // are never re-flipped, so Stripe's automatic retries are harmless.
 
 import crypto from 'node:crypto';
-import { fsGet } from './_firestore.js';
+import { fsGet, fsPatchVerified } from './_firestore.js';
 import { verifyPayment, finalizePaid } from './_finalize.js';
 
 export const config = { api: { bodyParser: false } }; // signature must be computed over the raw bytes
@@ -74,7 +74,16 @@ export default async function handler(req, res) {
   const reg = await fsGet(`registrations/${rid}`);
   if (!reg) return res.status(200).json({ ok: true, ignored: 'not_found' });
   if (reg.status === 'paid') return res.status(200).json({ ok: true, already: 'paid' });
-  if (['canceled', 'refunded', 'abandoned', 'error'].includes(reg.status)) return res.status(200).json({ ok: true, ignored: reg.status });
+  if (['canceled', 'refunded', 'abandoned', 'error'].includes(reg.status)) {
+    // Never re-flip a terminal record — but if Stripe says money actually came in (a parent paid a
+    // link that was still live when the admin cancelled), RECORD it so the dashboard shows a
+    // "paid after cancel" flag with a working Refund button instead of silently holding the money.
+    try {
+      const v = await verifyPayment(reg);
+      if (v.paid && !reg.paid_after_cancel) await fsPatchVerified(`registrations/${rid}`, Object.assign({ paid_after_cancel: true, paid_after_cancel_at: new Date().toISOString() }, v.patch || {}));
+    } catch (e) { /* best-effort flag */ }
+    return res.status(200).json({ ok: true, ignored: reg.status });
+  }
 
   try {
     // Re-verify with Stripe's API via the SAME helper as /api/confirm and the cron, so all

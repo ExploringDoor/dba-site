@@ -9,7 +9,7 @@
 // NOTE: no wildcard CORS — the success page is same-origin, and this response
 // carries registrant info that must not be readable cross-origin.
 
-import { fsGet } from './_firestore.js';
+import { fsGet, fsPatchVerified } from './_firestore.js';
 import { verifyPayment, finalizePaid } from './_finalize.js';
 import { priceBreakdown, sessionLabels } from './_clinic.js';
 
@@ -41,10 +41,13 @@ function summary(reg) {
 }
 
 export default async function handler(req, res) {
+  res.setHeader('Cache-Control', 'no-store'); // receipt data — never cache
   if (req.method !== 'GET' && req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
   const rid = (req.query && req.query.rid) || (req.body && req.body.rid);
   if (!safeId(rid)) return res.status(400).json({ error: 'bad_rid' });
 
+  // NOTE: fsGet throws (→ 500) if Firestore is unreachable, and returns null only for a real
+  // "no such registration". The success page treats a 500 as "still confirming" and keeps polling.
   const reg = await fsGet(`registrations/${rid}`);
   if (!reg) return res.status(404).json({ error: 'not_found' });
 
@@ -57,7 +60,14 @@ export default async function handler(req, res) {
 
   // Terminal states are final — never re-verify or re-finalize (a canceled, refunded,
   // or abandoned registration must not get flipped back to paid by a stray confirm call).
+  // But if the processor says money DID come in on a cancelled record, flag it for admin.
   if (reg.status === 'canceled' || reg.status === 'refunded' || reg.status === 'abandoned' || reg.status === 'error') {
+    try {
+      if (!reg.paid_after_cancel && reg.status !== 'refunded') {
+        const v = await verifyPayment(reg);
+        if (v.paid) await fsPatchVerified(`registrations/${rid}`, Object.assign({ paid_after_cancel: true, paid_after_cancel_at: new Date().toISOString() }, v.patch || {}));
+      }
+    } catch (e) { /* best-effort flag */ }
     return res.status(200).json({ ok: false, status: reg.status });
   }
 

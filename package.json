@@ -4,9 +4,11 @@
   "private": true,
   "type": "module",
   "description": "Downer Basketball Academy — clinic registration, payment, and admin.",
-  "engines": { "node": "20.x" },
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "dev": "npx serve -l 8899 .",
-    "test": "node tests/clinic.test.mjs"
+    "test": "node tests/clinic.test.mjs && node tests/flows.test.mjs"
   }
 }

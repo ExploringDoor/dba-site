@@ -8,14 +8,15 @@ import { fbConfigured, fbAdminConfigured, fsGet, fsPatchVerified } from './_fire
 
 export const STATUS_DOC = 'registrations/_sessions';
 
+// Returns {} when nothing has ever been cancelled. THROWS if Firestore can't be read, so a
+// blip is never mistaken for "nothing cancelled" — money-path callers (checkout POST, the
+// reminder cron) must treat a throw as "don't proceed"; display-only callers may catch it.
 export async function sessionStatus() {
   if (!fbConfigured() || !fbAdminConfigured()) return {};
-  try {
-    const d = await fsGet(STATUS_DOC);
-    if (!d) return {};
-    const { id, ...rest } = d;
-    return rest;
-  } catch (e) { return {}; }
+  const d = await fsGet(STATUS_DOC);
+  if (!d) return {};
+  const { id, ...rest } = d;
+  return rest;
 }
 export function isCanceled(status, sid) { return !!(status && status[sid] && status[sid].canceled); }
 export function canceledIds(status) { return Object.keys(status || {}).filter((k) => isCanceled(status, k)); }

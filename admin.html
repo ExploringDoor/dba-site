@@ -266,7 +266,7 @@ function rowHtml(r){
   // even if the registration was later canceled/abandoned.
   var hasPay=!!(r.stripe_payment_intent||r.square_payment_id||r.paid_via);
   var canRefund=hasPay&&(r.amount_refunded_cents||0)<(r.amount_cents||0);
-  var amtCell=money(r.amount_cents)+(r.amount_mismatch?' <span title="Amount charged differs from expected — review" style="color:#e06b5e">⚠</span>':'');
+  var amtCell=money(r.amount_cents)+(r.amount_mismatch?' <span title="Amount charged differs from expected — review" style="color:#e06b5e">⚠</span>':'')+(r.paid_after_cancel?' <span title="The parent paid AFTER this registration was cancelled — the money is at Stripe; refund it or reinstate them" style="color:#e06b5e;font-size:.7rem;font-weight:700">⚠ PAID AFTER CANCEL</span>':'');
   var acts='<button class="btn sm" data-act="manage" data-rid="'+r.id+'" style="background:var(--mrn);border-color:var(--mrn);color:#fff">Manage</button>'+
            '<button class="btn sm" data-act="waiver" data-rid="'+r.id+'">Waiver</button>'+
            '<button class="btn sm" data-act="receipt" data-rid="'+r.id+'">Receipt</button>'+
@@ -398,7 +398,7 @@ function showManage(r){
   var medHtml=(hasMedical(r)?'<div class="med-alert"><div class="lbl">⚠ Medical / Allergy — please read</div><div class="txt">'+esc(medicalSummary(r))+'</div></div>':kv('Medical notes','None'))+kv('OK to treat (non-Rx)', r.treat_ok?'Yes':'No');
   var body=
     '<h3 style="margin-bottom:4px">'+esc(r.parent_name||'Registration')+'</h3>'+
-    '<div style="font-size:.8rem;color:var(--dim);margin-bottom:2px"><span class="badge '+(r.status||'pending')+'">'+(r.status||'pending')+'</span> &middot; Receipt #<span class="mono">'+esc(r.id||'')+'</span>'+(r.amount_mismatch?' &middot; <span style="color:#e06b5e">⚠ amount mismatch</span>':'')+'</div>'+
+    '<div style="font-size:.8rem;color:var(--dim);margin-bottom:2px"><span class="badge '+(r.status||'pending')+'">'+(r.status||'pending')+'</span> &middot; Receipt #<span class="mono">'+esc(r.id||'')+'</span>'+(r.amount_mismatch?' &middot; <span style="color:#e06b5e">⚠ amount mismatch</span>':'')+(r.paid_after_cancel?' &middot; <span style="color:#e06b5e">⚠ paid after cancel — refund or reinstate</span>':'')+(r.dup_attempt_at?' &middot; <span style="color:var(--amber)" title="Someone tried to register this child again for an overlapping Sunday">duplicate attempt '+esc(fmtDateTime(r.dup_attempt_at))+'</span>':'')+'</div>'+
     sec('Player(s)')+playersHtml+
     sec('Registration')+kv('Registered', fmtDateTime(r.created))+kv('Sessions', sess)+
     sec('Parent / Guardian')+kv('Name', esc(r.parent_name||'—'))+(r.parent_rel?kv('Relationship', esc(r.parent_rel)):'')+kv('Email', esc(r.parent_email||'—'))+kv('Phone', esc(r.parent_phone||'—'))+
@@ -435,7 +435,7 @@ function doRefund(r){
     function fail(msg){ document.getElementById('refundErr').textContent=msg; btn.disabled=false; btn.textContent='Issue refund'; }
     api('/api/refund',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
       .then(function(x){return x.json();}).then(function(d){
-        if(d.ok){ closeModal(); load(); } else { fail('Failed: '+(d.error||'error')); }
+        if(d.ok){ closeModal(); load(); } else { fail('Failed: '+(d.message||d.error||'error')); }
       }).catch(function(){ fail('Network error — try again.'); });
   });
 }
@@ -450,7 +450,7 @@ function doCancel(r){
     btn.textContent='Canceling…'; btn.disabled=true;
     function fail(msg){ document.getElementById('cancelErr').textContent=msg; btn.disabled=false; btn.textContent='Cancel registration'; }
     api('/api/cancel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rid:r.id})})
-      .then(function(x){return x.json();}).then(function(d){ if(d.ok){ closeModal(); load(); } else { fail('Failed: '+(d.error||'error')); } })
+      .then(function(x){return x.json();}).then(function(d){ if(d.ok){ closeModal(); load(); } else { fail('Failed: '+(d.message||d.error||'error')); } })
       .catch(function(){ fail('Network error — try again.'); });
   });
 }
@@ -516,14 +516,15 @@ function noticeTemplate(sid, cancel){
   return { subject:'Fall Clinics update — '+when, message:'' };
 }
 function showNotify(sid){
-  var when=SESSION_LABELS[sid]||sid, off=isSessCanceled(sid), t=noticeTemplate(sid, !off);
+  // Opens as a plain update; cancelling is an explicit choice (radio + checkbox), never the default.
+  var when=SESSION_LABELS[sid]||sid, off=isSessCanceled(sid), t=noticeTemplate(sid, false);
   modal('<h3>📣 Email families — Sun, '+esc(when)+'</h3>'+
     (off?'<div class="notice-bad"><span>This Sunday is marked <b>CANCELLED</b> — hidden from the registration form, new signups refused, reminder off.</span><button class="btn sm" id="nReopen">Reopen it</button></div>':'')+
     '<div id="nCount" style="font-size:.82rem;color:var(--dim);margin-bottom:12px">Counting families…</div>'+
-    '<div class="nf row"><label><input type="radio" name="ntype" value="cancel"'+(off?'':' checked')+'> Cancellation notice</label><label><input type="radio" name="ntype" value="update"'+(off?' checked':'')+'> General update</label></div>'+
+    '<div class="nf row"><label><input type="radio" name="ntype" value="update" checked> General update</label><label><input type="radio" name="ntype" value="cancel"'+(off?' disabled':'')+'> Cancellation notice</label></div>'+
     '<div class="nf"><label class="lbl" for="nSubject">Subject</label><input class="ninp" id="nSubject" value="'+esc(t.subject)+'"></div>'+
     '<div class="nf"><label class="lbl" for="nMsg">Message <span style="text-transform:none;font-weight:400">— each family gets "Hi &lt;first name&gt;," on top; edit anything in [brackets]</span></label><textarea class="ninp" id="nMsg" rows="9">'+esc(t.message)+'</textarea></div>'+
-    '<label class="chk-row nf"><input type="checkbox" id="nCancel"'+(off?' disabled':' checked')+'> <span>Mark this Sunday as <b>cancelled</b>: it disappears from the registration form, new signups for it are refused, and the day-before reminder is skipped.'+(off?' (already cancelled)':'')+'</span></label>'+
+    '<label class="chk-row nf"><input type="checkbox" id="nCancel"'+(off?' disabled':'')+'> <span>Mark this Sunday as <b>cancelled</b>: it disappears from the registration form, new signups for it are refused, and the day-before reminder is skipped.'+(off?' (already cancelled)':'')+'</span></label>'+
     '<div class="foot"><span id="nStatus" style="flex:1;font-size:.8rem;color:var(--dim)"></span><button class="btn" onclick="closeModal()">Close</button><button class="btn primary" id="nSend">Send to all families</button></div>', true);
   var cnt=document.getElementById('nCount');
   if(state.demo){ cnt.textContent='Will go to 2 families (3 players) — demo'; }

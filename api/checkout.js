@@ -128,24 +128,49 @@ export default async function handler(req, res) {
   if (!ready()) return res.status(503).json({ error: 'not_configured' });
 
   // Never sell a Sunday the admin has cancelled (the form hides it, but the server is the authority).
-  try {
-    const st = await sessionStatus();
-    const dead = reg.sessions.filter((s) => isCanceled(st, s));
-    if (dead.length) return res.status(400).json({ error: 'session_canceled', sessions: dead });
-  } catch (e) { /* if the status read fails, don't block a real signup */ }
+  // If the cancellation status can't be READ, don't guess — pause checkout rather than sell a dead date.
+  let st;
+  try { st = await sessionStatus(); } catch (e) { return res.status(503).json({ error: 'checkout_unavailable' }); }
+  const dead = reg.sessions.filter((s) => isCanceled(st, s));
+  if (dead.length) return res.status(400).json({ error: 'session_canceled', sessions: dead });
 
-  // 0) Duplicate guard: the same family paying twice for the same child + Sunday (a re-submit
-  //    after Back from Stripe, or two parents registering the same kid). Blocks only when an
-  //    existing PAID registration for this email has the same player AND an overlapping session.
+  // Client IP for the waiver record. Vercel sets x-forwarded-for itself; x-real-ip is Vercel's too.
+  // (Never trust a client-supplied cf-connecting-ip — the site is not behind Cloudflare's proxy.)
+  const ip = String(req.headers['x-real-ip'] || (req.headers['x-forwarded-for'] || '').split(',')[0] || '').trim().slice(0, 60);
+
+  // 0) Duplicate guard, keyed on this parent's email. Two cases:
+  //    a) an existing PAID registration for the same child + an overlapping Sunday → 409 (would be a
+  //       refundable double-pay). The phone on file must match too, so this can't be used by someone
+  //       who merely knows an email + name + DOB as an "is that child registered?" oracle; and every
+  //       409 leaves a trace on the existing record so probing is visible in admin.
+  //    b) an unexpired PENDING twin (same players + same Sundays, < 55 min old) → hand back ITS
+  //       Stripe link instead of minting another, so Back + resubmit can't create two payable sessions.
   //    Best-effort — a lookup failure never blocks a real signup.
+  const digits = (p) => String(p || '').replace(/\D/g, '').slice(-7);
   try {
     const key = (p) => `${p.first}|${p.last}|${p.dob}`.toLowerCase().replace(/\s+/g, ' ');
     const mine = new Set(reg.players.map(key));
+    const mySess = [...reg.sessions].sort().join(',');
     const prior = await fsQuery('registrations', 'parent_email', 'EQUAL', reg.parent_email);
     const clash = (prior || []).find((d) => d.status === 'paid'
+      && digits(d.parent_phone) === digits(reg.parent_phone)
       && (d.players || []).some((p) => mine.has(key(p)))
       && cleanSessions(d.sessions).some((s) => reg.sessions.includes(s)));
-    if (clash) return res.status(409).json({ error: 'already_registered' });
+    if (clash) {
+      try { await fsPatch(`registrations/${clash.id}`, { dup_attempt_at: new Date().toISOString(), dup_attempt_ip: ip }); } catch (e) { /* trace is best-effort */ }
+      return res.status(409).json({ error: 'already_registered' });
+    }
+    const twin = (prior || []).find((d) => d.status === 'pending' && d.checkout_url && d.stripe_session_id
+      && (Date.now() - new Date(d.created || 0).getTime()) < 55 * 60 * 1000
+      && (d.players || []).length === reg.players.length && (d.players || []).every((p) => mine.has(key(p)))
+      && cleanSessions(d.sessions).sort().join(',') === mySess);
+    if (twin) {
+      // Same order, same family — refresh the contact/medical fields with what they just typed, then
+      // reuse the existing payable link (price/players/sessions are identical by construction).
+      const { sessions, players, session_count, all_six, player_count, parent_email, ...rest } = reg;
+      try { await fsPatch(`registrations/${twin.id}`, Object.assign({}, rest, { waiver_at: new Date().toISOString(), waiver_ip: ip, resubmitted_at: new Date().toISOString() })); } catch (e) { /* best-effort */ }
+      return res.status(200).json({ url: twin.checkout_url, rid: twin.id, reused: true });
+    }
   } catch (e) { /* fall through — never block on a lookup error */ }
 
   // 1) Persist a PENDING registration so we have a record even if the parent
@@ -158,7 +183,7 @@ export default async function handler(req, res) {
     amount_refunded_cents: 0,
     currency: 'USD',
     waiver_at: now,
-    waiver_ip: String(req.headers['cf-connecting-ip'] || (req.headers['x-forwarded-for'] || '').split(',')[0] || '').slice(0, 60),
+    waiver_ip: ip,
     created: now,
   }));
   const regId = created && created.name ? String(created.name).split('/').pop() : null;
@@ -174,14 +199,16 @@ export default async function handler(req, res) {
     // use to match a real payment back to this record. Persist it with a verified,
     // retried write BEFORE giving out the checkout URL — and fail closed if it can't be
     // stored, so we never let someone pay against a record we could never reconcile.
-    const w = await fsPatchVerified(`registrations/${regId}`, out.patch || {});
+    // The checkout URL is stored too, so a Back + resubmit within the hour reuses THIS link.
+    const w = await fsPatchVerified(`registrations/${regId}`, Object.assign({ checkout_url: out.url }, out.patch || {}));
     if (!w.ok) {
       await fsPatch(`registrations/${regId}`, { status: 'error', error_detail: 'link_persist_failed' });
       return res.status(503).json({ error: 'checkout_unavailable' });
     }
     return res.status(200).json({ url: out.url, rid: regId });
   } catch (e) {
+    // Provider error text stays in the record for the admin — never echoed to an anonymous caller.
     await fsPatch(`registrations/${regId}`, { status: 'error', error_detail: String(e.message || e).slice(0, 300) });
-    return res.status(502).json({ error: 'checkout_failed', detail: String(e.message || e) });
+    return res.status(502).json({ error: 'checkout_failed' });
   }
 }

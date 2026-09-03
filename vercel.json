@@ -2,6 +2,11 @@
   "buildCommand": "",
   "outputDirectory": ".",
   "framework": null,
+  "functions": {
+    "api/reconcile.js": { "maxDuration": 120 },
+    "api/remind.js": { "maxDuration": 120 },
+    "api/notify.js": { "maxDuration": 60 }
+  },
   "crons": [
     { "path": "/api/reconcile", "schedule": "*/15 * * * *" },
     { "path": "/api/remind", "schedule": "0 20 * * *" }
