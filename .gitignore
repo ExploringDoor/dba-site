@@ -4,3 +4,5 @@ node_modules/
 .env
 .env.*
 *.log
+# past-registrant mailing list for the launch email — personal data, never commit
+scripts/launch-list.csv
