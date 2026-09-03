@@ -421,16 +421,26 @@ function showManage(r){
 }
 function doRefund(r){
   var max=((r.amount_cents||0)-(r.amount_refunded_cents||0));
+  // Policy: the card-processing fee is non-refundable, so the STANDARD refund is the base amount
+  // (total minus fee, minus anything already refunded). "Refund everything" is one click away.
+  var nSess=cleanSess(r).length, nPl=(r.players||[]).length||r.player_count||1;
+  var feeCents=(allSix(r)?1400:nSess*500)*nPl;
+  var stdAmt=Math.max(0, Math.min(max, (r.amount_cents||0)-feeCents-(r.amount_refunded_cents||0)));
   modal('<h3>Refund — '+esc(r.parent_name)+'</h3>'+
-    '<p style="color:var(--dim);font-size:.86rem;margin-bottom:12px">Refundable: <b>'+money(max)+'</b>. Enter an amount or leave blank for a full refund.</p>'+
-    '<input class="inp" id="refundAmt" placeholder="Full refund ('+money(max)+')" inputmode="decimal">'+
+    '<p style="color:var(--dim);font-size:.86rem;margin-bottom:12px">Refundable up to <b>'+money(max)+'</b>. Per the refund policy the <b>'+money(feeCents)+' processing fee is non-refundable</b>, so the standard refund is <b>'+money(stdAmt)+'</b>.</p>'+
+    '<input class="inp" id="refundAmt" value="'+(stdAmt/100).toFixed(2)+'" inputmode="decimal" aria-label="Refund amount">'+
+    '<div style="margin-top:8px;font-size:.8rem"><a href="#" id="refundAll" style="color:var(--dim)">Refund everything ('+money(max)+') instead</a></div>'+
     '<div class="login-err" id="refundErr"></div>'+
     '<div class="foot"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary danger" id="refundGo">Issue refund</button></div>');
+  document.getElementById('refundAll').addEventListener('click', function(e){ e.preventDefault(); document.getElementById('refundAmt').value=(max/100).toFixed(2); });
   document.getElementById('refundGo').addEventListener('click', function(){
     var btn=this;
     var v=document.getElementById('refundAmt').value.trim();
-    var body={ rid:r.id };
-    if(v){ var n=parseFloat(v); if(isNaN(n)||n<=0){ document.getElementById('refundErr').textContent='Enter a valid amount.'; return; } body.amount_cents=Math.round(n*100); }
+    var n=parseFloat(v);
+    if(!v||isNaN(n)||n<=0){ document.getElementById('refundErr').textContent='Enter a valid amount.'; return; }
+    if(n*100>max+0.5){ document.getElementById('refundErr').textContent='That is more than the '+money(max)+' still refundable.'; return; }
+    var body={ rid:r.id, amount_cents:Math.round(n*100) };
+    if(!confirm('Refund '+money(Math.round(n*100))+' to '+r.parent_name+'?')) return;
     btn.textContent='Refunding…'; btn.disabled=true;
     function fail(msg){ document.getElementById('refundErr').textContent=msg; btn.disabled=false; btn.textContent='Issue refund'; }
     api('/api/refund',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
