@@ -78,7 +78,12 @@ strong{color:var(--txt)}
     <h3>How it’s stored and who sees it</h3>
     <p>Registration information is stored in a secured database and is accessible only to DBA administrators and coaching staff who need it to run the clinic. <strong>We do not sell your information.</strong> We share it only with our payment processor (to take payment) and with the coaching staff (to run the clinic and respond to emergencies). Payments are collected by Always Competing Sports LLC on behalf of the booster club, as noted above.</p>
     <h3>Analytics &amp; cookies</h3>
-    <p>We use Google Analytics to understand basic, anonymous site traffic. It may set cookies. We don’t use your registration data for advertising.</p>
+    <p>We use Google Analytics to understand basic, anonymous site traffic. It may set cookies. We don’t use your registration data for advertising, and we don’t sell it.</p>
+    <p>You can switch analytics off for this device at any time. It takes effect immediately, on every page of this site, and nothing else about the site changes.</p>
+    <p style="margin-top:12px">
+      <button id="gaOptOut" type="button" style="font-family:inherit;font-size:.92rem;font-weight:600;padding:11px 18px;border-radius:10px;border:1px solid #c9cdd3;background:#fff;color:#1b2027;cursor:pointer">Turn off analytics on this device</button>
+      <span id="gaOptOutMsg" role="status" aria-live="polite" style="display:block;margin-top:10px;font-size:.9rem"></span>
+    </p>
     <h3>Keeping &amp; deleting your information</h3>
     <p>We keep registration records only as long as needed to run the program and for our records. To ask what we have on file or to request deletion, email <a href="mailto:aceshoops@gmail.com">aceshoops@gmail.com</a>.</p>
     <h3>Children’s information</h3>
@@ -100,5 +105,28 @@ strong{color:var(--txt)}
     Questions about these policies? Email <a href="mailto:aceshoops@gmail.com">aceshoops@gmail.com</a>.
   </div>
 </div>
+<script>
+/* Analytics opt-out. Stores a flag on this device; every page checks it before loading
+   Google Analytics, and setting window['ga-disable-<id>'] stops any measurement already loaded. */
+(function(){
+  var KEY='dba_no_analytics';
+  var btn=document.getElementById('gaOptOut'), msg=document.getElementById('gaOptOutMsg');
+  if(!btn) return;
+  function isOff(){ try{ return localStorage.getItem(KEY)==='1'; }catch(e){ return false; } }
+  function paint(){
+    var off=isOff();
+    try{ window['ga-disable-G-KT0BL96HRZ']=off; }catch(e){}
+    btn.textContent = off ? 'Turn analytics back on' : 'Turn off analytics on this device';
+    msg.style.color = off ? '#1f7a38' : '#6b7280';
+    msg.textContent = off ? '\u2713 Analytics is off on this device. Google Analytics will not load or record anything on this site.' : '';
+  }
+  btn.addEventListener('click', function(){
+    try{ if(isOff()) localStorage.removeItem(KEY); else localStorage.setItem(KEY,'1'); }
+    catch(e){ msg.style.color='#b02a2a'; msg.textContent='Your browser is blocking site storage, so we cannot remember this choice. Your browser\u2019s own privacy settings will still block analytics.'; return; }
+    paint();
+  });
+  paint();
+})();
+</script>
 </body>
 </html>

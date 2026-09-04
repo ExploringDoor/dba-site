@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <script>/* capture rid + demo flag, then scrub the URL BEFORE analytics/referrer see it. The rid is also kept in sessionStorage so a pull-to-refresh or Back on this page still finds the receipt. */var __q=new URLSearchParams(location.search);var __r=__q.get('rid')||'';try{if(__r)sessionStorage.setItem('dba_rid',__r);else __r=sessionStorage.getItem('dba_rid')||'';}catch(e){}window.__RID__=__r;window.__DEMO__=(__q.get('demo')==='1');try{if(location.search&&history.replaceState)history.replaceState(null,'',location.pathname);}catch(e){}</script>
+<script>/* Analytics opt-out (set on policies.html) — read BEFORE Google Analytics loads, so opting out stops it firing at all. */try{if(localStorage.getItem('dba_no_analytics')==='1')window['ga-disable-G-KT0BL96HRZ']=true;}catch(e){}</script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-KT0BL96HRZ"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());gtag("config","G-KT0BL96HRZ");</script>
 <meta charset="UTF-8">
