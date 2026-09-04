@@ -14,7 +14,7 @@
 //   Optional: SITE_URL (e.g. https://www.downerbasketballacademy.com) for redirect links
 
 import { fbConfigured, fbAdminConfigured, fsCreate, fsPatch, fsPatchVerified, fsQuery } from './_firestore.js';
-import { normalizeRegistration, expectedCents, cleanSessions, CLINIC } from './_clinic.js';
+import { normalizeRegistration, expectedCents, cleanSessions, priceBreakdown, CLINIC } from './_clinic.js';
 import { sessionStatus, isCanceled, canceledIds } from './_status.js';
 
 const PROVIDER = (process.env.PAYMENT_PROVIDER || '').toLowerCase();
@@ -176,10 +176,15 @@ export default async function handler(req, res) {
   // 1) Persist a PENDING registration so we have a record even if the parent
   //    abandons checkout (and so the admin can see incomplete attempts).
   const now = new Date().toISOString();
+  // The base/fee split is STORED, not just derived, so receipts and refunds stay correct
+  // for this family even if prices change later in the season.
+  const split = priceBreakdown(Object.assign({}, reg, { amount_cents: cents }));
   const created = await fsCreate('registrations', Object.assign({}, reg, {
     status: 'pending',
     payment_provider: PROVIDER,
     amount_cents: cents,
+    base_cents: split.base_cents,
+    fee_cents: split.fee_cents,
     amount_refunded_cents: 0,
     currency: 'USD',
     waiver_at: now,

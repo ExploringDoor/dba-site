@@ -79,6 +79,29 @@ await test('parent email is stored lower-cased (so the same family always matche
   assert.equal(normalizeRegistration({ ...GOOD, parent_email: ' Jane.Doe@Gmail.com ' }).reg.parent_email, 'jane.doe@gmail.com');
 });
 
+await test('priceBreakdown always adds up to what was actually charged (survives a price change)', async () => {
+  const { priceBreakdown } = await import('../api/_clinic.js');
+  const one = priceBreakdown({ sessions: ['s1'], players: [{}], amount_cents: PRICE.perSessionCents });
+  assert.equal(one.total_cents, PRICE.perSessionCents);
+  assert.equal(one.base_cents, PRICE.baseSessionCents);
+  assert.equal(one.fee_cents, PRICE.feeSessionCents);
+  // An older registration charged at a price we no longer offer: the split must still reconcile,
+  // with the difference in the fee (the advertised base price is what stays put).
+  const legacy = priceBreakdown({ sessions: ['s1'], players: [{}], amount_cents: 3800 });
+  assert.equal(legacy.total_cents, 3800, 'legacy receipt must add up');
+  assert.equal(legacy.base_cents, PRICE.baseSessionCents);
+  assert.equal(legacy.fee_cents, 3800 - PRICE.baseSessionCents);
+  // A split recorded at checkout wins over anything recomputed.
+  const stored = priceBreakdown({ sessions: ['s1'], players: [{}], amount_cents: 3800, base_cents: 3000, fee_cents: 800 });
+  assert.equal(stored.base_cents, 3000); assert.equal(stored.fee_cents, 800); assert.equal(stored.total_cents, 3800);
+  // Multi-player / multi-session still reconciles.
+  const multi = priceBreakdown({ sessions: ['s1', 's2'], players: [{}, {}], amount_cents: 4 * PRICE.perSessionCents });
+  assert.equal(multi.total_cents, 4 * PRICE.perSessionCents);
+  // No amount yet (pre-pricing) → plain computation, still self-consistent.
+  const fresh = priceBreakdown({ sessions: ['s1'], players: [{}] });
+  assert.equal(fresh.base_cents + fresh.fee_cents, fresh.total_cents);
+});
+
 console.log('\ncheckout handler (no env configured)');
 const checkout = (await import('../api/checkout.js')).default;
 await test('GET readiness reports not-ready with no env', async () => {

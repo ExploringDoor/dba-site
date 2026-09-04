@@ -62,16 +62,28 @@ export function expectedCents(reg) {
 
 // Receipt helpers ─────────────────────────────────────────────────────────
 // Split the authoritative total into base + processing (for an itemized receipt).
+// Prefers the split RECORDED on the registration at checkout, so a receipt always reflects
+// what the family actually paid — even if prices changed afterwards. Falls back to today's
+// prices for older records, reconciling any difference into the fee (base is the advertised
+// number, so a price change of this kind is always a change to the fee).
 export function priceBreakdown(reg) {
   const n = cleanSessions(reg && reg.sessions).length;
   const players = Array.isArray(reg && reg.players) ? reg.players.length : 0;
   const allSix = n === SESSION_IDS.length;
-  const basePer = allSix ? PRICE.baseAllSixCents : n * PRICE.baseSessionCents;
-  const feePer = allSix ? PRICE.feeAllSixCents : n * PRICE.feeSessionCents;
+  const paid = reg && typeof reg.amount_cents === 'number' && reg.amount_cents > 0 ? reg.amount_cents : null;
+
+  let base, fee;
+  if (reg && typeof reg.base_cents === 'number' && typeof reg.fee_cents === 'number') {
+    base = reg.base_cents; fee = reg.fee_cents;                       // recorded at checkout — authoritative
+  } else {
+    base = (allSix ? PRICE.baseAllSixCents : n * PRICE.baseSessionCents) * players;
+    fee = (allSix ? PRICE.feeAllSixCents : n * PRICE.feeSessionCents) * players;
+    if (paid !== null && base + fee !== paid) fee = Math.max(0, paid - base); // older record, prices since changed
+  }
   return {
-    base_cents: basePer * players,
-    fee_cents: feePer * players,
-    total_cents: (basePer + feePer) * players,
+    base_cents: base,
+    fee_cents: fee,
+    total_cents: base + fee,
     all_six: allSix,
     session_count: n,
     player_count: players,

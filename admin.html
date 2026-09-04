@@ -333,13 +333,15 @@ function showWaiver(r){
 function cleanSess(r){ var seen={},out=[]; (r&&r.sessions||[]).forEach(function(x){ if(SESSION_LABELS.hasOwnProperty(x)&&!seen[x]){ seen[x]=1; out.push(x); } }); return out; }
 function allSix(r){ return cleanSess(r).length===6; }
 function sessText(r){ return allSix(r)?'All 6 Sundays':(cleanSess(r).map(function(x){return SESSION_LABELS[x];}).join(', ')||'—'); }
+// Mirrors priceBreakdown() on the server: prefer the split recorded at checkout so an old
+// receipt still adds up after a price change; otherwise reconcile the difference into the fee.
 function regBreakdown(r){
-  var n=cleanSess(r).length;
-  var players=(r.player_count||(r.players||[]).length||0);
-  var all6=n===6;
-  var basePer=all6?15000:n*3000;
-  var feePer=all6?1400:n*500;
-  return { base:basePer*players, fee:feePer*players };
+  var paid=(typeof r.amount_cents==='number'&&r.amount_cents>0)?r.amount_cents:null;
+  if(typeof r.base_cents==='number'&&typeof r.fee_cents==='number') return { base:r.base_cents, fee:r.fee_cents };
+  var n=cleanSess(r).length, players=(r.player_count||(r.players||[]).length||0), all6=n===6;
+  var base=(all6?15000:n*3000)*players, fee=(all6?1400:n*500)*players;
+  if(paid!==null && base+fee!==paid) fee=Math.max(0,paid-base);
+  return { base:base, fee:fee };
 }
 // A self-contained white "paper" receipt — renders inside the dark modal AND in a print window.
 function receiptCard(r){
@@ -423,8 +425,7 @@ function doRefund(r){
   var max=((r.amount_cents||0)-(r.amount_refunded_cents||0));
   // Policy: the card-processing fee is non-refundable, so the STANDARD refund is the base amount
   // (total minus fee, minus anything already refunded). "Refund everything" is one click away.
-  var nSess=cleanSess(r).length, nPl=(r.players||[]).length||r.player_count||1;
-  var feeCents=(allSix(r)?1400:nSess*500)*nPl;
+  var feeCents=regBreakdown(r).fee;
   var stdAmt=Math.max(0, Math.min(max, (r.amount_cents||0)-feeCents-(r.amount_refunded_cents||0)));
   modal('<h3>Refund — '+esc(r.parent_name)+'</h3>'+
     '<p style="color:var(--dim);font-size:.86rem;margin-bottom:12px">Refundable up to <b>'+money(max)+'</b>. Per the refund policy the <b>'+money(feeCents)+' processing fee is non-refundable</b>, so the standard refund is <b>'+money(stdAmt)+'</b>.</p>'+
