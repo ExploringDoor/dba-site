@@ -306,9 +306,22 @@ function recalc(){
     sum.innerHTML =
       '<div class="sum-row"><span>'+line+' × '+players+' player'+(players>1?'s':'')+'</span><span class="amt">$'+pp+' ea</span></div>' +
       '<div class="sum-row total"><span>Total</span><span class="amt">$'+total+'</span></div>' +
+      upsellNote(n) +
       '<div class="sum-note">Includes a card-processing fee ($5 per session · $14 for all six), which is non-refundable.</div>';
   }
   updatePayState();
+}
+
+// Five Sundays costs MORE than the six-session package ($175 vs $164 per player), so never
+// let a parent overpay by accident — offer the last date. Hidden when a Sunday is cancelled,
+// because then there is no six-session package to buy.
+function upsellNote(n){
+  if(n !== SESSIONS.length - 1 || all6.disabled) return "";
+  var saving = (SESSIONS.length - 1) * PRICE_SESSION - PRICE_ALL6;
+  if(saving <= 0) return "";
+  return '<div class="sum-note" style="color:var(--pink)">Add the last Sunday and pay <b>$' + saving +
+    ' less</b> per player \u2014 all six is $' + PRICE_ALL6 + '. ' +
+    '<button type="button" id="addAll6" style="background:none;border:none;padding:0;font:inherit;color:var(--pink);text-decoration:underline;cursor:pointer">Add it</button></div>';
 }
 
 /* ── Enable pay only when valid ── */
@@ -480,6 +493,13 @@ fetch('/api/checkout').then(function(r){ return r.json(); }).then(function(d){
   else if(d && d.ready===false){ document.getElementById('testNotice').style.display='block'; }
   if(d && d.canceled) markCanceled(d.canceled);
 }).catch(function(){});
+
+document.getElementById('sumBody').addEventListener('click', function(ev){
+  if(!ev.target || ev.target.id !== 'addAll6') return;
+  all6.checked = true;
+  sessChks.forEach(function(c){ if(!c.disabled) c.checked = true; });
+  syncSessRows(); recalc();
+});
 
 restoreDraft();
 recalc();
