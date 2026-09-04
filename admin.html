@@ -361,7 +361,7 @@ function receiptCard(r){
       rr('Processing', money(b.fee))+
       rr('Total paid', money(r.amount_cents), true)+
       ((r.amount_refunded_cents||0)>0?rr('Refunded','-'+money(r.amount_refunded_cents)):'')+
-      rr('Paid with', esc(r.paid_via||r.payment_provider||'Card')+(r.card_last4?(' ending '+esc(r.card_last4)):''))+
+      rr('Paid with', r.card_last4 ? ('Card ending '+esc(r.card_last4)+(r.paid_via||r.payment_provider ? ' (via '+esc(r.paid_via||r.payment_provider)+')' : '')) : esc(r.paid_via||r.payment_provider||'Card'))+
       rr('Waiver & refund policy', r.waiver_name?('Agreed &middot; '+esc(r.waiver_name)):'Agreed')+
     '</div>'+
   '</div>';
