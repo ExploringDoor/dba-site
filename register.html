@@ -222,6 +222,8 @@ input[type=checkbox].inp-err{outline:2px solid var(--err);outline-offset:2px}
 
 <script>
 /* ── Clinic config (front-end display only; the server recomputes the authoritative price) ── */
+var PRICE_BASE_SESSION = 30;   // advertised price before the card-processing fee
+var PRICE_BASE_ALL6    = 150;  // keep both in sync with PRICE.base*Cents in api/_clinic.js
 var PRICE_SESSION = 35;      // all-in per single session ($30 + $5 processing)
 var PRICE_ALL6    = 164;     // all-in for all six ($150 + $14 processing)
 var SESSIONS = [
@@ -321,7 +323,7 @@ function recalc(){
       '<div class="sum-row"><span>'+line+' × '+players+' player'+(players>1?'s':'')+'</span><span class="amt">$'+pp+' ea</span></div>' +
       '<div class="sum-row total"><span>Total</span><span class="amt">$'+total+'</span></div>' +
       upsellNote(n) +
-      '<div class="sum-note">Includes a card-processing fee ($5 per session · $14 for all six), which is non-refundable.</div>';
+      feeNote(n, players);
   }
   updatePayState();
 }
@@ -336,6 +338,18 @@ function upsellNote(n){
   if(n * PRICE_SESSION <= PRICE_ALL6) return "";
   return '<div class="sum-note" style="color:var(--pink)">You\u2019re already at the all-six price \u2014 add the last Sunday at <b>no extra cost</b>. ' +
     '<button type="button" id="addAll6" style="background:none;border:none;padding:0;font:inherit;color:var(--pink);text-decoration:underline;cursor:pointer">Add it</button></div>';
+}
+
+// The exact processing fee in this order — mirrors priceBreakdown() on the server, so the
+// number here is the number on the receipt. (A five-Sunday order is capped to the six-session
+// price, so its fee is the package's $14 rather than 5 x $5.)
+function feeNote(n, players){
+  var basePer = (n === SESSIONS.length) ? PRICE_BASE_ALL6 : n * PRICE_BASE_SESSION;
+  var feePer = perPlayer() - basePer;
+  if(feePer <= 0) return '';
+  var totalFee = feePer * players;
+  return '<div class="sum-note">Includes $' + totalFee.toFixed(2) + ' in card-processing fees' +
+    (players > 1 ? ' ($' + feePer.toFixed(2) + ' per player)' : '') + ', which are non-refundable.</div>';
 }
 
 /* ── Enable pay only when valid ── */

@@ -657,7 +657,7 @@ document.getElementById('burger').addEventListener('click',function(){var open=d
 document.querySelectorAll('#navMenu a').forEach(a=>a.addEventListener('click',function(){document.getElementById('navMenu').classList.remove('open');var b=document.getElementById('burger');if(b)b.setAttribute('aria-expanded','false');}));
 document.addEventListener('keydown',function(e){if(e.key==='Escape'){var m=document.getElementById('navMenu');if(m&&m.classList.contains('open')){m.classList.remove('open');var b=document.getElementById('burger');if(b){b.setAttribute('aria-expanded','false');b.focus();}}}});
 (function(){var els=document.querySelectorAll('.sr');function revealAll(){els.forEach(function(el){el.classList.add('v')})}try{if('IntersectionObserver' in window){var obs=new IntersectionObserver(function(e){e.forEach(function(el,i){if(el.isIntersecting){setTimeout(function(){el.target.classList.add('v')},i*50);obs.unobserve(el.target)}})},{threshold:.08,rootMargin:'0px 0px -30px 0px'});els.forEach(function(el){obs.observe(el)})}else{revealAll()}}catch(e){revealAll()}})();
-document.querySelectorAll('a[href^="#"]').forEach(a=>{a.addEventListener('click',function(e){e.preventDefault();const t=document.querySelector(this.getAttribute('href'));if(t)t.scrollIntoView({behavior:'smooth',block:'start'})})});
+document.querySelectorAll('a[href^="#"]').forEach(a=>{a.addEventListener('click',function(e){const t=document.querySelector(this.getAttribute('href'));if(!t)return;e.preventDefault();t.scrollIntoView({behavior:'smooth',block:'start'})})});
 document.getElementById('contactForm').addEventListener('submit',function(e){
   e.preventDefault();
   var form=this;
