@@ -258,6 +258,12 @@ sessChks.forEach(function(c){ c.addEventListener('change', function(){
 });});
 
 /* ── Players repeater ── */
+var MAX_PLAYERS = 8; // matches the server's cap, so the form can't build a basket it will reject
+// The DOB range the server accepts: age 3–18 on the first clinic day. Derived from one
+// constant so the picker can never offer a date our own guard would reject.
+var FIRST_CLINIC_DATE = '2026-09-27'; // keep in sync with SESSIONS[0].date in api/_clinic.js
+var DOB_MIN = (function(){ var d=new Date(FIRST_CLINIC_DATE+'T12:00:00Z'); d.setUTCFullYear(d.getUTCFullYear()-18); d.setUTCDate(d.getUTCDate()+1); return d.toISOString().slice(0,10); })();
+var DOB_MAX = (function(){ var d=new Date(FIRST_CLINIC_DATE+'T12:00:00Z'); d.setUTCFullYear(d.getUTCFullYear()-3); return d.toISOString().slice(0,10); })();
 var playerList = document.getElementById('playerList');
 var pCount = 0;
 function addPlayer(){
@@ -274,7 +280,9 @@ function addPlayer(){
       '<div class="fg"><label>Grade (fall 2026)</label><input class="inp p-grade" placeholder="e.g. 4th" aria-label="Player grade"></div>' +
     '</div>';
   playerList.appendChild(d);
-  try { var dob = d.querySelector('.p-dob'); dob.max = new Date().toISOString().slice(0, 10); dob.min = '2006-01-01'; } catch (e) {}
+  // Offer exactly the range the server accepts (age 3–18 on the first clinic day), so the
+  // date picker can never hand back a date our own guard rejects.
+  try { var dob = d.querySelector('.p-dob'); dob.min = DOB_MIN; dob.max = DOB_MAX; } catch (e) {}
   var rm = d.querySelector('.rm');
   if(rm) rm.addEventListener('click', function(){ d.remove(); renumber(); recalc(); });
   renumber(); recalc();
@@ -285,7 +293,12 @@ function renumber(){
   kids.forEach(function(p,i){ p.querySelector('.p-num').textContent = 'Player '+(i+1); var rm = p.querySelector('.rm'); if(rm) rm.style.display = kids.length > 1 ? '' : 'none'; });
   pCount = kids.length;
 }
-document.getElementById('addPlayer').addEventListener('click', addPlayer);
+document.getElementById('addPlayer').addEventListener('click', function(){
+  if(playerList.children.length >= MAX_PLAYERS){
+    return showErr('You can register up to ' + MAX_PLAYERS + ' players at once. For a larger group, email aceshoops@gmail.com.');
+  }
+  addPlayer();
+});
 addPlayer(); // start with one
 
 /* ── Live total ── */
@@ -293,7 +306,8 @@ function playerCount(){ return playerList.children.length; }
 function perPlayer(){
   var n = selectedSessions().length;
   if(n === 0) return 0;
-  return (n === SESSIONS.length) ? PRICE_ALL6 : n * PRICE_SESSION;
+  // Mirrors expectedCents() on the server: fewer Sundays never cost more than the full series.
+  return (n === SESSIONS.length) ? PRICE_ALL6 : Math.min(n * PRICE_SESSION, PRICE_ALL6);
 }
 function recalc(){
   var pp = perPlayer(), players = playerCount(), total = pp * players;
@@ -316,11 +330,11 @@ function recalc(){
 // let a parent overpay by accident — offer the last date. Hidden when a Sunday is cancelled,
 // because then there is no six-session package to buy.
 function upsellNote(n){
+  // Five Sundays already costs the capped six-session price, so the last date is free.
+  // Only offered when the sixth is actually available to add.
   if(n !== SESSIONS.length - 1 || all6.disabled) return "";
-  var saving = (SESSIONS.length - 1) * PRICE_SESSION - PRICE_ALL6;
-  if(saving <= 0) return "";
-  return '<div class="sum-note" style="color:var(--pink)">Add the last Sunday and pay <b>$' + saving +
-    ' less</b> per player \u2014 all six is $' + PRICE_ALL6 + '. ' +
+  if(n * PRICE_SESSION <= PRICE_ALL6) return "";
+  return '<div class="sum-note" style="color:var(--pink)">You\u2019re already at the all-six price \u2014 add the last Sunday at <b>no extra cost</b>. ' +
     '<button type="button" id="addAll6" style="background:none;border:none;padding:0;font:inherit;color:var(--pink);text-decoration:underline;cursor:pointer">Add it</button></div>';
 }
 
@@ -347,7 +361,8 @@ var ERR_TEXT = {
   too_many_players: 'You can register up to 8 players at once — email aceshoops@gmail.com for a larger group.',
   waiver_required: 'Please agree to the waiver and type your name to sign.',
   already_registered: 'This player is already registered for one of those Sundays — check your email for the receipt, or email aceshoops@gmail.com to make changes.',
-  session_canceled: 'One of the Sundays you picked has been cancelled — please unselect it and try again.',
+  session_canceled: 'One of the Sundays you picked has just been cancelled. We\u2019ve marked it below — please review your dates and try again.',
+  session_past: 'One of the Sundays you picked has already happened. We\u2019ve marked it below — please pick another date.',
   spam: 'We couldn\'t submit the form.' + HELP,
   not_configured: 'Online payment isn\'t switched on yet. Please email aceshoops@gmail.com to hold your spot.',
   checkout_unavailable: 'Checkout is temporarily unavailable — please try again in a minute.' + HELP,
@@ -417,6 +432,10 @@ document.getElementById('regForm').addEventListener('submit', function(e){
       if(timer) clearTimeout(timer);
       if(res.ok && res.d && res.d.url){ window.location = res.d.url; return; } // Stripe/Square hosted checkout
       var code = (res.d && res.d.error) || (res.status===503 ? 'not_configured' : '');
+      // Show the parent exactly WHICH date is the problem rather than making them hunt.
+      if(res.d && res.d.sessions && res.d.sessions.length){
+        if(code === 'session_past') markPast(res.d.sessions); else markCanceled(res.d.sessions);
+      }
       showErr(ERR_TEXT[code] || ('Something went wrong (' + (res.status || 'no response') + ').' + HELP));
       resetPay();
     })
@@ -471,26 +490,33 @@ function restoreDraft(){
 // cache with the button still greyed out — un-stick it.
 window.addEventListener('pageshow', function(e){ if(e.persisted) resetPay(); });
 
-/* ── A cancelled Sunday (weather / gym closure) stays visible but can't be picked ── */
-function markCanceled(ids){
+/* ── Sundays that can no longer be bought: cancelled (weather / gym closure) or already
+      played. They stay visible so the dates still read as a series, but can't be picked. ── */
+function blockSessions(ids, tag){
   if(!ids || !ids.length) return;
+  var hit = 0;
   ids.forEach(function(id){
     var l = sessionList.querySelector('.sess[data-id="'+id+'"]'); if(!l) return;
     var c = l.querySelector('input'); c.checked = false; c.disabled = true;
     l.classList.add('canceled');
-    var p = l.querySelector('.s-price'); if(p) p.innerHTML = '<span class="s-tag">CANCELLED</span>';
+    var p = l.querySelector('.s-price'); if(p) p.innerHTML = '<span class="s-tag">'+tag+'</span>';
+    hit++;
   });
-  // With a Sunday gone the 6-session package no longer exists.
+  if(!hit) return;
+  // With any Sunday gone there is no six-session package left to sell.
   all6.checked = false; all6.disabled = true;
   var row = document.getElementById('all6row'); row.classList.add('canceled');
   var save = row.querySelector('.a-save'); if(save) save.innerHTML = '<span class="s-tag">NOT AVAILABLE</span>';
   syncSessRows(); recalc();
 }
+function markCanceled(ids){ blockSessions(ids, 'CANCELLED'); }
+function markPast(ids){ blockSessions(ids, 'PAST'); }
 
 /* ── Ask the server if payments are ready; show the "opens soon" banner only if NOT ── */
 fetch('/api/checkout').then(function(r){ return r.json(); }).then(function(d){
   if(d && d.ready){ TEST_MODE=false; }
   else if(d && d.ready===false){ document.getElementById('testNotice').style.display='block'; }
+  if(d && d.past) markPast(d.past);
   if(d && d.canceled) markCanceled(d.canceled);
 }).catch(function(){});
 

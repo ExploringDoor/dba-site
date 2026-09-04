@@ -367,7 +367,8 @@ function receiptCard(r){
   '</div>';
 }
 function printDoc(title, inner){
-  var w=window.open('','_blank'); if(!w) return;
+  var w=window.open('','_blank');
+  if(!w){ alert('Your browser blocked the print window. Allow pop-ups for this site, then try again.'); return; }
   w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+title+'</title></head><body style="margin:24px;background:#fff">'+inner+'<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},150);}<\/scr'+'ipt></body></html>');
   w.document.close();
 }
@@ -427,13 +428,20 @@ function doRefund(r){
   // (total minus fee, minus anything already refunded). "Refund everything" is one click away.
   var feeCents=regBreakdown(r).fee;
   var stdAmt=Math.max(0, Math.min(max, (r.amount_cents||0)-feeCents-(r.amount_refunded_cents||0)));
+  // Everything but the fee is already back: the only thing left to refund IS the fee, so
+  // offer that rather than a $0.00 the button would refuse.
+  var feeOnly = stdAmt===0;
+  if(feeOnly) stdAmt = max;
   modal('<h3>Refund — '+esc(r.parent_name)+'</h3>'+
-    '<p style="color:var(--dim);font-size:.86rem;margin-bottom:12px">Refundable up to <b>'+money(max)+'</b>. Per the refund policy the <b>'+money(feeCents)+' processing fee is non-refundable</b>, so the standard refund is <b>'+money(stdAmt)+'</b>.</p>'+
+    '<p style="color:var(--dim);font-size:.86rem;margin-bottom:12px">'+(feeOnly
+      ? 'Everything but the processing fee has already been refunded. All that remains is the <b>'+money(max)+'</b> fee, which the refund policy says is non-refundable — refund it only if you mean to.'
+      : 'Refundable up to <b>'+money(max)+'</b>. Per the refund policy the <b>'+money(feeCents)+' processing fee is non-refundable</b>, so the standard refund is <b>'+money(stdAmt)+'</b>.')+'</p>'+
     '<input class="inp" id="refundAmt" value="'+(stdAmt/100).toFixed(2)+'" inputmode="decimal" aria-label="Refund amount">'+
-    '<div style="margin-top:8px;font-size:.8rem"><a href="#" id="refundAll" style="color:var(--dim)">Refund everything ('+money(max)+') instead</a></div>'+
+    (feeOnly ? '' : '<div style="margin-top:8px;font-size:.8rem"><a href="#" id="refundAll" style="color:var(--dim)">Refund everything ('+money(max)+') instead</a></div>')+
     '<div class="login-err" id="refundErr"></div>'+
     '<div class="foot"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary danger" id="refundGo">Issue refund</button></div>');
-  document.getElementById('refundAll').addEventListener('click', function(e){ e.preventDefault(); document.getElementById('refundAmt').value=(max/100).toFixed(2); });
+  var rAll=document.getElementById('refundAll');
+  if(rAll) rAll.addEventListener('click', function(e){ e.preventDefault(); document.getElementById('refundAmt').value=(max/100).toFixed(2); });
   document.getElementById('refundGo').addEventListener('click', function(){
     var btn=this;
     var v=document.getElementById('refundAmt').value.trim();
@@ -528,11 +536,13 @@ function noticeTemplate(sid, cancel){
 }
 function showNotify(sid){
   // Opens as a plain update; cancelling is an explicit choice (radio + checkbox), never the default.
-  var when=SESSION_LABELS[sid]||sid, off=isSessCanceled(sid), t=noticeTemplate(sid, false);
+  // Already cancelled means this is a RE-SEND, so open on the cancellation template to match
+  // the pre-selected radio. Otherwise open as a plain update: cancelling is always deliberate.
+  var when=SESSION_LABELS[sid]||sid, off=isSessCanceled(sid), t=noticeTemplate(sid, off);
   modal('<h3>📣 Email families — Sun, '+esc(when)+'</h3>'+
     (off?'<div class="notice-bad"><span>This Sunday is marked <b>CANCELLED</b> — hidden from the registration form, new signups refused, reminder off.</span><button class="btn sm" id="nReopen">Reopen it</button></div>':'')+
     '<div id="nCount" style="font-size:.82rem;color:var(--dim);margin-bottom:12px">Counting families…</div>'+
-    '<div class="nf row"><label><input type="radio" name="ntype" value="update" checked> General update</label><label><input type="radio" name="ntype" value="cancel"'+(off?' disabled':'')+'> Cancellation notice</label></div>'+
+    '<div class="nf row"><label><input type="radio" name="ntype" value="update"'+(off?'':' checked')+'> General update</label><label><input type="radio" name="ntype" value="cancel"'+(off?' checked':'')+'> Cancellation notice</label></div>'+
     '<div class="nf"><label class="lbl" for="nSubject">Subject</label><input class="ninp" id="nSubject" value="'+esc(t.subject)+'"></div>'+
     '<div class="nf"><label class="lbl" for="nMsg">Message <span style="text-transform:none;font-weight:400">— each family gets "Hi &lt;first name&gt;," on top; edit anything in [brackets]</span></label><textarea class="ninp" id="nMsg" rows="9">'+esc(t.message)+'</textarea></div>'+
     '<label class="chk-row nf"><input type="checkbox" id="nCancel"'+(off?' disabled':'')+'> <span>Mark this Sunday as <b>cancelled</b>: it disappears from the registration form, new signups for it are refused, and the day-before reminder is skipped.'+(off?' (already cancelled)':'')+'</span></label>'+
@@ -583,7 +593,10 @@ function toggleCheckin(rid, sid, pi, present){
   function apply(at){
     r.attendance=r.attendance||{}; r.attendance[sid]=r.attendance[sid]||{};
     if(present) r.attendance[sid][String(pi)]=at||new Date().toISOString(); else delete r.attendance[sid][String(pi)];
+    // Re-rendering the modal resets its scroll — hold the coach's place in a long roster.
+    var m=document.getElementById('modal'); var top=m?m.scrollTop:0;
     showRoster(sid);
+    var m2=document.getElementById('modal'); if(m2) m2.scrollTop=top;
   }
   if(state.demo){ apply(); return; }
   api('/api/checkin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rid:rid,session:sid,player:pi,present:present})})
@@ -611,7 +624,10 @@ function seasonStats(){
     });
   });
   players.sort(function(a,b){ return a.last.localeCompare(b.last)||a.name.localeCompare(b.name); });
-  var collected=paid.reduce(function(s,r){return s+((r.amount_cents||0)-(r.amount_refunded_cents||0));},0);
+  // Money still held, whatever the status: a policy refund keeps the processing fee, and a
+  // cancelled registration can still hold a payment. Matches /api/registrations.
+  var held=state.data.filter(function(r){ return (r.amount_cents||0)>0 && (r.paid_at||r.status==='paid'||r.status==='refunded'||r.paid_after_cancel); });
+  var collected=held.reduce(function(s,r){return s+((r.amount_cents||0)-(r.amount_refunded_cents||0));},0);
   var refunded=state.data.reduce(function(s,r){return s+(r.amount_refunded_cents||0);},0);
   return { sessions:sessions, players:players, paidRegs:paid.length, playerCount:players.length,
     allSix:paid.filter(allSix).length, single:paid.filter(function(r){return !allSix(r);}).length,
@@ -721,7 +737,10 @@ var SAMPLE_DATA=[
 // (tiles + session chips) match the rosters exactly.
 function computeSummary(data){
   var paid=data.filter(function(r){return r.status==='paid';});
-  var collected=paid.reduce(function(s,r){return s+((r.amount_cents||0)-(r.amount_refunded_cents||0));},0);
+  // Money still held, whatever the status: a policy refund keeps the processing fee, and a
+  // cancelled registration can still hold a payment. Matches /api/registrations.
+  var held=state.data.filter(function(r){ return (r.amount_cents||0)>0 && (r.paid_at||r.status==='paid'||r.status==='refunded'||r.paid_after_cancel); });
+  var collected=held.reduce(function(s,r){return s+((r.amount_cents||0)-(r.amount_refunded_cents||0));},0);
   var players=paid.reduce(function(s,r){return s+(r.player_count||(r.players||[]).length||0);},0);
   var per={};
   paid.forEach(function(r){ cleanSess(r).forEach(function(sid){ per[sid]=(per[sid]||0)+(r.player_count||(r.players||[]).length||0); }); });

@@ -18,6 +18,18 @@ export const SESSIONS = [
 ];
 export const SESSION_IDS = SESSIONS.map((s) => s.id);
 
+// Today's date in Eastern time — the clinic's own timezone, so a Sunday stops being
+// sellable when the day ends in Ardmore, not when it ends in UTC.
+export function todayET(now = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+}
+// Sundays that have already happened. A session stays sellable all day on its own date,
+// so a parent can still sign up on the morning of a clinic.
+export function pastSessionIds(now = new Date()) {
+  const t = todayET(now);
+  return SESSIONS.filter((sn) => sn.date < t).map((sn) => sn.id);
+}
+
 // All-in prices (what the parent pays), in cents. Matches the RYZER model:
 // $30 base + $5 processing = $35/session; $150 + $14 = $164 for all six.
 // We charge the all-in amount; the base/fee split is stored only for reporting.
@@ -56,7 +68,10 @@ export function expectedCents(reg) {
   const n = cleanSessions(reg && reg.sessions).length;
   const players = Array.isArray(reg && reg.players) ? reg.players.length : 0;
   if (n === 0 || players === 0) return 0;
-  const perPlayer = (n === SESSION_IDS.length) ? PRICE.allSixCents : n * PRICE.perSessionCents;
+  // Never charge more for fewer Sundays: five singles ($175) would otherwise cost more than
+  // the whole six-session series ($164). Capping also keeps the price fair when a Sunday is
+  // cancelled or has already passed, leaving the package unbuyable.
+  const perPlayer = (n === SESSION_IDS.length) ? PRICE.allSixCents : Math.min(n * PRICE.perSessionCents, PRICE.allSixCents);
   return perPlayer * players;
 }
 

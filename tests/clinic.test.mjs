@@ -102,6 +102,31 @@ await test('priceBreakdown always adds up to what was actually charged (survives
   assert.equal(fresh.base_cents + fresh.fee_cents, fresh.total_cents);
 });
 
+await test('fewer Sundays never cost more than the whole series', async () => {
+  const { pastSessionIds } = await import('../api/_clinic.js');
+  const one = [{}];
+  // Five singles would be 5 x $35 = $175, more than the $164 six-session package. Capped.
+  const five = expectedCents({ sessions: SESSION_IDS.slice(0, 5), players: one });
+  const six = expectedCents({ sessions: SESSION_IDS.slice(), players: one });
+  assert.equal(five, PRICE.allSixCents, 'five Sundays must not exceed the package price');
+  assert.equal(six, PRICE.allSixCents);
+  assert.ok(five <= six, 'fewer sessions must never cost more');
+  // Four and below are unaffected — still straight per-session pricing.
+  assert.equal(expectedCents({ sessions: SESSION_IDS.slice(0, 4), players: one }), 4 * PRICE.perSessionCents);
+  // The cap is per player, not per order.
+  assert.equal(expectedCents({ sessions: SESSION_IDS.slice(0, 5), players: [{}, {}] }), 2 * PRICE.allSixCents);
+});
+await test('a Sunday stops being sellable the day after it happens (Eastern time)', async () => {
+  const { pastSessionIds, todayET } = await import('../api/_clinic.js');
+  assert.deepEqual(pastSessionIds(new Date('2026-09-01T12:00:00Z')), [], 'before the season, nothing is past');
+  assert.deepEqual(pastSessionIds(new Date('2026-09-27T14:00:00Z')), [], 'still sellable on the morning of the clinic');
+  assert.deepEqual(pastSessionIds(new Date('2026-09-28T14:00:00Z')), ['s1']);
+  assert.deepEqual(pastSessionIds(new Date('2026-10-26T12:00:00Z')), ['s1', 's2', 's3', 's4', 's5']);
+  assert.equal(pastSessionIds(new Date('2026-12-01T12:00:00Z')).length, SESSION_IDS.length, 'after the season, all are past');
+  // Late on Nov 1 in Eastern time it is already Nov 2 in UTC — the session must still count as today.
+  assert.ok(!pastSessionIds(new Date('2026-11-02T02:00:00Z')).includes('s6'), 'ET, not UTC, decides the day');
+  assert.equal(todayET(new Date('2026-11-02T02:00:00Z')), '2026-11-01');
+});
 console.log('\ncheckout handler (no env configured)');
 const checkout = (await import('../api/checkout.js')).default;
 await test('GET readiness reports not-ready with no env', async () => {

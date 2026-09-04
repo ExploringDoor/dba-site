@@ -14,7 +14,7 @@
 //   Optional: SITE_URL (e.g. https://www.downerbasketballacademy.com) for redirect links
 
 import { fbConfigured, fbAdminConfigured, fsCreate, fsPatch, fsPatchVerified, fsQuery } from './_firestore.js';
-import { normalizeRegistration, expectedCents, cleanSessions, priceBreakdown, CLINIC } from './_clinic.js';
+import { normalizeRegistration, expectedCents, cleanSessions, priceBreakdown, pastSessionIds, CLINIC } from './_clinic.js';
 import { sessionStatus, isCanceled, canceledIds } from './_status.js';
 
 const PROVIDER = (process.env.PAYMENT_PROVIDER || '').toLowerCase();
@@ -111,7 +111,8 @@ export default async function handler(req, res) {
     let canceled = [];
     try { canceled = canceledIds(await sessionStatus()); } catch (e) { /* best-effort */ }
     res.setHeader('Cache-Control', 'no-store');
-    return res.status(200).json({ ready: ready(), provider: PROVIDER || null, canceled });
+    // `past` lets register.html grey out Sundays that have already happened.
+    return res.status(200).json({ ready: ready(), provider: PROVIDER || null, canceled, past: pastSessionIds() });
   }
   if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
 
@@ -133,6 +134,10 @@ export default async function handler(req, res) {
   try { st = await sessionStatus(); } catch (e) { return res.status(503).json({ error: 'checkout_unavailable' }); }
   const dead = reg.sessions.filter((s) => isCanceled(st, s));
   if (dead.length) return res.status(400).json({ error: 'session_canceled', sessions: dead });
+
+  // Never sell a Sunday that has already happened (the form hides them, but the server decides).
+  const gone = reg.sessions.filter((s) => pastSessionIds().includes(s));
+  if (gone.length) return res.status(400).json({ error: 'session_past', sessions: gone });
 
   // Client IP for the waiver record. Vercel sets x-forwarded-for itself; x-real-ip is Vercel's too.
   // (Never trust a client-supplied cf-connecting-ip — the site is not behind Cloudflare's proxy.)

@@ -366,7 +366,7 @@ await test('GET /api/checkout reports canceled:["s2"] (register.html greys it ou
   fake.seed('registrations/_sessions', { s2: { canceled: true, canceled_at: '2026-10-03T12:00:00.000Z', subject: 'Snow' }, s4: { canceled: false, reopened_at: '2026-10-01T00:00:00.000Z' } });
   const res = await call(checkout, { method: 'GET' });
   assert.equal(res.statusCode, 200);
-  assert.deepEqual(res.body, { ready: true, provider: 'stripe', canceled: ['s2'] });
+  assert.deepEqual(res.body, { ready: true, provider: 'stripe', canceled: ['s2'], past: [] });
   assert.equal(res.headers['Cache-Control'], 'no-store');
 });
 await test('POST /api/checkout with sessions [s1,s2] → 400 session_canceled {sessions:["s2"]}, nothing created, Stripe untouched', async () => {
