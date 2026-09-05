@@ -308,6 +308,37 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 <noscript><style>.sr{opacity:1 !important;transform:none !important}</style></noscript>
 </head>
 <body>
+<!-- Fall Clinics pop-up. Invisible until img/popup/flyer.jpg (or .png) exists and loads. -->
+<style>
+.flyer-pop{position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;padding:20px;background:rgba(6,6,8,.82);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.flyer-pop:not([hidden]){display:flex}
+.flyer-card{background:var(--bg2);border:1px solid var(--glass-b);border-radius:18px;max-width:440px;width:100%;max-height:92vh;overflow:auto;padding:14px;position:relative;box-shadow:0 30px 80px rgba(0,0,0,.6);animation:flyerIn .3s ease}
+@keyframes flyerIn{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.flyer-card{animation:none}}
+.flyer-x{position:absolute;top:10px;right:10px;z-index:2;width:38px;height:38px;border-radius:50%;border:none;background:rgba(0,0,0,.55);color:#fff;font-size:18px;line-height:1;cursor:pointer}
+.flyer-x:hover{background:rgba(0,0,0,.85)}
+.flyer-imglink{display:block;border-radius:10px;overflow:hidden}
+.flyer-imglink img{width:100%;display:block}
+.flyer-actions{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.flyer-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:15px 20px;border-radius:12px;font-weight:700;font-size:1rem;cursor:pointer;text-decoration:none;border:none;font-family:inherit;min-height:50px}
+.flyer-btn.primary{background:var(--mrn);color:#fff}
+.flyer-btn.primary:hover{background:var(--mrn-h)}
+.flyer-btn.ghost{background:var(--glass);color:var(--txt);border:1px solid var(--glass-b)}
+.flyer-btn.ghost:hover{background:var(--glass-h)}
+body.flyer-open{overflow:hidden}
+</style>
+<div id="flyerPop" class="flyer-pop" role="dialog" aria-modal="true" aria-label="Fall Clinics announcement" hidden>
+  <div class="flyer-card">
+    <button type="button" class="flyer-x" id="flyerClose" aria-label="Close and enter the site">&#10005;</button>
+    <a href="register.html" class="flyer-imglink" id="flyerImgLink" aria-label="Register for Fall Clinics">
+      <img id="flyerImg" alt="Downer Basketball Academy Fall Clinics flyer" />
+    </a>
+    <div class="flyer-actions">
+      <a href="register.html" class="flyer-btn primary">Register for Fall Clinics &rarr;</a>
+      <button type="button" class="flyer-btn ghost" id="flyerOk">Enter site</button>
+    </div>
+  </div>
+</div>
 <div class="page-wrap">
 
 <div class="announce">🏀 Fall Clinics — six Sundays at the Kobe Bryant Gymnasium. Registration is now open! <a href="clinics.html#register">Register now →</a></div>
@@ -670,6 +701,31 @@ document.getElementById('contactForm').addEventListener('submit',function(e){
     else{btn.textContent='Error — Try Again';btn.style.opacity='1';setTimeout(function(){btn.textContent='Send Message →'},3000)}
   }).catch(function(){btn.textContent='Error — Try Again';btn.style.opacity='1';setTimeout(function(){btn.textContent='Send Message →'},3000)});
 });
+</script>
+<script>
+/* Fall Clinics pop-up: shown once per browsing session, and ONLY once the flyer image actually
+   loads — so a missing/blocked image can never trap a visitor behind a blank modal. */
+(function(){
+  var KEY='dba_flyer_seen';
+  var pop=document.getElementById('flyerPop'); if(!pop) return;
+  try{ if(sessionStorage.getItem(KEY)==='1') return; }catch(e){}
+  var img=document.getElementById('flyerImg');
+  var triedAlt=false;
+  function seen(){ try{ sessionStorage.setItem(KEY,'1'); }catch(e){} }
+  function dismiss(){ pop.hidden=true; document.body.classList.remove('flyer-open'); seen(); document.removeEventListener('keydown',onKey); }
+  function onKey(e){ if(e.key==='Escape') dismiss(); }
+  img.onload=function(){
+    pop.hidden=false; document.body.classList.add('flyer-open');
+    document.addEventListener('keydown',onKey);
+    try{ document.getElementById('flyerClose').focus(); }catch(e){}
+  };
+  img.onerror=function(){ if(!triedAlt){ triedAlt=true; img.src='img/popup/flyer.png'; } };
+  img.src='img/popup/flyer.jpg';
+  document.getElementById('flyerClose').addEventListener('click',dismiss);
+  document.getElementById('flyerOk').addEventListener('click',dismiss);
+  pop.addEventListener('click',function(e){ if(e.target===pop) dismiss(); });
+  Array.prototype.forEach.call(pop.querySelectorAll('a[href]'),function(a){ a.addEventListener('click',seen); });
+})();
 </script>
 </body>
 </html>
