@@ -446,6 +446,20 @@ document.getElementById('regForm').addEventListener('submit', function(e){
       if(timer) clearTimeout(timer);
       if(res.ok && res.d && res.d.url){ window.location = res.d.url; return; } // Stripe/Square hosted checkout
       var code = (res.d && res.d.error) || (res.status===503 ? 'not_configured' : '');
+      // A duplicate names the child: point at their row, and say which Sundays, so a parent
+      // registering two kids doesn't have to guess which one is already in.
+      if(code === 'already_registered' && res.d && res.d.players && res.d.players.length){
+        var names = res.d.players, dates = (res.d.sessions||[]).map(function(id){ var sd = SESSIONS.filter(function(x){return x.id===id;})[0]; return sd ? sd.label.replace(/^Session \d+ \u2014 /,'') : id; });
+        var who = names.length === 1 ? names[0] + ' is' : names.slice(0,-1).join(', ') + ' and ' + names[names.length-1] + ' are';
+        var firstRow = null;
+        Array.prototype.forEach.call(playerList.children, function(row){
+          var nm = (row.querySelector('.p-first').value.trim() + ' ' + row.querySelector('.p-last').value.trim()).trim().toLowerCase();
+          if(names.some(function(n){ return n.toLowerCase() === nm; })){ row.querySelector('.p-first').classList.add('inp-err'); row.querySelector('.p-last').classList.add('inp-err'); if(!firstRow) firstRow = row.querySelector('.p-first'); }
+        });
+        showErr(who + ' already registered' + (dates.length ? ' for ' + dates.join(', ') : '') + ' \u2014 remove ' + (names.length === 1 ? 'that player' : 'them') + ' from this form, or email aceshoops@gmail.com to make changes.', firstRow);
+        resetPay();
+        return;
+      }
       // Show the parent exactly WHICH date is the problem rather than making them hunt.
       if(res.d && res.d.sessions && res.d.sessions.length){
         if(code === 'session_past') markPast(res.d.sessions); else markCanceled(res.d.sessions);

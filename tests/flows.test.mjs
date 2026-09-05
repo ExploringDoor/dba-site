@@ -319,6 +319,8 @@ await test('a PAID reg for jane@x.com / Kobe B / [s1] + new checkout for [s1,s2]
   const res = await call(checkout, { method: 'POST', body: { ...GOOD, sessions: ['s1', 's2'], players: [KOBE] } });
   assert.equal(res.statusCode, 409, JSON.stringify(res.body));
   assert.equal(res.body.error, 'already_registered');
+  assert.deepEqual(res.body.players, ['Kobe B'], 'the 409 names the child so a two-kid family knows which one');
+  assert.deepEqual(res.body.sessions, ['s1'], 'and the overlapping Sunday');
   assert.equal(fake.docs('registrations').length, before, 'no pending doc created');
   assert.equal(fake.calls({ host: 'api.stripe.com' }).length, 0, 'Stripe never called');
   const q = fake.calls({ host: 'firestore', path: ':runQuery' });

@@ -163,7 +163,10 @@ export default async function handler(req, res) {
       && cleanSessions(d.sessions).some((s) => reg.sessions.includes(s)));
     if (clash) {
       try { await fsPatch(`registrations/${clash.id}`, { dup_attempt_at: new Date().toISOString(), dup_attempt_ip: ip }); } catch (e) { /* trace is best-effort */ }
-      return res.status(409).json({ error: 'already_registered' });
+      // Name the child and the dates, so a parent registering two kids knows which one to remove.
+      const clashPlayers = reg.players.filter((p) => (clash.players || []).some((q) => key(q) === key(p))).map((p) => `${p.first} ${p.last}`.trim());
+      const overlap = cleanSessions(clash.sessions).filter((sid) => reg.sessions.includes(sid));
+      return res.status(409).json({ error: 'already_registered', players: clashPlayers, sessions: overlap });
     }
     const twin = (prior || []).find((d) => d.status === 'pending' && d.checkout_url && d.stripe_session_id
       && (Date.now() - new Date(d.created || 0).getTime()) < 55 * 60 * 1000
