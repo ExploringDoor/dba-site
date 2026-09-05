@@ -49,6 +49,7 @@ const REGISTER = 'https://www.greggdownerbasketball.com/clinics.html#register';
 
 // ── CSV (quote-aware) ───────────────────────────────────────────────────
 function parseCSV(text) {
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1); // strip a leading BOM so column 1 isn't prefixed
   const rows = []; let row = [], cell = '', q = false;
   for (let i = 0; i < text.length; i++) {
     const c = text[i];
