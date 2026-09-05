@@ -322,6 +322,8 @@ function act(kind, rid){
 function modal(html, wide){ var m=document.getElementById('modal'); m.innerHTML=html; m.classList.toggle('wide', !!wide); m.classList.toggle('xwide', wide==='xwide'); document.getElementById('modalBg').classList.add('on'); }
 function closeModal(){ document.getElementById('modalBg').classList.remove('on'); }
 document.getElementById('modalBg').addEventListener('click', function(e){ if(e.target.id==='modalBg') closeModal(); });
+// Escape closes any open modal (roster, receipt, waiver, Manage, notice, report, refund).
+document.addEventListener('keydown', function(e){ if(e.key==='Escape' && document.getElementById('modalBg').classList.contains('on')) closeModal(); });
 
 // Formal, printable waiver agreement document (mirrors the RYZER waiver PDF).
 function waiverCard(r){
