@@ -88,6 +88,7 @@ tr:hover td{background:rgba(0,0,0,.03)}
 .modal{background:var(--bg2);border:1px solid var(--glass-b);border-radius:var(--r);max-width:460px;width:100%;padding:26px;max-height:85vh;overflow-y:auto}
 .modal.wide{max-width:640px}
 .modal.xwide{max-width:980px}
+.lnk{background:none;border:none;padding:0;font:inherit;color:var(--mrn);text-decoration:underline;cursor:pointer}
 .chk{padding:6px 12px;border-radius:8px;border:1px solid var(--glass-b);background:var(--glass);color:var(--txt);font-family:inherit;font-weight:600;font-size:.75rem;cursor:pointer;min-width:84px}
 .chk.on{background:rgba(47,158,79,.14);border-color:rgba(47,158,79,.5);color:#1f7a38}
 .who .nm[data-act]{cursor:pointer}
@@ -228,7 +229,28 @@ function render(){
     return true;
   });
   var tb=document.getElementById('rows');
-  document.getElementById('empty').style.display=rows.length?'none':'block';
+  // Say WHY the table is empty. "No registrations match" is wrong on launch day, when there is
+  // simply nothing yet and the owner may wonder whether the dashboard is broken.
+  var emptyEl=document.getElementById('empty');
+  emptyEl.style.display=rows.length?'none':'block';
+  if(!rows.length){
+    if(!state.data.length){
+      emptyEl.innerHTML='No registrations yet. They\u2019ll appear here the moment a family signs up.';
+    } else if(state.q && state.filter!=='all'){
+      emptyEl.innerHTML='No '+esc(state.filter)+' registrations match \u201c'+esc(state.q)+'\u201d. <button type="button" class="lnk" id="emptyClear">Clear search and filter</button>';
+    } else if(state.q){
+      emptyEl.innerHTML='No registrations match \u201c'+esc(state.q)+'\u201d. <button type="button" class="lnk" id="emptyClear">Clear search</button>';
+    } else {
+      emptyEl.innerHTML='No '+esc(state.filter)+' registrations. <button type="button" class="lnk" id="emptyClear">Show all '+state.data.length+'</button>';
+    }
+    var ec=document.getElementById('emptyClear');
+    if(ec) ec.addEventListener('click', function(){
+      state.q=''; state.filter='all';
+      var sb=document.getElementById('search'); if(sb) sb.value='';
+      Array.prototype.forEach.call(document.querySelectorAll('#filters .f'), function(f){ f.classList.toggle('on', f.dataset.s==='all'); });
+      render();
+    });
+  }
   tb.innerHTML=rows.map(rowHtml).join('');
   Array.prototype.forEach.call(tb.querySelectorAll('[data-act]'), function(el){
     el.addEventListener('click', function(){ act(el.dataset.act, el.dataset.rid); });
