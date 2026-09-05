@@ -450,7 +450,14 @@ document.getElementById('regForm').addEventListener('submit', function(e){
       if(res.d && res.d.sessions && res.d.sessions.length){
         if(code === 'session_past') markPast(res.d.sessions); else markCanceled(res.d.sessions);
       }
-      showErr(ERR_TEXT[code] || ('Something went wrong (' + (res.status || 'no response') + ').' + HELP));
+      var friendly = ERR_TEXT[code];
+      if(!friendly){
+        // A shared network (school, apartment block, office) can trip the checkout rate limit
+        // even when one family is behaving normally — say what to do rather than show a number.
+        if(res.status === 429) friendly = 'Too many attempts from your network — please wait a minute and try again.' + HELP;
+        else friendly = 'Something went wrong — please try again.' + HELP;
+      }
+      showErr(friendly);
       resetPay();
     })
     .catch(function(x){
