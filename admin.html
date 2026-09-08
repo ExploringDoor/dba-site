@@ -373,19 +373,23 @@ function receiptCard(r){
   var players=(r.players||[]).map(function(p){return esc((p.first+' '+p.last).trim());}).join('<br>')||'—';
   var sess=sessText(r);
   function rr(k,v,strong){ return '<div style="display:flex;justify-content:space-between;gap:16px;padding:8px 14px;border-top:1px solid #eee;font-size:13px'+(strong?';font-weight:700':'')+'"><span style="color:#777">'+k+'</span><span style="text-align:right;color:#111">'+v+'</span></div>'; }
+  var paid=(r.status==='paid');
   return '<div style="background:#fff;color:#111;border:1px solid #e2e6ea;border-radius:10px;overflow:hidden;font-family:Arial,Helvetica,sans-serif">'+
-    '<div style="background:#8B1A2B;color:#fff;padding:14px 16px"><div style="font-weight:800;letter-spacing:2px;font-size:15px">DOWNER BASKETBALL ACADEMY</div><div style="font-size:11px;color:#f0d0d6;letter-spacing:1px">REGISTRATION RECEIPT</div></div>'+
+    '<div style="background:#8B1A2B;color:#fff;padding:14px 16px"><div style="font-weight:800;letter-spacing:2px;font-size:15px">DOWNER BASKETBALL ACADEMY</div><div style="font-size:11px;color:#f0d0d6;letter-spacing:1px">'+(paid?'REGISTRATION RECEIPT':'REGISTRATION SUMMARY')+'</div></div>'+
+    (paid?'':'<div style="background:#fbeaea;color:#8B1A2B;border-bottom:1px solid #f0c4c4;padding:10px 16px;font-weight:800;font-size:13px;letter-spacing:.5px;text-align:center">⚠ AMOUNT DUE — NOT YET PAID</div>')+
     '<div style="padding:4px 0">'+
-      rr('Receipt #','<span style="font-family:monospace">'+esc(r.id||'')+'</span>')+
-      rr('Date', fmtDateTime(r.paid_at||r.created))+
+      rr(paid?'Receipt #':'Reference #','<span style="font-family:monospace">'+esc(r.id||'')+'</span>')+
+      rr(paid?'Date paid':'Registered', fmtDateTime(r.paid_at||r.created))+
       rr('Registrant', esc(r.parent_name||'—'))+
       rr('Player(s)', players)+
       rr('Sessions', sess)+
       rr('Base', money(b.base))+
       rr('Processing', money(b.fee))+
-      rr('Total paid', money(r.amount_cents), true)+
+      rr(paid?'Total paid':'Amount due', money(r.amount_cents), true)+
       ((r.amount_refunded_cents||0)>0?rr('Refunded','-'+money(r.amount_refunded_cents)):'')+
-      rr('Paid with', r.card_last4 ? ('Card ending '+esc(r.card_last4)+(r.paid_via||r.payment_provider ? ' (via '+esc(r.paid_via||r.payment_provider)+')' : '')) : esc(r.paid_via||r.payment_provider||'Card'))+
+      (paid
+        ? rr('Paid with', r.card_last4 ? ('Card ending '+esc(r.card_last4)+(r.paid_via||r.payment_provider ? ' (via '+esc(r.paid_via||r.payment_provider)+')' : '')) : esc(r.paid_via||r.payment_provider||'Card'))
+        : rr('Payment status','<span style="color:#b02a2a;font-weight:700">Not paid</span>'))+
       rr('Waiver & refund policy', r.waiver_name?('Agreed &middot; '+esc(r.waiver_name)):'Agreed')+
     '</div>'+
   '</div>';
@@ -396,11 +400,12 @@ function printDoc(title, inner){
   w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+title+'</title></head><body style="margin:24px;background:#fff">'+inner+'<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},150);}<\/scr'+'ipt></body></html>');
   w.document.close();
 }
-function printReceipt(rid){ var r=byId(rid); if(r) printDoc('Receipt '+esc(r.id||''), receiptCard(r)); }
+function printReceipt(rid){ var r=byId(rid); if(r) printDoc((r.status==='paid'?'Receipt ':'Registration (unpaid) ')+esc(r.id||''), receiptCard(r)); }
 function printWaiver(rid){ var r=byId(rid); if(r) printDoc('Waiver '+esc(r.id||''), waiverCard(r)); }
 function showReceipt(r){
-  modal('<h3>Receipt</h3>'+ receiptCard(r) +
-    '<p style="font-size:.72rem;color:var(--dim);margin-top:10px">The official card receipt is also emailed to the parent by '+(esc(r.paid_via||'the processor'))+'.</p>'+
+  var paid=(r.status==='paid');
+  modal('<h3>'+(paid?'Receipt':'Registration — unpaid')+'</h3>'+ receiptCard(r) +
+    '<p style="font-size:.72rem;color:var(--dim);margin-top:10px">'+(paid?('The official card receipt is also emailed to the parent by '+esc(r.paid_via||'the processor')+'.'):'This registration has not been paid — no payment has been received, and nothing has been emailed to the parent.')+'</p>'+
     '<div class="foot"><button class="btn" id="rcPrint">🖨 Print</button><button class="btn primary" onclick="closeModal()">Close</button></div>');
   var pb=document.getElementById('rcPrint'); if(pb) pb.addEventListener('click', function(){ printReceipt(r.id); });
 }
