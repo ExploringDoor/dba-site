@@ -212,7 +212,7 @@ document.getElementById('logoutBtn').addEventListener('click', function(){
 function render(){
   var s=state.summary;
   document.getElementById('tiles').innerHTML=
-    tile(s.paid||0,'Paid registrations')+tile(s.players||0,'Players')+tile('$'+(s.collected||'0.00'),'Collected (net)')+tile(s.pending||0,'Pending');
+    tile(s.paid||0,'Paid registrations')+tile(s.players||0,'Players')+tile('$'+(s.collected||'0.00'),'Collected (net of fees)')+tile(s.pending||0,'Pending');
   renderCron();
   var ps=s.perSession||{};
   document.getElementById('sessbar').innerHTML=Object.keys(SESSION_LABELS).map(function(id){
@@ -656,7 +656,8 @@ function seasonStats(){
   // Money still held, whatever the status: a policy refund keeps the processing fee, and a
   // cancelled registration can still hold a payment. Matches /api/registrations.
   var held=state.data.filter(function(r){ return (r.amount_cents||0)>0 && (r.paid_at||r.status==='paid'||r.status==='refunded'||r.paid_after_cancel); });
-  var collected=held.reduce(function(s,r){return s+((r.amount_cents||0)-(r.amount_refunded_cents||0));},0);
+  // Net of fees: base (program) money only — the owner keeps the processing fee separately.
+  var collected=held.reduce(function(s,r){return s+Math.max(0,((r.amount_cents||0)-(r.amount_refunded_cents||0))-(r.fee_cents||0));},0);
   var refunded=state.data.reduce(function(s,r){return s+(r.amount_refunded_cents||0);},0);
   return { sessions:sessions, players:players, paidRegs:paid.length, playerCount:players.length,
     allSix:paid.filter(allSix).length, single:paid.filter(function(r){return !allSix(r);}).length,
@@ -681,7 +682,7 @@ function reportCard(){
       td(att+' / '+reg,'text-align:center')+'</tr>';
   }).join('') || '<tr>'+td('No paid registrations yet.','color:#888')+'</tr>';
   var kvs=[['Paid registrations',s.paidRegs],['Players',s.playerCount],['All-6 packages',s.allSix],['Single-session regs',s.single],
-    ['Collected (net)',money(s.collected)],['Refunded',money(s.refunded)+(s.refundedRegs?' ('+s.refundedRegs+')':'')],['Canceled',s.canceledRegs]];
+    ['Collected (net of fees)',money(s.collected)],['Refunded',money(s.refunded)+(s.refundedRegs?' ('+s.refundedRegs+')':'')],['Canceled',s.canceledRegs]];
   return '<div style="background:#fff;color:#111;border:1px solid #e2e6ea;border-radius:10px;overflow:hidden;font-family:Arial,Helvetica,sans-serif">'+
     '<div style="background:#8B1A2B;color:#fff;padding:14px 16px"><div style="font-weight:800;font-size:16px">DBA Fall Clinics 2026 &mdash; Season Report</div><div style="font-size:11px;color:#f0d0d6">Generated '+esc(fmtDateTime(new Date().toISOString()))+' &middot; attendance from check-ins</div></div>'+
     '<div style="padding:14px 16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;font-size:12px;border-bottom:1px solid #eee">'+
@@ -769,7 +770,8 @@ function computeSummary(data){
   // Money still held, whatever the status: a policy refund keeps the processing fee, and a
   // cancelled registration can still hold a payment. Matches /api/registrations.
   var held=state.data.filter(function(r){ return (r.amount_cents||0)>0 && (r.paid_at||r.status==='paid'||r.status==='refunded'||r.paid_after_cancel); });
-  var collected=held.reduce(function(s,r){return s+((r.amount_cents||0)-(r.amount_refunded_cents||0));},0);
+  // Net of fees: base (program) money only — the owner keeps the processing fee separately.
+  var collected=held.reduce(function(s,r){return s+Math.max(0,((r.amount_cents||0)-(r.amount_refunded_cents||0))-(r.fee_cents||0));},0);
   var players=paid.reduce(function(s,r){return s+(r.player_count||(r.players||[]).length||0);},0);
   var per={};
   paid.forEach(function(r){ cleanSess(r).forEach(function(sid){ per[sid]=(per[sid]||0)+(r.player_count||(r.players||[]).length||0); }); });

@@ -44,7 +44,11 @@ export default async function handler(req, res) {
   // 'refunded' while the processing fee is retained, and a canceled record may still hold a
   // payment. Both belong in the total the owner reconciles against Stripe.
   const captured = all.filter((r) => (r.amount_cents || 0) > 0 && (r.paid_at || r.status === 'paid' || r.status === 'refunded' || r.paid_after_cancel));
-  const collectedCents = captured.reduce((s, r) => s + ((r.amount_cents || 0) - (r.amount_refunded_cents || 0)), 0);
+  // "Collected (net)" excludes the card-processing fee — the owner keeps that fee separately,
+  // so this figure is the base (program) money only. Per record: amount held after refunds,
+  // minus the (non-refundable) fee, floored at 0. Older records without a stored fee fall back
+  // to the full held amount.
+  const collectedCents = captured.reduce((s, r) => s + Math.max(0, ((r.amount_cents || 0) - (r.amount_refunded_cents || 0)) - (r.fee_cents || 0)), 0);
   const players = paid.reduce((s, r) => s + (r.player_count || 0), 0);
   const perSession = {};
   paid.forEach((r) => cleanSessions(r.sessions).forEach((sid) => { perSession[sid] = (perSession[sid] || 0) + (r.player_count || 0); }));
