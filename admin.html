@@ -166,6 +166,9 @@ var state={ key:'', data:[], summary:{}, filter:'all', q:'', sessions_status:{} 
 
 function money(c){ return '$'+((c||0)/100).toFixed(2); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];}); }
+// Display phones consistently as 610-804-9222. 11 digits starting with 1 → drop the 1.
+// Anything that isn't a clean 10-digit US number is shown as-is (never mangle it).
+function fmtPhone(p){ var d=String(p==null?'':p).replace(/\D/g,''); if(d.length===11&&d.charAt(0)==='1')d=d.slice(1); return d.length===10?(d.slice(0,3)+'-'+d.slice(3,6)+'-'+d.slice(6)):String(p==null?'':p); }
 function fmtDate(iso){ if(!iso) return '—'; var d=new Date(iso); return isNaN(d)?'—':(d.getMonth()+1)+'/'+d.getDate()+'/'+String(d.getFullYear()).slice(2); }
 
 /* ── Auth + load ── */
@@ -295,7 +298,7 @@ function rowHtml(r){
            (canRefund?'<button class="btn sm danger" data-act="refund" data-rid="'+r.id+'">Refund</button>':'')+
            (r.status!=='canceled'?'<button class="btn sm danger" data-act="cancel" data-rid="'+r.id+'">Cancel</button>':'');
   return '<tr>'+
-    '<td class="who"><div class="nm" data-act="manage" data-rid="'+r.id+'" title="View full details">'+esc(r.parent_name||'—')+'</div><div class="sub">'+esc(r.parent_email||'')+'</div><div class="sub">'+esc(r.parent_phone||'')+'</div></td>'+
+    '<td class="who"><div class="nm" data-act="manage" data-rid="'+r.id+'" title="View full details">'+esc(r.parent_name||'—')+'</div><div class="sub">'+esc(r.parent_email||'')+'</div><div class="sub">'+esc(fmtPhone(r.parent_phone))+'</div></td>'+
     '<td class="players-cell">'+players+medChip+'</td>'+
     '<td class="mono">'+fmtDate(r.created)+'</td>'+
     '<td>'+sess+'</td>'+
@@ -339,10 +342,10 @@ function waiverCard(r){
       '<p style="margin:0 0 8px;color:#333">Refunds are issued as credit toward a future clinic for injury or withdrawal.</p>'+
       '<p style="margin:0 0 14px"><strong>I agree to the above statement:</strong> Yes</p>'+
       '<hr style="border:none;border-top:1px solid #e5e5e5;margin:14px 0">'+
-      '<table style="font-size:12px;color:#555;border-collapse:collapse">'+
-        '<tr><td style="padding:2px 16px 2px 0;font-weight:700">Signed by</td><td>'+esc(r.waiver_name||'—')+'</td></tr>'+
-        '<tr><td style="padding:2px 16px 2px 0;font-weight:700">Date</td><td>'+fmtDateTime(r.waiver_at)+'</td></tr>'+
-        '<tr><td style="padding:2px 16px 2px 0;font-weight:700">IP address</td><td>'+esc(r.waiver_ip||'—')+'</td></tr>'+
+      '<table style="font-size:12px;color:#555;border-collapse:collapse;width:auto;min-width:0;table-layout:auto">'+
+        '<tr><td style="padding:2px 16px 2px 0;font-weight:700;white-space:nowrap;vertical-align:top">Signed by</td><td style="word-break:break-word">'+esc(r.waiver_name||'—')+'</td></tr>'+
+        '<tr><td style="padding:2px 16px 2px 0;font-weight:700;white-space:nowrap;vertical-align:top">Date</td><td style="word-break:break-word">'+fmtDateTime(r.waiver_at)+'</td></tr>'+
+        '<tr><td style="padding:2px 16px 2px 0;font-weight:700;white-space:nowrap;vertical-align:top">IP address</td><td style="word-break:break-word">'+esc(r.waiver_ip||'—')+'</td></tr>'+
       '</table>'+
     '</div>'+
   '</div>';
@@ -433,9 +436,9 @@ function showManage(r){
     '<div style="font-size:.8rem;color:var(--dim);margin-bottom:2px"><span class="badge '+(r.status||'pending')+'">'+(r.status||'pending')+'</span> &middot; Receipt #<span class="mono">'+esc(r.id||'')+'</span>'+(r.amount_mismatch?' &middot; <span style="color:#e06b5e">⚠ amount mismatch</span>':'')+(r.paid_after_cancel?' &middot; <span style="color:#e06b5e">⚠ paid after cancel — refund or reinstate</span>':'')+(r.dup_attempt_at?' &middot; <span style="color:var(--amber)" title="Someone tried to register this child again for an overlapping Sunday">duplicate attempt '+esc(fmtDateTime(r.dup_attempt_at))+'</span>':'')+'</div>'+
     sec('Player(s)')+playersHtml+
     sec('Registration')+kv('Registered', fmtDateTime(r.created))+kv('Sessions', sess)+
-    sec('Parent / Guardian')+kv('Name', esc(r.parent_name||'—'))+(r.parent_rel?kv('Relationship', esc(r.parent_rel)):'')+kv('Email', esc(r.parent_email||'—'))+kv('Phone', esc(r.parent_phone||'—'))+
-    sec('Emergency contact')+kv('Name', esc(r.emerg_name||'—'))+kv('Phone', esc(r.emerg_phone||'—'))+
-    (r.pickup_name?(sec('Authorized pickup')+kv('Name', esc(r.pickup_name))+(r.pickup_phone?kv('Phone', esc(r.pickup_phone)):'')):'')+
+    sec('Parent / Guardian')+kv('Name', esc(r.parent_name||'—'))+(r.parent_rel?kv('Relationship', esc(r.parent_rel)):'')+kv('Email', esc(r.parent_email||'—'))+kv('Phone', esc(fmtPhone(r.parent_phone)||'—'))+
+    sec('Emergency contact')+kv('Name', esc(r.emerg_name||'—'))+kv('Phone', esc(fmtPhone(r.emerg_phone)||'—'))+
+    (r.pickup_name?(sec('Authorized pickup')+kv('Name', esc(r.pickup_name))+(r.pickup_phone?kv('Phone', esc(fmtPhone(r.pickup_phone))):'')):'')+
     sec('Health')+medHtml+
     sec('Payment')+kv('Base', money(b.base))+kv('Processing', money(b.fee))+kv('Total', money(r.amount_cents))+((r.amount_refunded_cents||0)>0?kv('Refunded', '-'+money(r.amount_refunded_cents)):'')+kv('Card', r.card_last4?(esc(r.paid_via||'Card')+' ending '+esc(r.card_last4)):'—')+
     sec('Waiver')+kv('Agreed', r.waiver_name?('Yes &middot; '+esc(r.waiver_name)):'—')+(r.waiver_at?kv('Signed', fmtDateTime(r.waiver_at)):'')+
@@ -535,7 +538,7 @@ function rosterCard(sid, live){
       '<td style="padding:6px 8px;border-top:1px solid #eee;color:#888">'+(i+1)+'</td>'+
       '<td style="padding:6px 8px;border-top:1px solid #eee;font-weight:600">'+esc(x.player)+(x.med?' <span style="color:#c0392b">⚠</span>':'')+'</td>'+
       '<td style="padding:6px 8px;border-top:1px solid #eee">'+esc(x.parent)+'</td>'+
-      '<td style="padding:6px 8px;border-top:1px solid #eee">'+esc(x.phone)+'</td>'+
+      '<td style="padding:6px 8px;border-top:1px solid #eee">'+esc(fmtPhone(x.phone))+'</td>'+
       '<td style="padding:6px 8px;border-top:1px solid #eee;font-size:11px;color:#b02a2a">'+esc(x.med)+'</td>'+
       '<td style="padding:6px 8px;border-top:1px solid #eee;text-align:center;font-size:16px">'+cell+'</td>'+
     '</tr>';
@@ -726,7 +729,7 @@ document.getElementById('csvBtn').addEventListener('click', function(){
   var cols=['Parent','Email','Phone','Emergency','EmergPhone','Pickup','PickupPhone','Allergies','Medications','Conditions','TreatOK','Players','Sessions','Amount','Refunded','Status','Provider','Last4','Created','WaiverSignedBy'];
   var lines=[cols.join(',')];
   state.data.forEach(function(r){
-    var row=[r.parent_name, r.parent_email, r.parent_phone, r.emerg_name, r.emerg_phone, r.pickup_name||'', r.pickup_phone||'', r.allergies||'', r.medications||'', r.medical_conditions||'', (r.treat_ok?'Yes':'No'),
+    var row=[r.parent_name, r.parent_email, fmtPhone(r.parent_phone), r.emerg_name, fmtPhone(r.emerg_phone), r.pickup_name||'', fmtPhone(r.pickup_phone||''), r.allergies||'', r.medications||'', r.medical_conditions||'', (r.treat_ok?'Yes':'No'),
       (r.players||[]).map(function(p){return p.first+' '+p.last;}).join('; '),
       allSix(r)?'All 6':cleanSess(r).join(' '),
       ((r.amount_cents||0)/100).toFixed(2), ((r.amount_refunded_cents||0)/100).toFixed(2),
