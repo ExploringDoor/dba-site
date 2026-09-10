@@ -75,6 +75,18 @@ export function expectedCents(reg) {
   return perPlayer * players;
 }
 
+// Financial-aid codes: a comma-separated allowlist held ONLY in the env var AID_CODES
+// (never in code). A code that matches (case-insensitive, trimmed) lets a family register
+// for free — the server records the registration as paid $0. An empty/unset env var means
+// the feature is off and no code is ever valid. Checked server-side only.
+export function aidCodeValid(code) {
+  const c = String(code || '').trim().toLowerCase();
+  if (!c) return false;
+  return String(process.env.AID_CODES || '')
+    .split(',').map((x) => x.trim().toLowerCase()).filter(Boolean)
+    .includes(c);
+}
+
 // Receipt helpers ─────────────────────────────────────────────────────────
 // Split the authoritative total into base + processing (for an itemized receipt).
 // Prefers the split RECORDED on the registration at checkout, so a receipt always reflects

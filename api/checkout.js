@@ -14,8 +14,9 @@
 //   Optional: SITE_URL (e.g. https://www.downerbasketballacademy.com) for redirect links
 
 import { fbConfigured, fbAdminConfigured, fsCreate, fsPatch, fsPatchVerified, fsQuery } from './_firestore.js';
-import { normalizeRegistration, expectedCents, cleanSessions, priceBreakdown, pastSessionIds, CLINIC } from './_clinic.js';
+import { normalizeRegistration, expectedCents, cleanSessions, priceBreakdown, pastSessionIds, CLINIC, aidCodeValid } from './_clinic.js';
 import { sessionStatus, isCanceled, canceledIds } from './_status.js';
+import { maybeSendConfirmation } from './_finalize.js';
 
 const PROVIDER = (process.env.PAYMENT_PROVIDER || '').toLowerCase();
 
@@ -125,8 +126,17 @@ export default async function handler(req, res) {
   const cents = expectedCents(reg);
   if (cents <= 0) return res.status(400).json({ error: 'nothing_to_charge' });
 
+  // Financial-aid code (optional). A VALID code (checked server-side against env AID_CODES)
+  // waives the whole fee — this becomes a $0 registration with no payment step. A code that is
+  // present but NOT valid is rejected outright, so a wrong code can never silently fall through
+  // to a normal charge. No code at all → the normal paid flow below, unchanged.
+  const aidCode = String((req.body || {}).aid_code || '').trim();
+  const FREE = aidCode !== '';
+  if (FREE && !aidCodeValid(aidCode)) return res.status(400).json({ error: 'bad_aid_code' });
+
   // If payments/DB aren't wired yet, tell the page so it shows "opens soon".
-  if (!ready()) return res.status(503).json({ error: 'not_configured' });
+  // A free (aid-code) registration needs only the database, not the payment provider.
+  if (FREE ? !(fbConfigured() && fbAdminConfigured()) : !ready()) return res.status(503).json({ error: 'not_configured' });
 
   // Never sell a Sunday the admin has cancelled (the form hides it, but the server is the authority).
   // If the cancellation status can't be READ, don't guess — pause checkout rather than sell a dead date.
@@ -180,6 +190,35 @@ export default async function handler(req, res) {
       return res.status(200).json({ url: twin.checkout_url, rid: twin.id, reused: true });
     }
   } catch (e) { /* fall through — never block on a lookup error */ }
+
+  // FREE PATH — a valid financial-aid code. Record a $0 PAID registration directly (no
+  // provider session), which puts the player on the rosters exactly like a paid one, then
+  // send the standard confirmation email. Nothing is ever charged. All the guards above
+  // (validation, cancelled/past Sundays, duplicate check) have already run.
+  if (FREE) {
+    const nowFree = new Date().toISOString();
+    const createdFree = await fsCreate('registrations', Object.assign({}, reg, {
+      status: 'paid',
+      payment_provider: 'financial_aid',
+      paid_via: 'Financial Aid',
+      aid_code: aidCode,
+      amount_cents: 0,
+      base_cents: 0,
+      fee_cents: 0,
+      amount_refunded_cents: 0,
+      currency: 'USD',
+      paid_at: nowFree,
+      waiver_at: nowFree,
+      waiver_ip: ip,
+      created: nowFree,
+    }));
+    const freeId = createdFree && createdFree.name ? String(createdFree.name).split('/').pop() : null;
+    if (!freeId) return res.status(500).json({ error: 'save_failed' });
+    // Send the confirmation once (claim-before-send makes it idempotent); BCC admin.
+    // Best-effort — the reconcile cron re-sends any that fail, so a mail hiccup never blocks the signup.
+    try { await maybeSendConfirmation(freeId, Object.assign({}, reg, { status: 'paid', paid_at: nowFree, amount_cents: 0, base_cents: 0, fee_cents: 0, paid_via: 'Financial Aid' })); } catch (e) { /* cron will retry */ }
+    return res.status(200).json({ free: true, rid: freeId });
+  }
 
   // 1) Persist a PENDING registration so we have a record even if the parent
   //    abandons checkout (and so the admin can see incomplete attempts).

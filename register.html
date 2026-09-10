@@ -206,6 +206,7 @@ input[type=checkbox].inp-err{outline:2px solid var(--err);outline-offset:2px}
       </div>
       <label class="check"><input type="checkbox" id="waiverAgree" required><span>I have read and agree to the liability waiver, code of conduct &amp; refund policy on behalf of my player(s). <span class="req">*</span></span></label>
       <div class="fg"><label for="f-waiver">Type your full name to sign <span class="req">*</span></label><input class="inp" id="f-waiver" name="waiver_name" placeholder="Your legal name" autocomplete="name" required></div>
+      <div class="fg"><label for="f-aid">Financial aid code (optional)</label><input class="inp" id="f-aid" name="aid_code" placeholder="Enter only if you were given one" autocomplete="off" autocapitalize="characters"><small style="display:block;margin-top:4px;color:#9B95A0;line-height:1.4">If your family was given a financial aid code, enter it here and you won't be charged. Leave blank to pay normally.</small></div>
     </div>
   </div>
 
@@ -381,7 +382,8 @@ var ERR_TEXT = {
   not_configured: 'Online payment isn\'t switched on yet. Please email aceshoops@gmail.com to hold your spot.',
   checkout_unavailable: 'Checkout is temporarily unavailable — please try again in a minute.' + HELP,
   checkout_failed: 'We couldn\'t start the payment — please try again in a minute.' + HELP,
-  save_failed: 'We couldn\'t save your registration — please try again.' + HELP
+  save_failed: 'We couldn\'t save your registration — please try again.' + HELP,
+  bad_aid_code: 'That financial aid code isn\'t valid. Double-check it, or leave the box blank to pay normally.' + HELP
 };
 function resetPay(){ payBtn.textContent = PAY_LABEL; updatePayState(); }
 // Typo guard only (a mis-typed year): age 3–18 on the first clinic day (Sep 27, 2026) — the
@@ -433,7 +435,8 @@ document.getElementById('regForm').addEventListener('submit', function(e){
     allergies: f.allergies.value.trim(), medications: f.medications.value.trim(),
     medical_conditions: f.medical_conditions.value.trim(), treat_ok: f.treat_ok.checked ? 1 : 0,
     photo: f.photo.checked ? 1 : 0,
-    waiver_name: f.waiver_name.value.trim(), waiver_agree: true
+    waiver_name: f.waiver_name.value.trim(), waiver_agree: true,
+    aid_code: (f.aid_code && f.aid_code.value || '').trim()
   };
 
   saveDraft(); // so Back from the payment page (or a reload) doesn't wipe the form
@@ -444,6 +447,7 @@ document.getElementById('regForm').addEventListener('submit', function(e){
     .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, status:r.status, d:d}; }, function(){ return {ok:false, status:r.status, d:null}; }); })
     .then(function(res){
       if(timer) clearTimeout(timer);
+      if(res.ok && res.d && res.d.free){ window.location = 'register-success.html?rid=' + encodeURIComponent(res.d.rid || ''); return; } // financial-aid code — registered free, no payment
       if(res.ok && res.d && res.d.url){ window.location = res.d.url; return; } // Stripe/Square hosted checkout
       var code = (res.d && res.d.error) || (res.status===503 ? 'not_configured' : '');
       // A duplicate names the child: point at their row, and say which Sundays, so a parent
