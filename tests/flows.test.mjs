@@ -514,7 +514,7 @@ await test('the coach passcode cannot send notices (401) and the admin cannot no
 // ═════════════════════════════════════════════════════════════════════════
 group('7. Check-in — door-side roster only, attendance stamps per player');
 let r1 = '', r2 = '';
-const DOOR_KEYS = ['rid', 'pi', 'first', 'last', 'parent_name', 'parent_phone', 'emerg_name', 'emerg_phone', 'pickup_name', 'pickup_phone', 'medical', 'present', 'present_at'].sort();
+const DOOR_KEYS = ['rid', 'pi', 'first', 'last', 'grade', 'age', 'parent_name', 'parent_phone', 'emerg_name', 'emerg_phone', 'pickup_name', 'pickup_phone', 'medical', 'present', 'present_at'].sort();
 await test('GET /api/checkin?session=s1 with CHECKIN_PASSWORD → paid attendees only, ONLY door-side fields', async () => {
   r1 = fake.seedReg({ status: 'paid', sessions: ['s1'], parent_email: 'jane@x.com', parent_name: 'Jane Doe', waiver_name: 'Jane Q Doe-Signature', pickup_name: 'Gran', pickup_phone: '610-555-0102',
     players: [{ first: 'Maya', last: 'Avery', dob: '2015-01-01' }, { first: 'Marcus', last: 'Avery', dob: '2017-06-06' }], allergies: 'Peanuts', medications: 'n/a', medical_conditions: 'Asthma' });
@@ -534,6 +534,7 @@ await test('GET /api/checkin?session=s1 with CHECKIN_PASSWORD → paid attendees
   const maya = res.body.players[1];
   assert.equal(maya.parent_name, 'Jane Doe'); assert.equal(maya.parent_phone, '610-555-0100'); assert.equal(maya.pickup_name, 'Gran');
   assert.equal(maya.medical, 'Allergies: Peanuts · Conditions: Asthma', '"n/a" meds filtered out');
+  assert.equal(maya.age, 11, 'age computed as of the session date'); assert.equal(maya.grade, '', 'grade empty when unset');
   assert.equal(maya.present, false); assert.equal(maya.present_at, '');
   const json = JSON.stringify(res.body);
   for (const leak of ['@', 'Doe-Signature', 'amount_cents', 'waiver', 'stripe', '4242', 'medical_conditions', 'dob']) assert.ok(!json.includes(leak), `roster must not contain "${leak}"`);

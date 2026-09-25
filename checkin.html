@@ -31,6 +31,10 @@ h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:1.5rem;margin-
 .sess button.off{text-decoration:line-through;opacity:.6}
 .count{display:flex;justify-content:space-between;align-items:center;margin:6px 0 10px;font-size:.95rem}
 .count b{font-family:'DM Serif Display',serif;font-size:1.6rem;color:var(--pink)}
+.filters{display:flex;gap:8px;margin:0 0 10px}
+.fbtn{flex:1;padding:9px 6px;border-radius:10px;border:1px solid var(--glass-b);background:#fff;font-weight:600;font-size:.85rem;color:var(--txt-m);font-family:inherit;cursor:pointer;min-height:42px}
+.fbtn.on{background:var(--mrn);border-color:var(--mrn);color:#fff}
+.fbtn b{font-family:'DM Serif Display',serif;font-weight:400;font-size:1.05rem;margin-left:3px}
 .row{background:#fff;border:1px solid var(--glass-b);border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px}
 .row.on{border-color:rgba(47,158,79,.5);background:#f3faf5}
 .who{flex:1;min-width:0}
@@ -61,7 +65,8 @@ h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:1.5rem;margin-
 
   <div id="app" style="display:none">
     <div class="sess" id="sess" aria-label="Session"></div>
-    <div class="count"><div><b id="cPresent">0</b> <span class="muted">of</span> <b id="cTotal">0</b> <span class="muted">checked in</span></div><div style="display:flex;gap:8px"><button class="btn sm" id="printBtn">🖨 Print sheet</button><button class="btn sm" id="refreshBtn">↻ Refresh</button></div></div>
+    <div class="count"><div><b id="cPresent">0</b> <span class="muted">of</span> <b id="cTotal">0</b> <span class="muted">checked in</span></div><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end"><button class="btn sm" id="tagsBtn">🏷 Name tags</button><button class="btn sm" id="printBtn">🖨 Print sheet</button><button class="btn sm" id="refreshBtn">↻ Refresh</button></div></div>
+    <div class="filters" id="filters" aria-label="Filter"></div>
     <input class="inp" id="q" placeholder="Search player or parent…" aria-label="Search" style="margin-bottom:10px">
     <div id="list"></div>
     <p class="hint">Tap <b>Check in</b> when a player arrives · tap again to undo</p>
@@ -70,7 +75,7 @@ h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:1.5rem;margin-
 </div>
 <script>
 var KEY_STORE='dba_checkin_key';
-var state={ key:'', sessions:[], sid:'', players:[], q:'' };
+var state={ key:'', sessions:[], sid:'', players:[], q:'', filter:'all' };
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];}); }
 function api(path, opts){ opts=opts||{}; opts.headers=Object.assign({'x-checkin-key':state.key}, opts.headers||{}); return fetch(path, opts); }
 function todayET(){ return new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()); }
@@ -96,11 +101,29 @@ function renderSess(){
     return '<button data-sid="'+esc(s.id)+'" class="'+(s.id===state.sid?'on':'')+(s.canceled?' off':'')+'" aria-pressed="'+(s.id===state.sid)+'">'+esc(s.label)+(s.canceled?' · cancelled':'')+'</button>';
   }).join('');
 }
+// Filter chips: All / Here / Not here, each with a live count.
+function renderFilters(present){
+  var total=state.players.length, out=total-present, f=state.filter||'all';
+  var defs=[['all','All',total],['here','Here',present],['out','Not here',out]];
+  document.getElementById('filters').innerHTML=defs.map(function(d){
+    return '<button data-f="'+d[0]+'" class="fbtn'+(f===d[0]?' on':'')+'" aria-pressed="'+(f===d[0])+'">'+d[1]+' <b>'+d[2]+'</b></button>';
+  }).join('');
+}
 function renderList(){
-  var q=state.q;
-  var rows=state.players.filter(function(p){ return !q || (p.first+' '+p.last+' '+p.parent_name).toLowerCase().indexOf(q)>=0; });
-  document.getElementById('cPresent').textContent=state.players.filter(function(p){return p.present;}).length;
+  var q=state.q, f=state.filter||'all';
+  var present=state.players.filter(function(p){return p.present;}).length;
+  document.getElementById('cPresent').textContent=present;
   document.getElementById('cTotal').textContent=state.players.length;
+  renderFilters(present);
+  var rows=state.players.filter(function(p){
+    if(f==='here' && !p.present) return false;
+    if(f==='out' && p.present) return false;
+    return !q || (p.first+' '+p.last+' '+p.parent_name).toLowerCase().indexOf(q)>=0;
+  });
+  var empty = !state.players.length ? 'No players registered for this session yet.'
+    : (f==='out' ? 'Everyone is checked in. 🎉'
+    : (f==='here' ? 'No one is checked in yet.'
+    : 'No matches.'));
   document.getElementById('list').innerHTML=rows.map(function(p){
     var tel=p.parent_phone?p.parent_phone.replace(/[^\d+]/g,''):'';
     var more=[];
@@ -114,7 +137,7 @@ function renderList(){
       '</div>'+
       '<button class="chk'+(p.present?' on':'')+'" data-rid="'+esc(p.rid)+'" data-pi="'+p.pi+'" data-present="'+(p.present?1:0)+'" aria-pressed="'+!!p.present+'">'+(p.present?'✓ In':'Check in')+'</button>'+
     '</div>';
-  }).join('') || '<div class="empty">'+(state.players.length?'No matches.':'No players registered for this session yet.')+'</div>';
+  }).join('') || '<div class="empty">'+empty+'</div>';
 }
 // Optimistic toggle; rolls back if the save fails.
 function toggle(rid, pi, present){
@@ -167,6 +190,28 @@ function printSheet(){
   var s=state.sessions.filter(function(x){return x.id===state.sid;})[0]||{};
   printDoc('Check-in sheet — '+(s.label||state.sid), sheetCard());
 }
+// Printable player name tags (2 per row) — first name big, with age/grade for grouping.
+// Medical details are deliberately left OFF a tag a child wears in public.
+function nameTags(){
+  var rows=state.players.slice().sort(function(a,b){ return (a.last+' '+a.first).localeCompare(b.last+' '+b.first); });
+  var cards=rows.map(function(p){
+    var sub=[p.last?esc(p.last):'', (p.age!==''&&p.age!=null?'Age '+esc(String(p.age)):''), (p.grade?'Gr '+esc(String(p.grade)):'')].filter(Boolean).join('  ·  ');
+    return '<div class="tag"><div class="thdr">🏀 DBA FALL CLINIC</div><div class="tname">'+esc(p.first||'')+'</div><div class="tsub">'+sub+'</div></div>';
+  }).join('') || '<div style="padding:24px;font-family:Arial,Helvetica,sans-serif">No players registered for this session yet.</div>';
+  var css='<style>'
+    +'*{box-sizing:border-box}'
+    +'.tag{display:inline-block;width:47%;height:2in;margin:0 1% 0.18in;vertical-align:top;border:1px dashed #b7b7b7;border-radius:12px;padding:0.15in;text-align:center;page-break-inside:avoid;font-family:Arial,Helvetica,sans-serif;overflow:hidden}'
+    +'.thdr{font-size:10px;letter-spacing:1.5px;color:#8B1A2B;font-weight:800;margin-bottom:10px}'
+    +'.tname{font-size:38px;font-weight:800;color:#111;line-height:1.05;word-break:break-word}'
+    +'.tsub{font-size:14px;color:#555;margin-top:12px}'
+    +'</style>';
+  return css+'<div>'+cards+'</div>';
+}
+function printNameTags(){
+  if(!state.sid){ alert('Pick a session first.'); return; }
+  var s=state.sessions.filter(function(x){return x.id===state.sid;})[0]||{};
+  printDoc('Name tags — '+(s.label||state.sid), nameTags());
+}
 function enterApp(){
   document.getElementById('loginWrap').style.display='none';
   document.getElementById('app').style.display='block';
@@ -186,6 +231,8 @@ document.getElementById('list').addEventListener('click', function(e){ var b=e.t
 document.getElementById('q').addEventListener('input', function(){ state.q=this.value.trim().toLowerCase(); renderList(); });
 document.getElementById('refreshBtn').addEventListener('click', function(){ loadRoster(); });
 document.getElementById('printBtn').addEventListener('click', printSheet);
+document.getElementById('tagsBtn').addEventListener('click', printNameTags);
+document.getElementById('filters').addEventListener('click', function(e){ var b=e.target.closest('[data-f]'); if(!b) return; state.filter=b.dataset.f; renderList(); });
 // Stay signed in for this tab.
 try{ var k=sessionStorage.getItem(KEY_STORE); if(k){ state.key=k; loadSessions().then(enterApp).catch(function(){ state.key=''; }); } }catch(_){ }
 </script>

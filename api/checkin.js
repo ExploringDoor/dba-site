@@ -40,6 +40,15 @@ function medicalSummary(r) {
 }
 function attends(reg, sid) { return !!reg.all_six || cleanSessions(reg.sessions).includes(sid); }
 const shortLabel = (s) => s.label.replace(/^Session \d+ — /, '');
+// Whole-year age as of a reference date (the session's Sunday) — for coach name tags / grouping.
+function ageAsOf(dob, refISO) {
+  if (!dob) return '';
+  const b = new Date(dob), ref = refISO ? new Date(refISO) : new Date();
+  if (isNaN(b) || isNaN(ref)) return '';
+  let a = ref.getFullYear() - b.getFullYear();
+  if (ref.getMonth() < b.getMonth() || (ref.getMonth() === b.getMonth() && ref.getDate() < b.getDate())) a--;
+  return a < 0 ? '' : a;
+}
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -57,6 +66,7 @@ export default async function handler(req, res) {
     if (!fbConfigured() || !fbAdminConfigured()) return res.status(503).json({ error: 'db_not_configured' });
 
     const all = await fsList('registrations');
+    const refDate = (SESSIONS.find((x) => x.id === sid) || {}).date || '';
     const players = [];
     for (const r of all) {
       if (String(r.id || '').startsWith('_') || r.status !== 'paid' || !attends(r, sid)) continue;
@@ -64,6 +74,7 @@ export default async function handler(req, res) {
       (r.players || []).forEach((p, i) => {
         players.push({
           rid: r.id, pi: i, first: p.first || '', last: p.last || '',
+          grade: p.grade || '', age: ageAsOf(p.dob, refDate),
           parent_name: r.parent_name || '', parent_phone: r.parent_phone || '',
           emerg_name: r.emerg_name || '', emerg_phone: r.emerg_phone || '',
           pickup_name: r.pickup_name || '', pickup_phone: r.pickup_phone || '',
