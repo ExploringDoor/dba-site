@@ -61,7 +61,7 @@ h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:1.5rem;margin-
 
   <div id="app" style="display:none">
     <div class="sess" id="sess" aria-label="Session"></div>
-    <div class="count"><div><b id="cPresent">0</b> <span class="muted">of</span> <b id="cTotal">0</b> <span class="muted">checked in</span></div><button class="btn sm" id="refreshBtn">↻ Refresh</button></div>
+    <div class="count"><div><b id="cPresent">0</b> <span class="muted">of</span> <b id="cTotal">0</b> <span class="muted">checked in</span></div><div style="display:flex;gap:8px"><button class="btn sm" id="printBtn">🖨 Print sheet</button><button class="btn sm" id="refreshBtn">↻ Refresh</button></div></div>
     <input class="inp" id="q" placeholder="Search player or parent…" aria-label="Search" style="margin-bottom:10px">
     <div id="list"></div>
     <p class="hint">Tap <b>Check in</b> when a player arrives · tap again to undo</p>
@@ -124,6 +124,49 @@ function toggle(rid, pi, present){
     .then(function(r){ return r.json().then(function(d){ if(!r.ok||!d.ok) throw new Error(d.error||('http '+r.status)); }); })
     .catch(function(e){ p.present=was; renderList(); alert('Could not save that check-in — check your connection and try again. ('+e.message+')'); });
 }
+// Format a phone as 610-804-9222 (falls back to the raw value if it isn't 10 digits).
+function fmtPhone(p){ var d=String(p==null?'':p).replace(/\D/g,''); if(d.length===11&&d.charAt(0)==='1')d=d.slice(1); return d.length===10?(d.slice(0,3)+'-'+d.slice(3,6)+'-'+d.slice(6)):String(p==null?'':p); }
+// "2026-09-27" → "Sunday, September 27, 2026" (parsed as UTC so the day never shifts).
+function prettyDate(iso){ if(!/^\d{4}-\d{2}-\d{2}$/.test(iso||'')) return iso||''; var a=iso.split('-'); var d=new Date(Date.UTC(+a[0],+a[1]-1,+a[2])); return new Intl.DateTimeFormat('en-US',{timeZone:'UTC',weekday:'long',month:'long',day:'numeric',year:'numeric'}).format(d); }
+// Open a white "paper" window and print it — same approach the admin dashboard uses.
+function printDoc(title, inner){
+  var w=window.open('','_blank');
+  if(!w){ alert('Your browser blocked the print window. Allow pop-ups for this site, then try again.'); return; }
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+esc(title)+'</title></head><body style="margin:24px;background:#fff">'+inner+'<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},150);}<\/scr'+'ipt></body></html>');
+  w.document.close();
+}
+// Printable check-in sheet for the selected session — includes the emergency contact.
+// ☑/☐ reflect who's already checked in, so a printed sheet matches the digital roster.
+function sheetCard(){
+  var s=state.sessions.filter(function(x){return x.id===state.sid;})[0]||{};
+  var label=s.label||state.sid, date=s.date||'';
+  var rows=state.players.slice().sort(function(a,b){ return (a.last+' '+a.first).localeCompare(b.last+' '+b.first); });
+  var present=rows.filter(function(p){return p.present;}).length;
+  var body=rows.map(function(p,i){
+    var parent=[esc(p.parent_name), p.parent_phone?esc(fmtPhone(p.parent_phone)):''].filter(Boolean).join('<br>');
+    var emerg=[esc(p.emerg_name), p.emerg_phone?esc(fmtPhone(p.emerg_phone)):''].filter(Boolean).join('<br>');
+    return '<tr>'+
+      '<td style="padding:7px 8px;border-top:1px solid #eee;color:#888">'+(i+1)+'</td>'+
+      '<td style="padding:7px 8px;border-top:1px solid #eee;font-weight:600">'+esc((p.first+' '+p.last).trim())+(p.medical?' <span style="color:#c0392b">&#9888;</span>':'')+'</td>'+
+      '<td style="padding:7px 8px;border-top:1px solid #eee">'+(parent||'&mdash;')+'</td>'+
+      '<td style="padding:7px 8px;border-top:1px solid #eee">'+(emerg||'&mdash;')+'</td>'+
+      '<td style="padding:7px 8px;border-top:1px solid #eee;font-size:11px;color:#b02a2a">'+esc(p.medical||'')+'</td>'+
+      '<td style="padding:7px 8px;border-top:1px solid #eee;text-align:center;font-size:16px">'+(p.present?'&#9745;':'&#9744;')+'</td>'+
+    '</tr>';
+  }).join('') || '<tr><td colspan="6" style="padding:16px;text-align:center;color:#888">No players registered for this session yet.</td></tr>';
+  return '<div style="background:#fff;color:#111;border:1px solid #e2e6ea;border-radius:10px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;max-width:900px">'+
+    '<div style="background:#8B1A2B;color:#fff;padding:12px 16px"><div style="font-weight:800;font-size:15px">DBA Fall Clinic &mdash; '+esc(date?prettyDate(date):label)+'</div><div style="font-size:11px;color:#f0d0d6">Check-in sheet &middot; '+rows.length+' player'+(rows.length===1?'':'s')+(rows.length?' &middot; '+present+' checked in':'')+'</div></div>'+
+    '<table style="width:100%;border-collapse:collapse;font-size:13px">'+
+      '<thead><tr style="background:#f3f4f6;color:#555;font-size:11px;text-transform:uppercase;letter-spacing:.5px">'+
+        '<th style="padding:6px 8px;text-align:left">#</th><th style="padding:6px 8px;text-align:left">Player</th><th style="padding:6px 8px;text-align:left">Parent</th><th style="padding:6px 8px;text-align:left">Emergency contact</th><th style="padding:6px 8px;text-align:left">Allergy / Med</th><th style="padding:6px 8px;text-align:center">In</th>'+
+      '</tr></thead><tbody>'+body+'</tbody></table>'+
+  '</div>';
+}
+function printSheet(){
+  if(!state.sid){ alert('Pick a session first.'); return; }
+  var s=state.sessions.filter(function(x){return x.id===state.sid;})[0]||{};
+  printDoc('Check-in sheet — '+(s.label||state.sid), sheetCard());
+}
 function enterApp(){
   document.getElementById('loginWrap').style.display='none';
   document.getElementById('app').style.display='block';
@@ -142,6 +185,7 @@ document.getElementById('sess').addEventListener('click', function(e){ var b=e.t
 document.getElementById('list').addEventListener('click', function(e){ var b=e.target.closest('button.chk'); if(!b) return; toggle(b.dataset.rid, parseInt(b.dataset.pi,10), b.dataset.present!=='1'); });
 document.getElementById('q').addEventListener('input', function(){ state.q=this.value.trim().toLowerCase(); renderList(); });
 document.getElementById('refreshBtn').addEventListener('click', function(){ loadRoster(); });
+document.getElementById('printBtn').addEventListener('click', printSheet);
 // Stay signed in for this tab.
 try{ var k=sessionStorage.getItem(KEY_STORE); if(k){ state.key=k; loadSessions().then(enterApp).catch(function(){ state.key=''; }); } }catch(_){ }
 </script>

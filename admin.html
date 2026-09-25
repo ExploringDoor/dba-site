@@ -518,7 +518,8 @@ function sessionRoster(sid){
     if(cleanSess(r).indexOf(sid)<0) return;
     var att=attendanceOf(r,sid);
     (r.players||[]).forEach(function(p,i){
-      rows.push({ rid:r.id, pi:i, player:(p.first+' '+p.last).trim(), parent:r.parent_name||'', phone:r.parent_phone||'', med:medicalSummary(r), present:!!att[String(i)] });
+      var emerg=[(r.emerg_name||'').trim(), r.emerg_phone?fmtPhone(r.emerg_phone):''].filter(Boolean).join(' · ');
+      rows.push({ rid:r.id, pi:i, player:(p.first+' '+p.last).trim(), parent:r.parent_name||'', phone:r.parent_phone||'', emerg:emerg, med:medicalSummary(r), present:!!att[String(i)] });
     });
   });
   rows.sort(function(a,b){ return a.player.localeCompare(b.player); });
@@ -539,15 +540,16 @@ function rosterCard(sid, live){
       '<td style="padding:6px 8px;border-top:1px solid #eee;font-weight:600">'+esc(x.player)+(x.med?' <span style="color:#c0392b">⚠</span>':'')+'</td>'+
       '<td style="padding:6px 8px;border-top:1px solid #eee">'+esc(x.parent)+'</td>'+
       '<td style="padding:6px 8px;border-top:1px solid #eee">'+esc(fmtPhone(x.phone))+'</td>'+
+      '<td style="padding:6px 8px;border-top:1px solid #eee;font-size:12px">'+(esc(x.emerg)||'<span style="color:#bbb">&mdash;</span>')+'</td>'+
       '<td style="padding:6px 8px;border-top:1px solid #eee;font-size:11px;color:#b02a2a">'+esc(x.med)+'</td>'+
       '<td style="padding:6px 8px;border-top:1px solid #eee;text-align:center;font-size:16px">'+cell+'</td>'+
     '</tr>';
-  }).join('') || '<tr><td colspan="6" style="padding:16px;text-align:center;color:#888">No paid registrations for this session yet.</td></tr>';
+  }).join('') || '<tr><td colspan="7" style="padding:16px;text-align:center;color:#888">No paid registrations for this session yet.</td></tr>';
   return '<div style="background:#fff;color:#111;border:1px solid #e2e6ea;border-radius:10px;overflow:hidden;font-family:Arial,Helvetica,sans-serif">'+
     '<div style="background:#8B1A2B;color:#fff;padding:12px 16px"><div style="font-weight:800;font-size:15px">DBA Fall Clinic &mdash; '+esc(label)+(isSessCanceled(sid)?' <span style="background:#fff;color:#8B1A2B;border-radius:4px;padding:1px 7px;font-size:11px;letter-spacing:1px;vertical-align:middle">CANCELLED</span>':'')+'</div><div style="font-size:11px;color:#f0d0d6">Check-in roster &middot; '+rows.length+' player'+(rows.length===1?'':'s')+(rows.length?' &middot; '+present+' checked in':'')+'</div></div>'+
     '<table style="width:100%;border-collapse:collapse;font-size:13px">'+
       '<thead><tr style="background:#f3f4f6;color:#555;font-size:11px;text-transform:uppercase;letter-spacing:.5px">'+
-        '<th style="padding:6px 8px;text-align:left">#</th><th style="padding:6px 8px;text-align:left">Player</th><th style="padding:6px 8px;text-align:left">Parent</th><th style="padding:6px 8px;text-align:left">Phone</th><th style="padding:6px 8px;text-align:left">Allergy / Med</th><th style="padding:6px 8px;text-align:center">In</th>'+
+        '<th style="padding:6px 8px;text-align:left">#</th><th style="padding:6px 8px;text-align:left">Player</th><th style="padding:6px 8px;text-align:left">Parent</th><th style="padding:6px 8px;text-align:left">Phone</th><th style="padding:6px 8px;text-align:left">Emergency contact</th><th style="padding:6px 8px;text-align:left">Allergy / Med</th><th style="padding:6px 8px;text-align:center">In</th>'+
       '</tr></thead><tbody>'+body+'</tbody></table>'+
   '</div>';
 }
