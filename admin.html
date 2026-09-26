@@ -141,6 +141,7 @@ tr:hover td{background:rgba(0,0,0,.03)}
     </div>
     <button class="btn sm" id="refreshBtn">↻ Refresh</button>
     <button class="btn sm" id="csvBtn">⬇ Export CSV</button>
+    <button class="btn sm" id="playersCsvBtn" title="One row per player with age &amp; grade — for age counts">⬇ Players (ages)</button>
     <button class="btn sm" id="rostersBtn">🖨 Session sheets</button>
     <button class="btn sm" id="reportBtn">📊 Season report</button>
   </div>
@@ -740,6 +741,23 @@ document.getElementById('csvBtn').addEventListener('click', function(){
   });
   var blob=new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
   var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dba-clinic-registrations.csv'; a.click();
+});
+// One row PER PLAYER (paid only) with age + grade — for "how many kids, what ages" questions.
+// Kept separate from the money export above so summing a column can't double-count a payment.
+document.getElementById('playersCsvBtn').addEventListener('click', function(){
+  var cols=['First','Last','Age','Grade','Sessions','Parent','Phone','Email'];
+  var lines=[cols.join(',')];
+  state.data.forEach(function(r){
+    if(r.status!=='paid') return;
+    var sess=allSix(r)?'All 6':cleanSess(r).join(' ');
+    (r.players||[]).forEach(function(p){
+      var age=ageAsOf(p.dob,'2026-09-27');
+      var row=[p.first||'', p.last||'', (age===''?'':age), p.grade||'', sess, r.parent_name||'', fmtPhone(r.parent_phone), r.parent_email||''];
+      lines.push(row.map(function(c){ var s=String(c==null?'':c); if(/^[=+\-@\t\r]/.test(s)) s="'"+s; return '"'+s.replace(/"/g,'""')+'"'; }).join(','));
+    });
+  });
+  var blob=new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dba-clinic-players-ages.csv'; a.click();
 });
 
 /* ── Wire filters/search/refresh ── */
