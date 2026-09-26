@@ -130,7 +130,7 @@ function renderList(){
     if(p.emerg_name) more.push('Emergency: '+esc(p.emerg_name)+(p.emerg_phone?' '+esc(p.emerg_phone):''));
     if(p.pickup_name) more.push('Pickup: '+esc(p.pickup_name)+(p.pickup_phone?' '+esc(p.pickup_phone):''));
     return '<div class="row'+(p.present?' on':'')+'">'+
-      '<div class="who"><div class="name">'+esc(p.first+' '+p.last)+'</div>'+
+      '<div class="who"><div class="name">'+esc(p.first+' '+p.last)+((p.age!==''&&p.age!=null)?' <span style="font-weight:400;color:var(--dim);font-size:.85rem">· age '+esc(String(p.age))+'</span>':'')+'</div>'+
         '<div class="meta">'+esc(p.parent_name)+(tel?' · <a href="tel:'+esc(tel)+'">'+esc(p.parent_phone)+'</a>':'')+'</div>'+
         (p.medical?'<div class="med">⚠ '+esc(p.medical)+'</div>':'')+
         (more.length?'<div class="more">'+more.join(' · ')+'</div>':'')+
@@ -171,17 +171,18 @@ function sheetCard(){
     return '<tr>'+
       '<td style="padding:7px 8px;border-top:1px solid #eee;color:#888">'+(i+1)+'</td>'+
       '<td style="padding:7px 8px;border-top:1px solid #eee;font-weight:600">'+esc((p.first+' '+p.last).trim())+(p.medical?' <span style="color:#c0392b">&#9888;</span>':'')+'</td>'+
+      '<td style="padding:7px 8px;border-top:1px solid #eee;text-align:center">'+((p.age!==''&&p.age!=null)?esc(String(p.age)):'&mdash;')+'</td>'+
       '<td style="padding:7px 8px;border-top:1px solid #eee">'+(parent||'&mdash;')+'</td>'+
       '<td style="padding:7px 8px;border-top:1px solid #eee">'+(emerg||'&mdash;')+'</td>'+
       '<td style="padding:7px 8px;border-top:1px solid #eee;font-size:11px;color:#b02a2a">'+esc(p.medical||'')+'</td>'+
       '<td style="padding:7px 8px;border-top:1px solid #eee;text-align:center;font-size:16px">'+(p.present?'&#9745;':'&#9744;')+'</td>'+
     '</tr>';
-  }).join('') || '<tr><td colspan="6" style="padding:16px;text-align:center;color:#888">No players registered for this session yet.</td></tr>';
+  }).join('') || '<tr><td colspan="7" style="padding:16px;text-align:center;color:#888">No players registered for this session yet.</td></tr>';
   return '<div style="background:#fff;color:#111;border:1px solid #e2e6ea;border-radius:10px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;max-width:900px">'+
     '<div style="background:#8B1A2B;color:#fff;padding:12px 16px"><div style="font-weight:800;font-size:15px">DBA Fall Clinic &mdash; '+esc(date?prettyDate(date):label)+'</div><div style="font-size:11px;color:#f0d0d6">Check-in sheet &middot; '+rows.length+' player'+(rows.length===1?'':'s')+(rows.length?' &middot; '+present+' checked in':'')+'</div></div>'+
     '<table style="width:100%;border-collapse:collapse;font-size:13px">'+
       '<thead><tr style="background:#f3f4f6;color:#555;font-size:11px;text-transform:uppercase;letter-spacing:.5px">'+
-        '<th style="padding:6px 8px;text-align:left">#</th><th style="padding:6px 8px;text-align:left">Player</th><th style="padding:6px 8px;text-align:left">Parent</th><th style="padding:6px 8px;text-align:left">Emergency contact</th><th style="padding:6px 8px;text-align:left">Allergy / Med</th><th style="padding:6px 8px;text-align:center">In</th>'+
+        '<th style="padding:6px 8px;text-align:left">#</th><th style="padding:6px 8px;text-align:left">Player</th><th style="padding:6px 8px;text-align:center">Age</th><th style="padding:6px 8px;text-align:left">Parent</th><th style="padding:6px 8px;text-align:left">Emergency contact</th><th style="padding:6px 8px;text-align:left">Allergy / Med</th><th style="padding:6px 8px;text-align:center">In</th>'+
       '</tr></thead><tbody>'+body+'</tbody></table>'+
   '</div>';
 }
