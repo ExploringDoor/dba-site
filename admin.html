@@ -322,6 +322,7 @@ function act(kind, rid){
   if(kind==='receipt') return showReceipt(r);
   if(kind==='refund') return doRefund(r);
   if(kind==='cancel') return doCancel(r);
+  if(kind==='move') return doMove(r);
 }
 function modal(html, wide){ var m=document.getElementById('modal'); m.innerHTML=html; m.classList.toggle('wide', !!wide); m.classList.toggle('xwide', wide==='xwide'); document.getElementById('modalBg').classList.add('on'); }
 function closeModal(){ document.getElementById('modalBg').classList.remove('on'); }
@@ -446,6 +447,7 @@ function showManage(r){
     '<div class="foot" style="flex-wrap:wrap;gap:6px">'+
       '<button class="btn sm" data-mact="receipt">Receipt</button>'+
       '<button class="btn sm" data-mact="waiver">Waiver</button>'+
+      ((r.status==='paid' && !allSix(r))?'<button class="btn sm" data-mact="move">Move session</button>':'')+
       (canRefundReg(r)?'<button class="btn sm danger" data-mact="refund">Refund</button>':'')+
       (r.status!=='canceled'?'<button class="btn sm danger" data-mact="cancel">Cancel</button>':'')+
       '<button class="btn primary" onclick="closeModal()">Close</button>'+
@@ -453,6 +455,49 @@ function showManage(r){
   modal(body, true);
   Array.prototype.forEach.call(document.querySelectorAll('#modal [data-mact]'), function(el){
     el.addEventListener('click', function(){ act(el.dataset.mact, r.id); });
+  });
+}
+// Move ONE Sunday on a paid registration to a different Sunday. Same price (every single session
+// costs the same), so no money moves — the player keeps their spot on a new date. Rosters/check-in
+// update automatically because they read the registration's `sessions`.
+var MOVE_ERR={ target_canceled:'That Sunday is cancelled — pick another.', already_booked_to:'They’re already signed up for that Sunday.', all_six:'This family has all 6 Sundays — nothing to move.', not_booked_from:'They’re not registered for that Sunday.', not_paid:'Only a paid registration can be moved.' };
+function doMove(r){
+  var cur=cleanSess(r);
+  var ids=['s1','s2','s3','s4','s5','s6'];
+  var toList=ids.filter(function(s){ return cur.indexOf(s)<0; });
+  if(!cur.length || !toList.length){
+    modal('<h3>Move session</h3><p style="color:var(--dim);font-size:.9rem">There’s no other Sunday available to move this registration to.</p><div class="foot"><button class="btn primary" onclick="closeModal()">Close</button></div>', true);
+    return;
+  }
+  var who=(r.players&&r.players[0])?((r.players[0].first+' '+r.players[0].last).trim()):(r.parent_name||'this player');
+  function opt(sid,disabled){ return '<option value="'+sid+'"'+(disabled?' disabled':'')+'>'+SESSION_LABELS[sid]+(disabled?' (cancelled)':'')+'</option>'; }
+  var fromOpts=cur.map(function(s){return opt(s,false);}).join('');
+  var toOpts=toList.map(function(s){return opt(s, isSessCanceled(s));}).join('');
+  var lbl='display:block;font-family:\'IBM Plex Mono\',monospace;font-size:.58rem;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-bottom:5px';
+  modal('<h3 style="margin-bottom:4px">Move session — '+esc(who)+'</h3>'+
+    '<p style="color:var(--dim);font-size:.85rem;margin-bottom:16px">Swap one Sunday for another. Same price, so no payment changes — the player keeps their paid spot, just on a different date.</p>'+
+    '<div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">'+
+      '<div style="flex:1;min-width:120px"><label style="'+lbl+'">Move this date</label><select class="inp" id="moveFrom" style="padding:11px">'+fromOpts+'</select></div>'+
+      '<div style="padding-bottom:11px;color:var(--pink);font-weight:700">→</div>'+
+      '<div style="flex:1;min-width:120px"><label style="'+lbl+'">To this date</label><select class="inp" id="moveTo" style="padding:11px">'+toOpts+'</select></div>'+
+    '</div>'+
+    '<div class="login-err" id="moveErr" style="margin-top:10px"></div>'+
+    '<div class="foot"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" id="moveGo">Move session</button></div>', true);
+  document.getElementById('moveGo').addEventListener('click', function(){
+    var btn=this, from=document.getElementById('moveFrom').value, to=document.getElementById('moveTo').value;
+    var err=document.getElementById('moveErr');
+    if(from===to){ err.textContent='Pick two different Sundays.'; return; }
+    if(!confirm('Move '+who+' from '+SESSION_LABELS[from]+' to '+SESSION_LABELS[to]+'?\n\nSame price — no refund or charge.')) return;
+    btn.textContent='Moving…'; btn.disabled=true;
+    function fail(m){ err.textContent=m; btn.disabled=false; btn.textContent='Move session'; }
+    if(state.demo){
+      r.sessions=ids.filter(function(s){ return s===to || (cur.indexOf(s)>=0 && s!==from); });
+      setTimeout(function(){ closeModal(); showManage(byId(r.id)); }, 300); return;
+    }
+    api('/api/move-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rid:r.id,from:from,to:to})})
+      .then(function(x){ return x.json().then(function(d){ return {ok:x.ok,d:d}; }); })
+      .then(function(res){ if(res.ok&&res.d&&res.d.ok){ closeModal(); load(); } else { var e=(res.d&&res.d.error)||'error'; fail(MOVE_ERR[e]||('Could not move: '+e)); } })
+      .catch(function(){ fail('Network error — try again.'); });
   });
 }
 function doRefund(r){

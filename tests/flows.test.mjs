@@ -18,6 +18,7 @@ import reconcile from '../api/reconcile.js';
 import remind from '../api/remind.js';
 import refund from '../api/refund.js';
 import checkin from '../api/checkin.js';
+import moveSession from '../api/move-session.js';
 import notify from '../api/notify.js';
 import { PRICE } from '../api/_clinic.js';
 
@@ -848,6 +849,49 @@ await test('Firestore fake: updateMask semantics, precondition mismatch → 400 
   assert.equal(r.status, 400);
   fake.state.unexpected.length = 0; // that last one was deliberate
 });
+group('12. Move session — admin swaps one Sunday for another (even price, no money moves)');
+await test('a paid single-session reg moves from s4 to s6; sessions update, amount untouched', async () => {
+  const rid = fake.seedReg({ status: 'paid', sessions: ['s4'], amount_cents: 3500, parent_email: 'mv@x.com', players: [{ first: 'Kellan', last: 'Moran', dob: '2016-01-01' }] });
+  const res = await call(moveSession, { method: 'POST', headers: ADMIN, body: { rid, from: 's4', to: 's6' } });
+  assert.equal(res.statusCode, 200, JSON.stringify(res.body));
+  assert.deepEqual(res.body.sessions, ['s6']);
+  const doc = fake.doc(`registrations/${rid}`);
+  assert.deepEqual(doc.sessions, ['s6']);
+  assert.equal(doc.amount_cents, 3500, 'price never changes on an even swap');
+  assert.equal(doc.moved_from, 's4'); assert.equal(doc.moved_to, 's6');
+});
+await test('a multi-session reg moves one date and keeps the list sorted; the other date stays', async () => {
+  const rid = fake.seedReg({ status: 'paid', sessions: ['s1', 's3'], parent_email: 'mv2@x.com' });
+  const res = await call(moveSession, { method: 'POST', headers: ADMIN, body: { rid, from: 's1', to: 's5' } });
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(fake.doc(`registrations/${rid}`).sessions, ['s3', 's5'], 'canonical chronological order');
+});
+await test('move carries a recorded check-in off the old date onto the new one', async () => {
+  const rid = fake.seedReg({ status: 'paid', sessions: ['s2'], attendance: { s2: { '0': '2026-10-04T15:00:00Z' } }, parent_email: 'mv3@x.com' });
+  await call(moveSession, { method: 'POST', headers: ADMIN, body: { rid, from: 's2', to: 's5' } });
+  const att = fake.doc(`registrations/${rid}`).attendance;
+  assert.deepEqual(Object.keys(att), ['s5']);
+  assert.equal(att.s5['0'], '2026-10-04T15:00:00Z');
+});
+await test('refuses: wrong key, all-six, a `to` they already hold, a `from` they lack, a cancelled target, and a non-paid reg', async () => {
+  const paid = fake.seedReg({ status: 'paid', sessions: ['s1'], parent_email: 'g1@x.com' });
+  assert.equal((await call(moveSession, { method: 'POST', headers: { 'x-admin-key': 'nope' }, body: { rid: paid, from: 's1', to: 's2' } })).statusCode, 401);
+
+  const all6 = fake.seedReg({ status: 'paid', all_six: true, sessions: ['s1', 's2', 's3', 's4', 's5', 's6'], parent_email: 'g2@x.com' });
+  assert.equal((await call(moveSession, { method: 'POST', headers: ADMIN, body: { rid: all6, from: 's1', to: 's2' } })).body.error, 'all_six');
+
+  const two = fake.seedReg({ status: 'paid', sessions: ['s1', 's2'], parent_email: 'g3@x.com' });
+  assert.equal((await call(moveSession, { method: 'POST', headers: ADMIN, body: { rid: two, from: 's1', to: 's2' } })).body.error, 'already_booked_to');
+  assert.equal((await call(moveSession, { method: 'POST', headers: ADMIN, body: { rid: two, from: 's4', to: 's5' } })).body.error, 'not_booked_from');
+
+  const pend = fake.seedReg({ status: 'pending', sessions: ['s1'], parent_email: 'g4@x.com' });
+  assert.equal((await call(moveSession, { method: 'POST', headers: ADMIN, body: { rid: pend, from: 's1', to: 's2' } })).body.error, 'not_paid');
+
+  // mark s6 cancelled, then a move onto it is refused
+  fake.seed('registrations/_sessions', { s6: { canceled: true } });
+  assert.equal((await call(moveSession, { method: 'POST', headers: ADMIN, body: { rid: paid, from: 's1', to: 's6' } })).body.error, 'target_canceled');
+});
+
 await test('nothing in this suite ever reached a host the fake does not model', async () => {
   assert.equal(fake.state.unexpected.length, 0);
 });
