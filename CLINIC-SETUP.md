@@ -110,11 +110,13 @@ Pick any passcode you'll type to open `admin.html`.
 
 ## 7. Shoot-a-Thon (donations) — optional, reuses everything above
 
-A per-made-shot fundraiser: supporters **pledge** now (no card), then after the event you
-enter each player's made-shot count and the system emails everyone a secure pay-link for
-their total. Supporters can back a specific player (per made shot, with an optional cap) or
-give a flat one-time gift. Money routes exactly like clinics — collected by Always Competing
-Sports LLC and remitted to the booster club, which issues the tax-deductible receipt.
+A GivingZone-style **multi-level** free-throw fundraiser. Three goals, and every gift rolls up:
+**organization** ($30k) → **teams** (Varsity/JV/Freshman, $10k each) → **players** ($1k each).
+Supporters either give a **one-time donation** (paid right away, no cards stored — just like your
+clinic payments) or **sponsor a player per MADE free throw** (billed after the event: you enter each
+player's made count and the system emails a secure pay-link). Money routes exactly like clinics —
+collected by Always Competing Sports LLC and remitted to the booster club, which issues the
+tax-deductible receipt.
 
 **Good news: no new accounts.** It reuses the same Firebase, the same Stripe (and the **same
 Stripe webhook** — nothing to add there), the same SendGrid, and the same admin passcode.
@@ -128,13 +130,15 @@ Stripe webhook** — nothing to add there), the same SendGrid, and the same admi
       right 501(c)(3): `BOOSTER_NAME` = e.g. `Lower Merion Basketball Boosters`,
       `BOOSTER_EIN` = e.g. `12-3456789`. If you skip these, receipts say "the organizing
       booster club" (still accurate), with no EIN line.
-- [ ] Open **/shootathon.html**, sign in with your **admin passcode**. Under **Event setup**:
-      name it, set a goal, add your players, check **Open for pledges**, **Save**.
-- [ ] Share the links: the **public donate page** is `/donate.html`, and each player has their
-      own shareable link (Copy buttons are right there on the admin page).
-- [ ] **After the event:** enter each player's **made shots** → **Save** → **Send pay-links**.
-      Supporters get an email with their exact total and a secure "Donate" button. Use
-      **Sync payments** anytime to double-check anything that didn't confirm automatically.
+- [ ] Open **/shootathon.html**, sign in with your **admin passcode**. Under **Event setup**: set
+      the **organization goal**, add your **teams** (name + goal) and **players** (name + team + $1k
+      goal), check **Open for donations**, **Save setup**.
+- [ ] Share the links: the **public page** is `/donate.html` (org + teams), and each player has their
+      own shareable page/link (Copy buttons are right there on the admin page). One-time donations
+      start counting on the thermometers immediately.
+- [ ] **After the event:** enter each player's **made free throws** → **Save** → **Send pay-links**
+      (this only bills the per-throw *pledges* — one-time gifts are already paid). Use **Sync
+      payments** anytime to double-check anything that didn't confirm automatically.
 
 Preview it with no backend: **/shootathon.html?demo=1** and **/donate.html?demo=1**.
 
