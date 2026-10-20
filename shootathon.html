@@ -105,7 +105,7 @@ tr:last-child td{border-bottom:none}
     <h2>Event setup</h2>
     <p class="hint">Name the event, set a goal, add your players, then flip it <b>Open</b> to start taking pledges.</p>
     <div class="row2">
-      <div class="fld"><label>Event title</label><input class="inp" id="evTitle" placeholder="DBA Shoot-a-Thon 2026"></div>
+      <div class="fld"><label>Event title</label><input class="inp" id="evTitle" placeholder="Aces Shoot-a-Thon"></div>
       <div class="fld" style="max-width:180px"><label>Goal ($, optional)</label><input class="inp" id="evGoal" inputmode="decimal" placeholder="5000"></div>
     </div>
     <div class="fld"><label>Short blurb (optional)</label><input class="inp" id="evBlurb" maxlength="500" placeholder="Help our players raise funds — pledge per made shot!"></div>
@@ -290,7 +290,7 @@ function doResend(id,btn){ if(blockDemo($('sendStatus'))) return; btn.disabled=t
 function doCancel(id){ if(blockDemo($('sendStatus'))) return; if(!confirm('Cancel this pledge? (Use a refund in Stripe for one already paid.)')) return; api('cancel',{id:id}).then(function(){ return loadConfig(); }).then(function(){ setStatus($('sendStatus'),'Pledge canceled.','ok'); }).catch(function(){ setStatus($('sendStatus'),'Cancel failed.','err'); }); }
 
 /* ── demo preview ── */
-var DEMO={ ok:true, event:{ event_id:'fall-2026', title:'DBA Shoot-a-Thon 2026', blurb:'Help our players — pledge per made shot!', goal_cents:500000, open:true, players:[{slug:'jimmy-d',name:'Jimmy D',makes:84},{slug:'sara-k',name:'Sara K',makes:61},{slug:'andre-w',name:'Andre W',makes:0}] },
+var DEMO={ ok:true, event:{ event_id:'fall-2026', title:'Aces Shoot-a-Thon', blurb:'Help our players — pledge per made shot!', goal_cents:500000, open:true, players:[{slug:'jimmy-d',name:'Jimmy D',makes:84},{slug:'sara-k',name:'Sara K',makes:61},{slug:'andre-w',name:'Andre W',makes:0}] },
   totals:{ pledges:5, paid:2, raised_cents:9200, projected_cents:34050, per_shot_rate_cents:325, flat_cents:20000 },
   pledges:[
     {id:'d1',status:'paid',kind:'per_shot',player_slug:'jimmy-d',donor_name:'Pat Quinn',donor_email:'pat@example.com',anonymous:false,description:'$0.50 per made shot (up to $100.00)',per_shot_cents:50,cap_cents:10000,computed_cents:4200,makes:84},

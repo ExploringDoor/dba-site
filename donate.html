@@ -92,7 +92,7 @@ footer{text-align:center;padding:26px 16px;font-size:.78rem;color:#9B95A0;border
 <div class="wrap">
   <div class="hero">
     <div class="kicker">🏀 Shoot-a-Thon</div>
-    <h1 id="title">DBA Shoot-a-Thon</h1>
+    <h1 id="title">Aces Shoot-a-Thon</h1>
     <p class="lead" id="blurb">Back a player for every shot they make — or give a one-time gift. <strong>You don't pay anything today.</strong> After the event we'll email you a secure link for your total.</p>
     <div class="therm-wrap hidden" id="thermWrap">
       <div class="therm"><i id="thermFill"></i></div>
@@ -197,7 +197,7 @@ function dollarsToCents(v){ var n=parseFloat(String(v==null?'':v).replace(/[^0-9
 
 var CFG=null, KIND='per_shot', DEMO=false;
 var LIMITS={ minPerShot:25, minFlat:500 }; // display-side mirror; the server is authoritative
-var DEMO_CFG={ open:true, ready:true, title:'DBA Shoot-a-Thon 2026', blurb:"Back a player for every shot they make — or give a one-time gift. You don't pay anything today.", goal_cents:500000, players:[{slug:'jimmy-d',name:'Jimmy D'},{slug:'sara-k',name:'Sara K'},{slug:'andre-w',name:'Andre W'}], supporter_count:23, per_shot_total_cents:4250, flat_total_cents:30000, raised_cents:128000, recent:[{name:'Pat Q',backs:'Jimmy D'},{name:'Dana R',backs:'the team'},{name:'Chris L',backs:'Sara K'}] };
+var DEMO_CFG={ open:true, ready:true, title:'Aces Shoot-a-Thon', blurb:"Back a player for every shot they make — or give a one-time gift. You don't pay anything today.", goal_cents:500000, players:[{slug:'jimmy-d',name:'Jimmy D'},{slug:'sara-k',name:'Sara K'},{slug:'andre-w',name:'Andre W'}], supporter_count:23, per_shot_total_cents:4250, flat_total_cents:30000, raised_cents:128000, recent:[{name:'Pat Q',backs:'Jimmy D'},{name:'Dana R',backs:'the team'},{name:'Chris L',backs:'Sara K'}] };
 
 var ERR_PARAMS={ notready:"That donation link isn't ready yet — we'll email it after the event.", notfound:"We couldn't find that donation. Try pledging below.", payfail:"Something went wrong starting your payment. Please try again.", unavailable:"Online payment isn't available right now — please try again soon.", badlink:"That link looks incomplete." };
 

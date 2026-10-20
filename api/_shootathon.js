@@ -24,7 +24,7 @@ export const SHOOTATHON = {
   // Firestore config doc lives at shootathon/<eventId>; pledges carry event_id so a
   // future year reuses the same code with a new id.
   eventId: process.env.SHOOTATHON_EVENT_ID || 'fall-2026',
-  title: 'DBA Shoot-a-Thon 2026',
+  title: 'Aces Shoot-a-Thon',
   // The organizing booster club actually receives the funds and issues tax receipts.
   // Kept generic by default (matches the clinic wording); set BOOSTER_NAME / BOOSTER_EIN
   // in Vercel to print the exact legal name + EIN on donation receipts — no code change.
