@@ -10,7 +10,7 @@
 //   must NOT treat that as "unpaid" (never abandon a possibly-real payment on an outage).
 
 import { fsPatch, fsPatchVerified, fsGetMeta } from './_firestore.js';
-import { sendMail, buildConfirmationEmail, emailConfigured, ADMIN_EMAIL } from './_email.js';
+import { sendMail, buildConfirmationEmail, buildDonationReceiptEmail, emailConfigured, ADMIN_EMAIL } from './_email.js';
 
 // ── Verify with Stripe: was the Checkout Session actually paid? ──
 export async function verifyStripe(reg) {
@@ -120,5 +120,38 @@ export async function finalizePaid(rid, reg, verifyPatch) {
   if (!w.ok) return reg; // couldn't record "paid" — don't email a receipt for a record that still says pending; the cron retries
   const merged = Object.assign({}, reg, patch);
   await maybeSendConfirmation(rid, merged);
+  return merged;
+}
+
+// ── Shoot-a-Thon donations ────────────────────────────────────────────────
+// A pledge lives in the `pledges` collection and is paid through its own hosted checkout
+// (metadata.kind === 'donation'). These mirror the registration finalize/confirm above so the
+// webhook and the admin "sync" backup can never disagree about what "paid" means, and the
+// donation RECEIPT is sent exactly once (claim-before-send on receipt_email_sent).
+export async function maybeSendDonationReceipt(id, pledge) {
+  if (pledge.receipt_email_sent || !emailConfigured() || !pledge.donor_email) return false;
+  const cur = await fsGetMeta(`pledges/${id}`);
+  if (!cur || !cur.doc || cur.doc.receipt_email_sent) return false;
+  const claim = await fsPatchVerified(`pledges/${id}`, { receipt_email_sent: true, receipt_email_at: new Date().toISOString() }, 2, { ifUpdateTime: cur.updateTime });
+  if (!claim.ok) return false; // another path already claimed it (or the write failed — sync will revisit)
+  const { subject, html } = buildDonationReceiptEmail(Object.assign({}, cur.doc, pledge));
+  const ok = await sendMail({ to: pledge.donor_email, subject, html, bcc: ADMIN_EMAIL });
+  if (!ok) await fsPatch(`pledges/${id}`, { receipt_email_sent: false, receipt_email_error: 'send_failed' });
+  return ok;
+}
+
+export async function finalizeDonationPaid(id, pledge, verifyPatch) {
+  if (pledge.status === 'paid') { await maybeSendDonationReceipt(id, pledge); return pledge; }
+  const vp = verifyPatch || {};
+  const captured = typeof vp.amount_captured_cents === 'number' ? vp.amount_captured_cents : (pledge.amount_cents || 0);
+  const patch = Object.assign({ status: 'paid', paid_at: new Date().toISOString(), amount_paid_cents: captured }, vp);
+  // Money is real → mark paid, but flag any mismatch vs the amount we invoiced for admin review.
+  if (typeof vp.amount_captured_cents === 'number' && typeof pledge.amount_cents === 'number' && pledge.amount_cents > 0 && vp.amount_captured_cents !== pledge.amount_cents) {
+    patch.amount_mismatch = true;
+  }
+  const w = await fsPatchVerified(`pledges/${id}`, patch);
+  if (!w.ok) return pledge; // couldn't record "paid" — don't send a receipt yet; sync retries
+  const merged = Object.assign({}, pledge, patch);
+  await maybeSendDonationReceipt(id, merged);
   return merged;
 }

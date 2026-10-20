@@ -15,7 +15,7 @@
 
 import crypto from 'node:crypto';
 import { fsGet, fsPatchVerified } from './_firestore.js';
-import { verifyPayment, finalizePaid } from './_finalize.js';
+import { verifyPayment, finalizePaid, finalizeDonationPaid } from './_finalize.js';
 
 export const config = { api: { bodyParser: false } }; // signature must be computed over the raw bytes
 
@@ -68,6 +68,29 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true, ignored: type || 'unknown' });
   }
   const session = (event.data && event.data.object) || {};
+
+  // Shoot-a-Thon donation? Pledges live in their own collection and finalize via their own
+  // path (checkout metadata.kind === 'donation'). Handle them before the registration logic.
+  if (session.metadata && session.metadata.kind === 'donation') {
+    const pid = (session.metadata && session.metadata.pledge_id) || session.client_reference_id || '';
+    if (!safeId(pid)) return res.status(200).json({ ok: true, ignored: 'no_pledge' });
+    let pledge = await fsGet(`pledges/${pid}`);
+    if (!pledge) return res.status(200).json({ ok: true, ignored: 'pledge_not_found' });
+    if (pledge.status === 'paid') return res.status(200).json({ ok: true, already: 'paid' });
+    try {
+      // A donor may have opened the pay-link more than once (several sessions). Verify the ONE
+      // that actually fired by pointing the pledge at this event's session id before verifying.
+      const sid = session.id || pledge.stripe_session_id;
+      if (sid && pledge.stripe_session_id !== sid) pledge = Object.assign({}, pledge, { stripe_session_id: sid });
+      const v = await verifyPayment(pledge);
+      if (!v.paid) return res.status(200).json({ ok: true, pending: true });
+      await finalizeDonationPaid(pid, pledge, Object.assign({ stripe_session_id: sid }, v.patch));
+      return res.status(200).json({ ok: true, donation_finalized: true });
+    } catch (e) {
+      return res.status(500).json({ error: 'finalize_failed' }); // non-2xx → Stripe retries
+    }
+  }
+
   const rid = (session.metadata && session.metadata.rid) || session.client_reference_id || '';
   if (!safeId(rid)) return res.status(200).json({ ok: true, ignored: 'no_rid' });
 

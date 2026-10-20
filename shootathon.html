@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🏀%3C/text%3E%3C/svg%3E">
+<meta name="theme-color" content="#8B1A2B">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<title>Shoot-a-Thon Admin — Downer Basketball Academy</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Outfit:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Saira+Condensed:wght@600;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--mrn:#8B1A2B;--mrn-h:#A82E42;--pink:#A82E52;--bg:#eef1f5;--bg2:#ffffff;--bg3:#f3f4f6;--glass:#ffffff;--glass-b:#e2e6ea;--glass-h:#d3d8de;--txt:#1b2027;--txt-m:#454b54;--dim:#6b7280;--ok:#2f9e4f;--amber:#a9780c;--r:14px}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased;line-height:1.5;min-height:100vh}
+a{color:inherit}
+.topbar{border-bottom:1px solid var(--glass-b);padding:0 28px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:rgba(255,255,255,.92);backdrop-filter:blur(20px);z-index:50}
+.brand{font-family:'Saira Condensed',sans-serif;font-weight:800;letter-spacing:3px;font-size:18px;text-transform:uppercase}
+.brand span{color:var(--pink)}
+.topbar .right{display:flex;gap:8px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:9px;font-family:inherit;font-weight:600;font-size:.82rem;border:1px solid var(--glass-b);background:var(--glass);color:var(--txt);cursor:pointer;transition:all .2s;text-decoration:none}
+.btn:hover{border-color:var(--pink)}
+.btn.primary{background:var(--mrn);border-color:var(--mrn);color:#fff}.btn.primary:hover{background:var(--mrn-h)}
+.btn.sm{padding:5px 10px;font-size:.72rem;border-radius:7px}
+.btn.danger:hover{border-color:#c0392b;color:#c0392b}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.login-wrap{max-width:380px;margin:12vh auto;padding:0 20px}
+.login-card{background:var(--glass);border:1px solid var(--glass-b);border-radius:var(--r);padding:32px}
+.login-card h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:1.5rem;margin-bottom:6px}
+.login-card p{color:var(--dim);font-size:.86rem;margin-bottom:20px}
+.inp{width:100%;background:var(--bg);border:1px solid var(--glass-b);border-radius:9px;padding:12px 14px;color:var(--txt);font-family:inherit;font-size:16px;outline:none}
+.inp:focus{border-color:var(--mrn)}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--pink);outline-offset:2px;border-radius:4px}
+.login-err{color:#c0392b;font-size:.82rem;margin-top:10px;min-height:1em}
+.dash{max-width:1100px;margin:0 auto;padding:22px 24px 80px;display:none}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.tile{background:var(--glass);border:1px solid var(--glass-b);border-radius:var(--r);padding:18px}
+.tile .n{font-family:'DM Serif Display',serif;font-size:1.8rem;color:var(--pink);line-height:1}
+.tile .l{font-size:.72rem;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-top:6px}
+.sec{background:var(--glass);border:1px solid var(--glass-b);border-radius:var(--r);padding:20px 22px;margin-bottom:16px}
+.sec h2{font-family:'DM Serif Display',serif;font-weight:400;font-size:1.2rem;margin-bottom:3px}
+.sec .hint{color:var(--dim);font-size:.83rem;margin-bottom:16px}
+.fld{margin-bottom:13px}
+.fld label{display:block;font-size:.74rem;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);margin-bottom:5px}
+.row2{display:flex;gap:14px;flex-wrap:wrap}.row2>*{flex:1;min-width:160px}
+.chk{display:flex;gap:9px;align-items:center;font-size:.9rem;color:var(--txt-m);cursor:pointer}
+.chk input{width:18px;height:18px}
+.roster{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.pl-row{display:flex;gap:8px;align-items:center}
+.pl-row .inp{flex:1}
+.pl-row .makes{width:92px;flex:none;text-align:center}
+.pl-row .x{border:1px solid var(--glass-b);background:var(--glass);border-radius:8px;width:38px;height:40px;cursor:pointer;color:var(--dim);font-size:1.1rem}
+.pl-row .x:hover{border-color:#c0392b;color:#c0392b}
+.statusline{font-size:.82rem;color:var(--dim);margin-top:10px;min-height:1.1em}
+.statusline.ok{color:var(--ok)}.statusline.err{color:#c0392b}
+.tbl-wrap{border:1px solid var(--glass-b);border-radius:var(--r);overflow-x:auto;background:var(--glass)}
+table{width:100%;border-collapse:collapse;font-size:.86rem}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--glass-b);white-space:nowrap}
+th{font-size:.7rem;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);background:var(--bg3)}
+td.wrap{white-space:normal}
+tr:last-child td{border-bottom:none}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.72rem;font-weight:600}
+.pill.pledged{background:#eef;color:#3b4fb0}
+.pill.invoiced{background:#fff3d6;color:#a9780c}
+.pill.paid{background:#e4f5e9;color:#2f9e4f}
+.pill.canceled{background:#f2f2f2;color:#888;text-decoration:line-through}
+.pill.no_charge{background:#f2f2f2;color:#888}
+.empty{padding:26px;text-align:center;color:var(--dim)}
+.sharelink{font-family:'IBM Plex Mono',monospace;font-size:.76rem;color:var(--mrn)}
+.linkbox{display:flex;gap:8px;align-items:center;margin-top:8px}
+.linkbox .inp{font-family:'IBM Plex Mono',monospace;font-size:.78rem}
+.demoBanner{display:none;background:rgba(168,46,82,.1);border-bottom:1px solid rgba(168,46,82,.35);color:#8B1A2B;text-align:center;padding:9px 16px;font-size:.82rem}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand">DOWNER <span>· Shoot-a-Thon</span></div>
+  <div class="right">
+    <a class="btn sm" href="admin.html">Clinic Admin →</a>
+    <button class="btn sm" id="logoutBtn" style="display:none">Log out</button>
+  </div>
+</div>
+<div class="demoBanner" id="demoBanner">👀 <b>Demo preview</b> — sample data, not live. Saving, sending links &amp; syncing are disabled here.</div>
+
+<!-- LOGIN -->
+<div class="login-wrap" id="loginWrap">
+  <div class="login-card">
+    <h1>Shoot-a-Thon Admin</h1>
+    <p>Enter the admin passcode (same as the clinic admin).</p>
+    <form id="loginForm">
+      <input class="inp" id="pw" type="password" placeholder="Admin passcode" autocomplete="current-password">
+      <button class="btn primary" style="width:100%;margin-top:12px;justify-content:center" type="submit">Sign in →</button>
+      <div class="login-err" id="loginErr"></div>
+    </form>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="dash" id="dash">
+  <div class="tiles" id="tiles"></div>
+
+  <!-- EVENT SETUP -->
+  <div class="sec">
+    <h2>Event setup</h2>
+    <p class="hint">Name the event, set a goal, add your players, then flip it <b>Open</b> to start taking pledges.</p>
+    <div class="row2">
+      <div class="fld"><label>Event title</label><input class="inp" id="evTitle" placeholder="DBA Shoot-a-Thon 2026"></div>
+      <div class="fld" style="max-width:180px"><label>Goal ($, optional)</label><input class="inp" id="evGoal" inputmode="decimal" placeholder="5000"></div>
+    </div>
+    <div class="fld"><label>Short blurb (optional)</label><input class="inp" id="evBlurb" maxlength="500" placeholder="Help our players raise funds — pledge per made shot!"></div>
+    <div class="fld">
+      <label>Players</label>
+      <div class="roster" id="roster"></div>
+      <button class="btn sm" id="addPlayer" type="button">+ Add player</button>
+    </div>
+    <label class="chk" style="margin:12px 0"><input type="checkbox" id="evOpen"><span><b>Open for pledges</b> — the public donate page accepts pledges when this is on</span></label>
+    <div><button class="btn primary" id="saveEvent" type="button">Save event</button></div>
+    <div class="statusline" id="evStatus"></div>
+    <div id="publicLinks"></div>
+  </div>
+
+  <!-- MADE SHOTS -->
+  <div class="sec">
+    <h2>Enter made shots</h2>
+    <p class="hint">After the event, enter how many shots each player made. Then send pay-links below — each per-shot pledge is billed for the shots actually made.</p>
+    <div class="roster" id="makesList"></div>
+    <div><button class="btn primary" id="saveMakes" type="button">Save made shots</button></div>
+    <div class="statusline" id="makesStatus"></div>
+  </div>
+
+  <!-- SEND LINKS -->
+  <div class="sec">
+    <h2>Collect the pledges</h2>
+    <p class="hint">Email every new pledge a secure link for its total (per-shot pledges use the made-shot counts above). Players with 0 made shots are skipped. Then “Sync payments” double-checks anything that didn’t confirm automatically.</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn primary" id="sendLinks" type="button">✉️ Send pay-links</button>
+      <button class="btn" id="syncBtn" type="button">↻ Sync payments</button>
+      <button class="btn sm" id="refreshBtn" type="button">Refresh</button>
+    </div>
+    <div class="statusline" id="sendStatus"></div>
+  </div>
+
+  <!-- PLEDGES -->
+  <div class="sec" style="padding-bottom:10px">
+    <h2>Pledges</h2>
+    <p class="hint" id="pledgeHint"></p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Donor</th><th>Backing</th><th>Pledge</th><th>Made</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="pledgeRows"></tbody>
+      </table>
+      <div class="empty" id="pledgeEmpty" style="display:none">No pledges yet.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+var KEY_STORE='dba_admin_key';
+var state={ key:'', cfg:null, demo:false, roster:[] };
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];}); }
+function money(c){ var v=(c||0)/100; return '$'+(v%1===0?v.toLocaleString('en-US'):v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})); }
+function dollarsToCents(v){ var n=parseFloat(String(v==null?'':v).replace(/[^0-9.]/g,'')); if(!isFinite(n)||n<0) return 0; return Math.round(n*100); }
+
+function api(action, body){
+  return fetch('/api/shootathon',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':state.key},body:JSON.stringify(Object.assign({action:action}, body||{}))})
+    .then(function(r){ if(r.status===401) throw {code:'auth'}; if(r.status===503) throw {code:'config'}; return r.json(); });
+}
+
+function loadConfig(){ return api('config').then(function(d){ state.cfg=d; render(); }); }
+
+/* ── login ── */
+$('loginForm').addEventListener('submit',function(e){
+  e.preventDefault();
+  state.key=$('pw').value.trim();
+  var err=$('loginErr'); err.textContent='';
+  if(!state.key){ err.textContent='Enter the passcode.'; return; }
+  loadConfig().then(function(){
+    try{ sessionStorage.setItem(KEY_STORE,state.key); }catch(e){}
+    $('loginWrap').style.display='none'; $('dash').style.display='block'; $('logoutBtn').style.display='inline-flex';
+  }).catch(function(e){
+    err.textContent = (e&&e.code==='config') ? "Shoot-a-Thon isn't configured yet (ADMIN_PASSWORD / database not set)." : 'Wrong passcode — try again.';
+    state.key='';
+  });
+});
+$('logoutBtn').addEventListener('click',function(){ state.key=''; try{sessionStorage.removeItem(KEY_STORE);}catch(e){} $('dash').style.display='none'; $('logoutBtn').style.display='none'; $('loginWrap').style.display='block'; $('pw').value=''; });
+
+/* ── roster editor ── */
+function renderRoster(){
+  var r=$('roster'); r.innerHTML='';
+  state.roster.forEach(function(p,i){
+    var row=document.createElement('div'); row.className='pl-row';
+    row.innerHTML='<input class="inp" placeholder="Player name" value="'+esc(p.name)+'"><button class="x" title="Remove" type="button">✕</button>';
+    row.querySelector('input').addEventListener('input',function(){ state.roster[i].name=this.value; });
+    row.querySelector('.x').addEventListener('click',function(){ state.roster.splice(i,1); renderRoster(); });
+    r.appendChild(row);
+  });
+}
+$('addPlayer').addEventListener('click',function(){ state.roster.push({name:'',slug:'',makes:0}); renderRoster(); });
+
+function renderMakes(){
+  var m=$('makesList'); m.innerHTML='';
+  if(!state.roster.length){ m.innerHTML='<p class="hint" style="margin:0">Add players in Event setup first.</p>'; return; }
+  state.roster.forEach(function(p,i){
+    var row=document.createElement('div'); row.className='pl-row';
+    row.innerHTML='<input class="inp" readonly value="'+esc(p.name||'(unnamed)')+'"><input class="inp makes" inputmode="numeric" value="'+(parseInt(p.makes,10)||0)+'" aria-label="made shots">';
+    row.querySelectorAll('input')[1].addEventListener('input',function(){ state.roster[i].makes=parseInt(this.value,10)||0; });
+    m.appendChild(row);
+  });
+}
+
+/* ── render ── */
+function render(){
+  var c=state.cfg||{}; var ev=c.event||{}; var t=c.totals||{};
+  $('tiles').innerHTML =
+    '<div class="tile"><div class="n">'+(t.pledges||0)+'</div><div class="l">Pledges</div></div>'+
+    '<div class="tile"><div class="n">'+(t.paid||0)+'</div><div class="l">Paid</div></div>'+
+    '<div class="tile"><div class="n">'+money(t.raised_cents||0)+'</div><div class="l">Raised</div></div>'+
+    '<div class="tile"><div class="n">'+money(t.projected_cents||0)+'</div><div class="l">Projected</div></div>';
+  $('evTitle').value=ev.title||''; $('evBlurb').value=ev.blurb||''; $('evGoal').value=ev.goal_cents?((ev.goal_cents/100)):''; $('evOpen').checked=!!ev.open;
+  state.roster=(ev.players||[]).map(function(p){ return {name:p.name,slug:p.slug,makes:p.makes||0}; });
+  renderRoster(); renderMakes();
+
+  // public links
+  var origin=location.origin; var pl='<div class="fld" style="margin-top:14px"><label>Public donate page</label><div class="linkbox"><input class="inp" readonly value="'+origin+'/donate.html"><button class="btn sm" type="button" data-copy="'+origin+'/donate.html">Copy</button></div>';
+  (ev.players||[]).forEach(function(p){ pl+='<div class="linkbox"><input class="inp" readonly value="'+origin+'/donate.html?player='+encodeURIComponent(p.slug)+'"><button class="btn sm" type="button" data-copy="'+origin+'/donate.html?player='+encodeURIComponent(p.slug)+'">Copy '+esc(p.name)+'</button></div>'; });
+  pl+='</div>';
+  $('publicLinks').innerHTML = (ev.players&&ev.players.length)?pl:'';
+  Array.prototype.forEach.call($('publicLinks').querySelectorAll('[data-copy]'),function(b){ b.addEventListener('click',function(){ var v=b.getAttribute('data-copy'); if(navigator.clipboard)navigator.clipboard.writeText(v); var o=b.textContent;b.textContent='Copied ✓';setTimeout(function(){b.textContent=o;},1400); }); });
+
+  // pledges table
+  var rows=c.pledges||[];
+  $('pledgeHint').textContent = rows.length ? (rows.length+' pledge'+(rows.length===1?'':'s')+' · '+money(t.per_shot_rate_cents||0)+' per made shot + '+money(t.flat_cents||0)+' one-time pledged') : '';
+  var tb=$('pledgeRows'); tb.innerHTML='';
+  $('pledgeEmpty').style.display = rows.length ? 'none':'block';
+  rows.forEach(function(p){
+    var backing = p.player_slug==='general' ? '<span style="color:var(--dim)">General fund</span>' : esc(playerName(ev,p.player_slug));
+    var made = (p.player_slug==='general'||p.kind==='flat') ? '—' : (p.makes==null?'—':String(p.makes));
+    var actions='';
+    if(p.status==='invoiced') actions+='<button class="btn sm" data-resend="'+p.id+'">Resend</button> ';
+    if(p.status!=='paid'&&p.status!=='canceled') actions+='<button class="btn sm danger" data-cancel="'+p.id+'">Cancel</button>';
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td class="wrap">'+esc(p.donor_name)+(p.anonymous?' <span style="color:var(--dim)">(anon)</span>':'')+'<br><span style="color:var(--dim);font-size:.78rem">'+esc(p.donor_email)+'</span></td>'+
+      '<td>'+backing+'</td>'+
+      '<td class="wrap">'+esc(p.description)+'</td>'+
+      '<td>'+made+'</td>'+
+      '<td><b>'+money(p.computed_cents)+'</b></td>'+
+      '<td><span class="pill '+p.status+'">'+p.status+'</span></td>'+
+      '<td>'+(actions||'—')+'</td>';
+    tb.appendChild(tr);
+  });
+  Array.prototype.forEach.call(tb.querySelectorAll('[data-resend]'),function(b){ b.addEventListener('click',function(){ doResend(b.getAttribute('data-resend'),b); }); });
+  Array.prototype.forEach.call(tb.querySelectorAll('[data-cancel]'),function(b){ b.addEventListener('click',function(){ doCancel(b.getAttribute('data-cancel')); }); });
+}
+function playerName(ev,slug){ var p=(ev.players||[]).find(function(x){return x.slug===slug;}); return p?p.name:'(unknown)'; }
+
+function blockDemo(statusEl){ if(state.demo){ setStatus(statusEl,'Disabled in demo preview.','err'); return true; } return false; }
+function setStatus(el,msg,cls){ el.textContent=msg||''; el.className='statusline'+(cls?' '+cls:''); }
+
+/* ── actions ── */
+$('saveEvent').addEventListener('click',function(){
+  if(blockDemo($('evStatus'))) return;
+  var body={ title:$('evTitle').value.trim(), blurb:$('evBlurb').value.trim(), goal_cents:dollarsToCents($('evGoal').value), open:$('evOpen').checked,
+    players: state.roster.filter(function(p){return (p.name||'').trim();}).map(function(p){ return p.slug?{slug:p.slug,name:p.name.trim(),makes:p.makes||0}:{name:p.name.trim(),makes:p.makes||0}; }) };
+  setStatus($('evStatus'),'Saving…');
+  api('set_event',body).then(function(){ return loadConfig(); }).then(function(){ setStatus($('evStatus'),'Saved ✓','ok'); }).catch(function(){ setStatus($('evStatus'),'Save failed.','err'); });
+});
+$('saveMakes').addEventListener('click',function(){
+  if(blockDemo($('makesStatus'))) return;
+  var makes={}; state.roster.forEach(function(p){ if(p.slug) makes[p.slug]=parseInt(p.makes,10)||0; });
+  setStatus($('makesStatus'),'Saving…');
+  api('set_makes',{makes:makes}).then(function(){ return loadConfig(); }).then(function(){ setStatus($('makesStatus'),'Made shots saved ✓','ok'); }).catch(function(){ setStatus($('makesStatus'),'Save failed.','err'); });
+});
+$('sendLinks').addEventListener('click',function(){
+  if(blockDemo($('sendStatus'))) return;
+  if(!confirm('Email a pay-link to every NEW pledge for its current total? (Already-invoiced pledges are skipped.)')) return;
+  setStatus($('sendStatus'),'Sending…');
+  api('send_links',{}).then(function(d){ return loadConfig().then(function(){
+    setStatus($('sendStatus'),'Sent: '+(d.emailed||0)+' emailed · '+(d.invoiced||0)+' invoiced · '+(d.zero||0)+' had 0 made shots · '+(d.skipped||0)+' skipped'+(d.remaining?' · '+d.remaining+' left (click again)':''),'ok');
+  }); }).catch(function(){ setStatus($('sendStatus'),'Send failed.','err'); });
+});
+$('syncBtn').addEventListener('click',function(){
+  if(blockDemo($('sendStatus'))) return;
+  setStatus($('sendStatus'),'Checking the processor…');
+  api('sync',{}).then(function(d){ return loadConfig().then(function(){ setStatus($('sendStatus'),'Synced: checked '+(d.checked||0)+', newly paid '+(d.paid||0)+'.','ok'); }); }).catch(function(){ setStatus($('sendStatus'),'Sync failed.','err'); });
+});
+$('refreshBtn').addEventListener('click',function(){ loadConfig().catch(function(){}); });
+function doResend(id,btn){ if(blockDemo($('sendStatus'))) return; btn.disabled=true; api('resend',{id:id}).then(function(){ setStatus($('sendStatus'),'Pay-link re-sent ✓','ok'); btn.disabled=false; }).catch(function(){ setStatus($('sendStatus'),'Resend failed.','err'); btn.disabled=false; }); }
+function doCancel(id){ if(blockDemo($('sendStatus'))) return; if(!confirm('Cancel this pledge? (Use a refund in Stripe for one already paid.)')) return; api('cancel',{id:id}).then(function(){ return loadConfig(); }).then(function(){ setStatus($('sendStatus'),'Pledge canceled.','ok'); }).catch(function(){ setStatus($('sendStatus'),'Cancel failed.','err'); }); }
+
+/* ── demo preview ── */
+var DEMO={ ok:true, event:{ event_id:'fall-2026', title:'DBA Shoot-a-Thon 2026', blurb:'Help our players — pledge per made shot!', goal_cents:500000, open:true, players:[{slug:'jimmy-d',name:'Jimmy D',makes:84},{slug:'sara-k',name:'Sara K',makes:61},{slug:'andre-w',name:'Andre W',makes:0}] },
+  totals:{ pledges:5, paid:2, raised_cents:9200, projected_cents:34050, per_shot_rate_cents:325, flat_cents:20000 },
+  pledges:[
+    {id:'d1',status:'paid',kind:'per_shot',player_slug:'jimmy-d',donor_name:'Pat Quinn',donor_email:'pat@example.com',anonymous:false,description:'$0.50 per made shot (up to $100.00)',per_shot_cents:50,cap_cents:10000,computed_cents:4200,makes:84},
+    {id:'d2',status:'paid',kind:'flat',player_slug:'general',donor_name:'Dana Reed',donor_email:'dana@example.com',anonymous:false,description:'$50.00 one-time gift',computed_cents:5000,makes:null},
+    {id:'d3',status:'invoiced',kind:'per_shot',player_slug:'sara-k',donor_name:'Chris Lee',donor_email:'chris@example.com',anonymous:true,description:'$0.75 per made shot',per_shot_cents:75,computed_cents:4575,makes:61},
+    {id:'d4',status:'pledged',kind:'per_shot',player_slug:'andre-w',donor_name:'Morgan Fox',donor_email:'morgan@example.com',anonymous:false,description:'$1.00 per made shot (up to $150.00)',per_shot_cents:100,cap_cents:15000,computed_cents:0,makes:0},
+    {id:'d5',status:'pledged',kind:'flat',player_slug:'general',donor_name:'Sam Diaz',donor_email:'sam@example.com',anonymous:false,description:'$150.00 one-time gift',computed_cents:15000,makes:null}
+  ] };
+function enterDemo(){ state.demo=true; state.cfg=DEMO; $('loginWrap').style.display='none'; $('dash').style.display='block'; $('demoBanner').style.display='block'; render(); }
+
+/* ── boot ── */
+(function(){
+  if(new URLSearchParams(location.search).get('demo')==='1'){ enterDemo(); return; }
+  var k=''; try{ k=sessionStorage.getItem(KEY_STORE)||''; }catch(e){}
+  if(k){ state.key=k; loadConfig().then(function(){ $('loginWrap').style.display='none'; $('dash').style.display='block'; $('logoutBtn').style.display='inline-flex'; }).catch(function(){ state.key=''; try{sessionStorage.removeItem(KEY_STORE);}catch(e){} }); }
+})();
+</script>
+</body>
+</html>

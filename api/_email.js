@@ -7,6 +7,7 @@
 //      MAIL_REPLY_TO (optional — where "reply to this email" actually goes; defaults to aceshoops@gmail.com).
 
 import { priceBreakdown, sessionLabels } from './_clinic.js';
+import { SHOOTATHON, dollars, pledgeDescription } from './_shootathon.js';
 
 function fmtDate(iso) {
   if (!iso) return '';
@@ -159,6 +160,93 @@ export function buildRefundEmail(reg, refundedNowCents, fullyRefunded) {
       </div>
     </div>`;
   return { subject, html };
+}
+
+// ── Shoot-a-Thon donation emails ────────────────────────────────────────────
+// Shared helpers for the three donation emails below.
+function donEsc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m])); }
+function donShell(kicker, inner) {
+  return `
+    <div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;color:#222">
+      <div style="background:#8B1A2B;color:#fff;padding:22px 24px;border-radius:12px 12px 0 0">
+        <div style="font-weight:800;letter-spacing:3px;font-size:20px">DOWNER BASKETBALL ACADEMY</div>
+        <div style="color:#f0d0d6;font-size:12px;letter-spacing:1px;margin-top:2px">${kicker}</div>
+      </div>
+      <div style="border:1px solid #eee;border-top:none;padding:24px;border-radius:0 0 12px 12px">${inner}</div>
+    </div>`;
+}
+// The deductibility language. Kept accurate: Always Competing Sports LLC only COLLECTS and
+// remits; the 501(c)(3) booster club is the donee and issues the official acknowledgment.
+function donTaxFooter(paid) {
+  const booster = donEsc(SHOOTATHON.boosterName);
+  const ein = SHOOTATHON.boosterEin ? ` Tax ID (EIN): ${donEsc(SHOOTATHON.boosterEin)}.` : '';
+  const receipt = paid
+    ? 'This email is your payment confirmation. No goods or services were provided in exchange for this contribution, so it may qualify as tax-deductible; the booster club will provide the official acknowledgment for your records.'
+    : 'No goods or services are provided in exchange for this contribution, so it may qualify as tax-deductible once completed.';
+  return `<p style="color:#999;font-size:12px;line-height:1.6;margin:16px 0 0">Your gift supports <strong>${booster}</strong>, a 501(c)(3) nonprofit.${ein} Payments are collected by Always Competing Sports LLC on its behalf and remitted in full. ${receipt} Questions? Reply to this email or contact aceshoops@gmail.com.</p>`;
+}
+const donRow = (k, v, strong) => `<tr><td style="padding:9px 14px;color:#777;border-top:1px solid #eee;vertical-align:top;white-space:nowrap">${k}</td><td style="padding:9px 14px;border-top:1px solid #eee;text-align:right${strong ? ';font-weight:700' : ''}">${v}</td></tr>`;
+
+// 1) Sent the moment someone pledges (no card yet). Sets expectations for the pay-link later.
+export function buildPledgeEmail(pledge, playerName) {
+  const donor = donEsc((String(pledge.donor_name || '').trim().split(/\s+/)[0]) || 'there');
+  const backing = pledge.player_slug && pledge.player_slug !== 'general'
+    ? `to back <strong>${donEsc(playerName || 'your player')}</strong>` : 'to the team';
+  const desc = donEsc(pledgeDescription(pledge));
+  const next = pledge.kind === 'flat'
+    ? "After our Shoot-a-Thon we'll email you a secure link to complete your gift."
+    : "After the Shoot-a-Thon we'll count every made shot, then email you a secure link for your exact total — you only pay for shots actually made.";
+  const inner = `
+    <h2 style="margin:0 0 6px">Thanks for your pledge! &#127936;</h2>
+    <p style="color:#555;line-height:1.6;margin:0 0 16px">You've pledged <strong>${desc}</strong> ${backing} in the ${donEsc(pledge.clinic_title || SHOOTATHON.title)}. ${next} <strong>Nothing has been charged yet.</strong></p>
+    <table style="width:100%;border-collapse:collapse;border:1px solid #eee;border-radius:8px;overflow:hidden;font-size:14px">
+      <tr><td style="padding:9px 14px;color:#777;white-space:nowrap">Your pledge</td><td style="padding:9px 14px;text-align:right">${desc}</td></tr>
+      ${pledge.player_slug && pledge.player_slug !== 'general' ? donRow('Backing', donEsc(playerName || 'Player')) : donRow('Supporting', 'The team (general fund)')}
+    </table>
+    ${donTaxFooter(false)}`;
+  return { subject: 'Your Shoot-a-Thon pledge is in — thank you!', html: donShell('PLEDGE CONFIRMATION', inner) };
+}
+
+// 2) Sent after makes are counted: the exact total + a button to pay. `link` is a durable URL
+// on our site that mints a fresh checkout session at click-time (so it never expires).
+export function buildPayLinkEmail(pledge, playerName, link, makes) {
+  const amount = dollars(pledge.amount_cents);
+  const donor = donEsc((String(pledge.donor_name || '').trim().split(/\s+/)[0]) || 'there');
+  const href = donEsc(link);
+  const madeLine = (pledge.kind !== 'flat' && pledge.player_slug !== 'general')
+    ? `<p style="color:#555;line-height:1.6;margin:0 0 16px"><strong>${donEsc(playerName || 'Your player')}</strong> made <strong>${parseInt(makes, 10) || 0}</strong> shots! Your pledge of ${donEsc(pledgeDescription(pledge))} comes to <strong>${amount}</strong>.</p>`
+    : `<p style="color:#555;line-height:1.6;margin:0 0 16px">Thank you for pledging a <strong>${amount}</strong> gift to the ${donEsc(pledge.clinic_title || SHOOTATHON.title)}. Here's your secure link to complete it.</p>`;
+  const inner = `
+    <h2 style="margin:0 0 6px">Your Shoot-a-Thon total is ready</h2>
+    ${madeLine}
+    <table style="width:100%;border-collapse:collapse;border:1px solid #eee;border-radius:8px;overflow:hidden;font-size:14px;margin:0 0 20px">
+      ${pledge.player_slug && pledge.player_slug !== 'general' ? `<tr><td style="padding:9px 14px;color:#777;white-space:nowrap">Backing</td><td style="padding:9px 14px;text-align:right">${donEsc(playerName || 'Player')}</td></tr>${donRow('Made shots', String(parseInt(makes, 10) || 0))}${donRow('Your pledge', donEsc(pledgeDescription(pledge)))}` : `<tr><td style="padding:9px 14px;color:#777;white-space:nowrap">Your gift</td><td style="padding:9px 14px;text-align:right">One-time donation</td></tr>`}
+      ${donRow('Total due', amount, true)}
+    </table>
+    <div style="text-align:center;margin:0 0 6px"><a href="${href}" style="display:inline-block;background:#8B1A2B;color:#fff;text-decoration:none;font-weight:700;font-size:16px;padding:14px 34px;border-radius:999px">Complete your ${amount} donation &rarr;</a></div>
+    <p style="color:#888;font-size:12px;text-align:center;margin:10px 0 0">Or paste this link into your browser:<br><span style="color:#8B1A2B;word-break:break-all">${href}</span></p>
+    ${donTaxFooter(false)}`;
+  return { subject: `Your Shoot-a-Thon total: ${amount} — ready to complete`, html: donShell('COMPLETE YOUR DONATION', inner) };
+}
+
+// 3) Sent once the donation is PAID — the donor's receipt.
+export function buildDonationReceiptEmail(pledge) {
+  const amount = dollars(pledge.amount_paid_cents || pledge.amount_cents);
+  const id = donEsc(pledge.id || '');
+  const last4 = donEsc(pledge.card_last4 || '');
+  const via = donEsc(pledge.paid_via || 'Card');
+  const date = donEsc(fmtDate(pledge.paid_at || pledge.created));
+  const inner = `
+    <h2 style="margin:0 0 6px">Thank you for your donation! &#127936;</h2>
+    <p style="color:#555;line-height:1.6;margin:0 0 18px">Your Shoot-a-Thon donation has been received. Thank you for supporting Downer Basketball Academy's players.</p>
+    <table style="width:100%;border-collapse:collapse;border:1px solid #eee;border-radius:8px;overflow:hidden;font-size:14px">
+      <tr><td style="padding:9px 14px;color:#777;white-space:nowrap">Receipt #</td><td style="padding:9px 14px;text-align:right;font-family:monospace">${id}</td></tr>
+      ${date ? donRow('Date', date) : ''}
+      ${donRow('Donation', amount, true)}
+      ${last4 ? donRow('Paid with', 'Card ending ' + last4 + ' (via ' + via + ')') : donRow('Paid with', via)}
+    </table>
+    ${donTaxFooter(true)}`;
+  return { subject: `Donation received — thank you! (${amount})`, html: donShell('DONATION RECEIPT', inner) };
 }
 
 // Branded "see you tomorrow" reminder for ONE clinic session (sent by api/remind.js

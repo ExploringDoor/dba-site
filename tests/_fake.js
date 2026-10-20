@@ -168,7 +168,7 @@ function firestore(e, u) {
   const auth = String(e.headers['authorization'] || '');
   const signedIn = auth.startsWith('Bearer ') && state.auth.tokens.has(auth.slice(7));
   const denied = () => reply(403, gerr(403, 'PERMISSION_DENIED', 'Missing or insufficient permissions.'));
-  const allowed = (coll, write) => signedIn && (coll === 'registrations' || (coll === 'admins' && !write));
+  const allowed = (coll, write) => signedIn && (coll === 'registrations' || coll === 'pledges' || coll === 'shootathon' || (coll === 'admins' && !write));
 
   try {
     if (rel === ':runQuery') {

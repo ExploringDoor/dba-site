@@ -9,6 +9,6 @@
   },
   "scripts": {
     "dev": "npx serve -l 8899 .",
-    "test": "node tests/clinic.test.mjs && node tests/flows.test.mjs"
+    "test": "node tests/clinic.test.mjs && node tests/shootathon.test.mjs && node tests/flows.test.mjs"
   }
 }

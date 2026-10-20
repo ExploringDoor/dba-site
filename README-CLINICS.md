@@ -65,3 +65,54 @@ Preview the dashboard without a backend: `admin.html?demo=1`.
 ## Editing the clinic
 - **Sessions / dates / prices** live in `api/_clinic.js` (authoritative) and are mirrored for
   display in `register.html` (`SESSIONS`, `PRICE_*`) and `clinics.html`. Keep them in sync.
+
+---
+
+# Shoot-a-Thon (per-made-shot donations)
+
+A fundraiser bolted onto the same stack. Supporters **pledge** with no card; after the event
+the admin enters each player's made-shot count and the system emails everyone a secure pay-link
+for their computed total. A supporter backs a specific player (per made shot, optional cap) or
+gives a flat one-time gift. **No stored cards** — each pay-link mints a fresh hosted checkout at
+click-time (so an emailed link never expires). Reuses the same Stripe, **the same Stripe webhook**,
+Firestore, SendGrid, and the admin passcode.
+
+## Pages
+| File | Who | Purpose |
+|------|-----|---------|
+| `donate.html` | Public | Pledge form + live thermometer. `?player=<slug>` deep-links a player. `?demo=1` = sample data, no backend. |
+| `donate-pay.html` | Public | "Complete your donation" — the durable pay-link target (`?p=<pledgeId>`); its button hits `/api/pledge?pay=` which 302s to a fresh checkout. |
+| `donate-success.html` | Public | Post-payment thank-you. |
+| `shootathon.html` | Admin | Console (same passcode): event + roster setup, enter made shots, send pay-links, dashboard. `?demo=1` for a backend-free preview. |
+
+## API
+| File | Purpose |
+|------|---------|
+| `pledge.js` | Public. `GET` config + totals (thermometer) · `GET ?info=<id>` safe pledge summary · `GET ?pay=<id>` mint fresh checkout + 302 · `POST` record a pledge (no charge). |
+| `shootathon.js` | Admin (x-admin-key). `config` (dashboard) · `set_event` · `set_makes` · `send_links` · `resend` · `cancel` · `sync`. |
+| `_shootathon.js` | **Authoritative** amount math (`computePledgeCents`) + pledge validation (`normalizePledge`) + money bounds (`LIMITS`). |
+| `webhook-stripe.js` | Extended: a `metadata.kind === 'donation'` checkout finalizes the pledge (its own path, shared verify). |
+| `_finalize.js` | Added `finalizeDonationPaid` + `maybeSendDonationReceipt` (receipt sent once via `receipt_email_sent`). |
+| `_email.js` | Added `buildPledgeEmail`, `buildPayLinkEmail`, `buildDonationReceiptEmail`. |
+
+## Money-safety design
+- **The charge is never trusted from the browser.** `send_links` recomputes each total from the
+  stored pledge × the admin-entered makes (`computePledgeCents`), clamped to hard bounds.
+- **Pay-links can't go stale.** The email links to our own `donate-pay.html?p=<id>`; the actual
+  checkout session is created fresh when the donor clicks (hosted sessions expire within ~24h).
+- **Finalize is shared.** The Stripe webhook (primary) and the admin **Sync** button both use
+  `verifyPayment` + `finalizeDonationPaid`; the receipt is guarded by `receipt_email_sent`.
+- **Deductibility stays honest.** Receipts state the gift supports the booster club (a 501(c)(3))
+  which issues the official acknowledgment — the for-profit LLC only collects and remits.
+
+## Data
+Firestore `pledges/{id}` (one per pledge: `status` = pledged → invoiced → paid, plus no_charge /
+canceled) and a single `shootathon/{eventId}` config doc (title, goal, open flag, `players[]` with
+their `makes`). Browsers never touch Firestore — all via `/api`. **`firestore.rules` must allow the
+`pledges` and `shootathon` collections** (added); re-publish the rules or writes are denied.
+
+## Editing the Shoot-a-Thon
+- **Players, goal, makes, and the open flag** are edited in the admin (`shootathon.html`) — no code
+  change. **Money bounds** (min/max per shot, caps, max gift) live in `api/_shootathon.js`.
+- Tests: `node tests/shootathon.test.mjs` (amount math, validation, auth, full pledge→pay→receipt
+  flow against the fakes) — also part of `npm test`.

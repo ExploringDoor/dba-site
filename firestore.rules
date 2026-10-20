@@ -20,6 +20,16 @@ service cloud.firestore {
       allow read, write: if isSuper();
     }
 
+    // Shoot-a-Thon pledges + event config: admin-only, both read and write.
+    // Donors never touch Firestore directly — the public /api/pledge endpoint reads/writes
+    // on their behalf with the server admin token, exactly like registrations.
+    match /pledges/{id} {
+      allow read, write: if isSuper();
+    }
+    match /shootathon/{id} {
+      allow read, write: if isSuper();
+    }
+
     // The admins collection: readable only by an admin (used by the rules themselves).
     match /admins/{uid} {
       allow read: if isSuper();

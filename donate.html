@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>/* Analytics opt-out (set on policies.html) — read BEFORE Google Analytics loads. */try{if(localStorage.getItem('dba_no_analytics')==='1')window['ga-disable-G-2SSTL5WSW9']=true;}catch(e){}</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-2SSTL5WSW9"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());gtag("config","G-2SSTL5WSW9");</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<meta name="theme-color" content="#8B1A2B">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🏀%3C/text%3E%3C/svg%3E">
+<title>Shoot-a-Thon — Downer Basketball Academy</title>
+<meta name="description" content="Back a Downer Basketball Academy player in our Shoot-a-Thon. Pledge per made shot or give a one-time gift — no payment until after the event.">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Outfit:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&family=Saira+Condensed:wght@600;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--mrn:#8B1A2B;--mrn-h:#A82E42;--pink:#D4506A;--bg:#0A0A0C;--bg2:#101014;--glass:rgba(255,255,255,.035);--glass-b:rgba(255,255,255,.07);--txt:#F0ECE8;--txt-m:rgba(240,236,232,.82);--dim:#9B95A0;--ok:#3fae5a;--r:16px}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased;line-height:1.55;min-height:100vh}
+a{color:inherit}
+.nav{border-bottom:1px solid var(--glass-b);padding:0 32px;display:flex;justify-content:space-between;align-items:center;height:64px}
+.logo-main{font-family:'Saira Condensed',sans-serif;font-weight:800;font-size:22px;color:#fff;letter-spacing:4px;text-transform:uppercase;line-height:.9}
+.logo-sub{font-family:'Saira Condensed',sans-serif;font-weight:600;font-size:10px;letter-spacing:7px;color:#888;text-transform:uppercase;text-align:center}
+.nav a.back{font-size:.82rem;color:var(--dim);text-decoration:none}
+.wrap{max-width:640px;margin:0 auto;padding:40px 24px 64px}
+.card{background:var(--glass);border:1px solid var(--glass-b);border-radius:var(--r);padding:28px 26px;margin-bottom:20px}
+.hero{text-align:center;padding-top:10px}
+.kicker{font-family:'Saira Condensed',sans-serif;letter-spacing:5px;text-transform:uppercase;color:var(--pink);font-size:.8rem;font-weight:600}
+h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:2.3rem;margin:8px 0 10px;line-height:1.1}
+.lead{color:var(--txt-m);max-width:520px;margin:0 auto}
+/* thermometer */
+.therm-wrap{margin:22px 0 6px}
+.therm{height:16px;border-radius:999px;background:var(--bg);border:1px solid var(--glass-b);overflow:hidden}
+.therm > i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--mrn),var(--pink));transition:width .8s ease}
+.therm-nums{display:flex;justify-content:space-between;margin-top:8px;font-size:.86rem}
+.therm-nums b{font-family:'Saira Condensed',sans-serif;font-size:1.25rem;color:#fff;letter-spacing:.5px}
+.stat-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+.chip{background:var(--bg);border:1px solid var(--glass-b);border-radius:999px;padding:7px 14px;font-size:.84rem;color:var(--txt-m)}
+.chip b{color:var(--txt)}
+h2{font-family:'DM Serif Display',serif;font-weight:400;font-size:1.4rem;margin-bottom:4px}
+.sub{color:var(--dim);font-size:.88rem;margin-bottom:18px}
+.fg{margin-bottom:16px}
+.fg > label{display:block;font-size:.84rem;color:var(--txt-m);margin-bottom:6px;font-weight:500}
+.req{color:var(--pink)}
+.inp{width:100%;background:var(--bg);border:1px solid var(--glass-b);border-radius:12px;padding:13px 14px;color:var(--txt);font-family:inherit;font-size:1rem}
+.inp:focus{outline:none;border-color:var(--pink)}
+select.inp{appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%239B95A0' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 16px center}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--pink);outline-offset:2px}
+/* segmented toggle */
+.seg{display:flex;gap:8px;margin-bottom:18px}
+.seg button{flex:1;background:var(--bg);border:1px solid var(--glass-b);border-radius:12px;padding:14px 10px;color:var(--txt-m);cursor:pointer;font-family:inherit;font-size:.92rem;font-weight:600;transition:all .2s;text-align:center}
+.seg button .s-sub{display:block;font-weight:400;font-size:.76rem;color:var(--dim);margin-top:3px}
+.seg button[aria-pressed="true"]{border-color:var(--pink);background:rgba(212,80,106,.1);color:var(--txt)}
+.money-in{position:relative}
+.money-in span.pre{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--dim)}
+.money-in .inp{padding-left:28px}
+.row2{display:flex;gap:12px}
+.row2 > *{flex:1}
+.est{background:var(--bg);border:1px dashed var(--glass-b);border-radius:12px;padding:12px 14px;font-size:.88rem;color:var(--txt-m);margin-bottom:16px}
+.est b{color:#fff}
+.check{display:flex;align-items:flex-start;gap:9px;font-size:.88rem;color:var(--txt-m);cursor:pointer;margin-bottom:16px}
+.check input{margin-top:3px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:15px 26px;border-radius:12px;font-weight:700;font-size:1rem;text-decoration:none;background:var(--mrn);color:#fff;border:none;cursor:pointer;transition:background .25s;font-family:inherit}
+.btn:hover{background:var(--mrn-h)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.ghost{background:var(--glass);border:1px solid var(--glass-b);color:var(--txt);width:auto;padding:10px 18px;font-size:.86rem;font-weight:600}
+.muted{font-size:.78rem;color:var(--dim)}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.hidden{display:none}
+.banner{border-radius:12px;padding:12px 16px;margin-bottom:18px;font-size:.9rem}
+.banner.warn{background:rgba(212,80,106,.12);border:1px solid rgba(212,80,106,.4);color:var(--txt-m)}
+.banner.ok{background:rgba(63,174,90,.12);border:1px solid rgba(63,174,90,.4);color:var(--txt)}
+.err{color:var(--pink);font-size:.84rem;margin-top:8px;min-height:1.1em}
+.share{display:flex;gap:8px;align-items:center;margin-top:14px;flex-wrap:wrap}
+.share input{flex:1;min-width:180px;font-size:.82rem;font-family:'IBM Plex Mono',monospace}
+.recent{margin-top:4px}
+.recent .r{display:flex;justify-content:space-between;font-size:.84rem;padding:6px 0;border-bottom:1px solid var(--glass-b);color:var(--txt-m)}
+.recent .r:last-child{border-bottom:none}
+.recent .r b{color:var(--txt);font-weight:500}
+.spinner{width:20px;height:20px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;display:inline-block;animation:spin 1s linear infinite;vertical-align:-4px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.spinner{animation:none}.therm>i{transition:none}}
+footer{text-align:center;padding:26px 16px;font-size:.78rem;color:#9B95A0;border-top:1px solid rgba(255,255,255,.07)}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="index.html" style="text-decoration:none"><div><div class="logo-main">DOWNER</div><div class="logo-sub">Basketball Academy</div></div></a>
+  <a href="index.html" class="back">← Home</a>
+</nav>
+
+<div class="wrap">
+  <div class="hero">
+    <div class="kicker">🏀 Shoot-a-Thon</div>
+    <h1 id="title">DBA Shoot-a-Thon</h1>
+    <p class="lead" id="blurb">Back a player for every shot they make — or give a one-time gift. <strong>You don't pay anything today.</strong> After the event we'll email you a secure link for your total.</p>
+    <div class="therm-wrap hidden" id="thermWrap">
+      <div class="therm"><i id="thermFill"></i></div>
+      <div class="therm-nums"><span><b id="raised">$0</b> raised</span><span class="muted" id="goal"></span></div>
+    </div>
+    <div class="stat-row" id="statRow"></div>
+  </div>
+
+  <!-- CLOSED / COMING SOON -->
+  <div class="card hidden" id="closed" style="text-align:center">
+    <h2>Coming soon</h2>
+    <p class="sub" style="margin-bottom:0">Our Shoot-a-Thon isn't open for pledges just yet — check back shortly. Questions? Email <a href="mailto:aceshoops@gmail.com" style="color:var(--txt-m);text-decoration:underline">aceshoops@gmail.com</a>.</p>
+  </div>
+
+  <!-- PLEDGE FORM -->
+  <div class="card hidden" id="formCard">
+    <h2>Make your pledge</h2>
+    <p class="sub">No card needed now — we'll email your link after the Shoot-a-Thon.</p>
+    <div id="errBanner"></div>
+
+    <form id="pledgeForm" novalidate>
+      <div class="hp" aria-hidden="true"><label>Leave this field empty<input type="text" name="dba_ref" tabindex="-1" autocomplete="off"></label></div>
+
+      <div class="fg">
+        <label for="player">Who are you supporting? <span class="req">*</span></label>
+        <select class="inp" id="player"></select>
+      </div>
+
+      <div class="seg" id="kindSeg" role="group" aria-label="Pledge type">
+        <button type="button" data-kind="per_shot" aria-pressed="true">Per made shot<span class="s-sub">Pay for shots made</span></button>
+        <button type="button" data-kind="flat" aria-pressed="false">One-time gift<span class="s-sub">A flat amount</span></button>
+      </div>
+
+      <!-- PER-SHOT fields -->
+      <div id="perFields">
+        <div class="row2">
+          <div class="fg">
+            <label for="perShot">Per made shot <span class="req">*</span></label>
+            <div class="money-in"><span class="pre">$</span><input class="inp" id="perShot" type="text" inputmode="decimal" placeholder="0.50"></div>
+          </div>
+          <div class="fg">
+            <label for="cap">Cap <span class="muted">(optional)</span></label>
+            <div class="money-in"><span class="pre">$</span><input class="inp" id="cap" type="text" inputmode="decimal" placeholder="no limit"></div>
+          </div>
+        </div>
+        <div class="est" id="est">Enter an amount to see an estimate.</div>
+      </div>
+
+      <!-- FLAT field -->
+      <div id="flatFields" class="hidden">
+        <div class="fg">
+          <label for="flat">One-time gift amount <span class="req">*</span></label>
+          <div class="money-in"><span class="pre">$</span><input class="inp" id="flat" type="text" inputmode="decimal" placeholder="50"></div>
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="fg"><label for="dname">Your name <span class="req">*</span></label><input class="inp" id="dname" type="text" autocomplete="name" placeholder="Your name"></div>
+        <div class="fg"><label for="demail">Email <span class="req">*</span></label><input class="inp" id="demail" type="email" inputmode="email" autocomplete="email" placeholder="you@email.com"></div>
+      </div>
+      <div class="fg"><label for="msg">Message <span class="muted">(optional)</span></label><input class="inp" id="msg" type="text" maxlength="280" placeholder="Go get 'em!"></div>
+      <label class="check"><input type="checkbox" id="anon"><span>Give anonymously (hide my name from the public supporters list)</span></label>
+
+      <button class="btn" id="submitBtn" type="submit">Pledge now →</button>
+      <div class="err" id="formErr"></div>
+      <p class="muted" style="margin-top:14px;text-align:center">Tax-deductible · supports the booster club (a 501(c)(3)). No goods or services are provided in exchange. Nothing is charged until you complete your emailed link.</p>
+    </form>
+  </div>
+
+  <!-- THANK YOU (after pledge) -->
+  <div class="card hidden" id="thanks" style="text-align:center">
+    <div style="font-size:2.4rem">🙌</div>
+    <h2 id="thanksTitle">Pledge received — thank you!</h2>
+    <p class="sub" id="thanksMsg"></p>
+    <div id="shareBox"></div>
+    <div style="margin-top:18px"><button class="btn ghost" id="againBtn">Make another pledge</button></div>
+  </div>
+
+  <!-- SHARE + SOCIAL PROOF -->
+  <div class="card hidden" id="shareCard">
+    <h2>Share your player's link</h2>
+    <p class="sub">Send friends and family straight to your player — every pledge adds up.</p>
+    <div class="share">
+      <input class="inp" id="shareUrl" readonly>
+      <button class="btn ghost" id="copyBtn" type="button">Copy</button>
+    </div>
+    <div id="recentWrap" class="hidden" style="margin-top:20px">
+      <h2 style="font-size:1.1rem">Recent supporters</h2>
+      <div class="recent" id="recent"></div>
+    </div>
+  </div>
+</div>
+
+<footer>Site by <a href="https://mainline-webdesign.com/" target="_blank" rel="noopener" style="color:#9B95A0;text-decoration:underline">Main Line Web Design</a></footer>
+
+<script>
+function $(id){ return document.getElementById(id); }
+function qs(k){ return new URLSearchParams(location.search).get(k); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];}); }
+function money(c){ var v=(c||0)/100; return '$'+(v%1===0?v.toLocaleString('en-US'):v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})); }
+function dollarsToCents(v){ var n=parseFloat(String(v==null?'':v).replace(/[^0-9.]/g,'')); if(!isFinite(n)||n<0) return null; return Math.round(n*100); }
+
+var CFG=null, KIND='per_shot', DEMO=false;
+var LIMITS={ minPerShot:25, minFlat:500 }; // display-side mirror; the server is authoritative
+var DEMO_CFG={ open:true, ready:true, title:'DBA Shoot-a-Thon 2026', blurb:"Back a player for every shot they make — or give a one-time gift. You don't pay anything today.", goal_cents:500000, players:[{slug:'jimmy-d',name:'Jimmy D'},{slug:'sara-k',name:'Sara K'},{slug:'andre-w',name:'Andre W'}], supporter_count:23, per_shot_total_cents:4250, flat_total_cents:30000, raised_cents:128000, recent:[{name:'Pat Q',backs:'Jimmy D'},{name:'Dana R',backs:'the team'},{name:'Chris L',backs:'Sara K'}] };
+
+var ERR_PARAMS={ notready:"That donation link isn't ready yet — we'll email it after the event.", notfound:"We couldn't find that donation. Try pledging below.", payfail:"Something went wrong starting your payment. Please try again.", unavailable:"Online payment isn't available right now — please try again soon.", badlink:"That link looks incomplete." };
+
+function renderStats(c){
+  var stats=[];
+  stats.push('<span class="chip"><b>'+(c.supporter_count||0)+'</b> supporter'+((c.supporter_count===1)?'':'s')+'</span>');
+  if(c.per_shot_total_cents>0) stats.push('<span class="chip"><b>'+money(c.per_shot_total_cents)+'</b> / made shot pledged</span>');
+  if(c.flat_total_cents>0) stats.push('<span class="chip"><b>'+money(c.flat_total_cents)+'</b> in one-time gifts</span>');
+  $('statRow').innerHTML=stats.join('');
+  if(c.goal_cents>0){
+    $('thermWrap').classList.remove('hidden');
+    var pct=Math.max(0,Math.min(100, Math.round((c.raised_cents||0)/c.goal_cents*100)));
+    $('thermFill').style.width=pct+'%';
+    $('raised').textContent=money(c.raised_cents||0);
+    $('goal').textContent='of '+money(c.goal_cents)+' goal';
+  }
+  if((c.recent||[]).length){
+    $('recentWrap').classList.remove('hidden');
+    $('recent').innerHTML=c.recent.map(function(r){ return '<div class="r"><b>'+esc(r.name)+'</b><span>backed '+esc(r.backs)+'</span></div>'; }).join('');
+  }
+}
+
+function fillPlayers(c){
+  var sel=$('player');
+  var opts='<option value="general">⭐ General donation — support the whole team</option>';
+  (c.players||[]).forEach(function(p){ opts+='<option value="'+esc(p.slug)+'">'+esc(p.name)+'</option>'; });
+  sel.innerHTML=opts;
+  var pre=qs('player');
+  if(pre && (c.players||[]).some(function(p){return p.slug===pre;})) sel.value=pre;
+}
+
+function setKind(k){
+  KIND = (k==='flat') ? 'flat' : 'per_shot';
+  Array.prototype.forEach.call(document.querySelectorAll('#kindSeg button'),function(b){ b.setAttribute('aria-pressed', String(b.dataset.kind===KIND)); });
+  $('perFields').classList.toggle('hidden', KIND!=='per_shot');
+  $('flatFields').classList.toggle('hidden', KIND!=='flat');
+  updateEst();
+}
+
+function updateEst(){
+  if(KIND!=='per_shot') return;
+  var per=dollarsToCents($('perShot').value);
+  var cap=dollarsToCents($('cap').value);
+  if(!per){ $('est').innerHTML="Enter an amount to see an estimate."; return; }
+  var ex=50; // illustrative made-shots
+  var raw=per*ex, capped=(cap&&cap>0)?Math.min(raw,cap):raw;
+  $('est').innerHTML='If your player makes <b>'+ex+'</b> shots, that\'s <b>'+money(capped)+'</b>'+((cap&&cap>0)?' (capped at '+money(cap)+')':'')+'. You only pay for shots actually made.';
+}
+
+function updateShare(){
+  var slug=$('player').value;
+  var base=location.origin+location.pathname;
+  var url = (slug && slug!=='general') ? base+'?player='+encodeURIComponent(slug) : base;
+  $('shareUrl').value=url;
+}
+
+function onPlayerChange(){
+  var slug=$('player').value;
+  // A per-shot pledge needs a specific player; general → switch to one-time gift.
+  var perBtn=document.querySelector('#kindSeg button[data-kind="per_shot"]');
+  if(slug==='general'){ if(KIND==='per_shot') setKind('flat'); perBtn.disabled=true; perBtn.style.opacity=.4; }
+  else { perBtn.disabled=false; perBtn.style.opacity=1; }
+  updateShare();
+}
+
+function showErr(msg){ $('formErr').textContent=msg||''; }
+
+function submit(e){
+  e.preventDefault();
+  showErr('');
+  var slug=$('player').value;
+  var name=$('dname').value.trim(), email=$('demail').value.trim();
+  if(!name) return showErr('Please enter your name.');
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showErr('Please enter a valid email.');
+  var payload={ dba_ref:(document.querySelector('[name=dba_ref]').value||'').trim(), kind:KIND, player_slug:slug, donor_name:name, donor_email:email, message:$('msg').value.trim(), anonymous:$('anon').checked };
+  if(KIND==='per_shot'){
+    if(slug==='general') return showErr('Pick a player for a per-made-shot pledge, or choose a one-time gift.');
+    var per=dollarsToCents($('perShot').value);
+    if(!per || per<LIMITS.minPerShot) return showErr('Enter at least $0.25 per made shot.');
+    var cap=dollarsToCents($('cap').value);
+    payload.per_shot_cents=per;
+    if(cap && cap>0){ if(cap<per) return showErr('Your cap should be at least one made shot ('+money(per)+').'); payload.cap_cents=cap; }
+  } else {
+    var flat=dollarsToCents($('flat').value);
+    if(!flat || flat<LIMITS.minFlat) return showErr('Enter at least $5.');
+    payload.flat_cents=flat;
+  }
+  var btn=$('submitBtn'); btn.disabled=true; var old=btn.innerHTML; btn.innerHTML='<span class="spinner"></span> Saving…';
+  if(DEMO){ setTimeout(function(){ btn.disabled=false; btn.innerHTML=old; onPledged(payload, slug); },500); return; }
+  fetch('/api/pledge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+    .then(function(r){ return r.json().then(function(d){ return {status:r.status,d:d}; }); })
+    .then(function(res){
+      btn.disabled=false; btn.innerHTML=old;
+      if(res.status===200 && res.d && res.d.ok){ onPledged(payload, slug); return; }
+      var map={ closed:'Pledging is closed right now.', unknown_player:'That player isn\'t in this event.', bad_amount:'Please enter a valid amount.', bad_per_shot:'Enter at least $0.25 per made shot.', bad_cap:'That cap is too low.', bad_email:'Please enter a valid email.', missing_name:'Please enter your name.', per_shot_needs_player:'Pick a player for a per-shot pledge.', not_configured:'Donations aren\'t available right now — please try again soon.' };
+      showErr(map[res.d&&res.d.error] || 'Sorry, something went wrong. Please try again.');
+    })
+    .catch(function(){ btn.disabled=false; btn.innerHTML=old; showErr('Network error — please try again.'); });
+}
+
+function onPledged(payload, slug){
+  try{ if(window.gtag) gtag('event','pledge',{method:payload.kind}); }catch(e){}
+  var who = (slug && slug!=='general') ? ($('player').options[$('player').selectedIndex].text) : 'the team';
+  var msg = payload.kind==='per_shot'
+    ? "Thanks for backing <b>"+esc(who)+"</b>! We'll count every made shot, then email <b>"+esc(payload.donor_email)+"</b> a secure link for your exact total. Nothing has been charged yet."
+    : "Thanks for your gift to support <b>"+esc(who)+"</b>! We'll email <b>"+esc(payload.donor_email)+"</b> a secure link to complete it. Nothing has been charged yet.";
+  $('thanksMsg').innerHTML=msg;
+  // Offer the share link for the player they just backed.
+  var base=location.origin+location.pathname;
+  var url=(slug&&slug!=='general')?base+'?player='+encodeURIComponent(slug):base;
+  $('shareBox').innerHTML='<div class="share" style="justify-content:center"><input class="inp" id="tShareUrl" readonly style="max-width:320px"><button class="btn ghost" type="button" id="tCopyBtn">Copy link</button></div>';
+  $('tShareUrl').value=url;
+  $('tCopyBtn').addEventListener('click',function(){ copy($('tShareUrl'), this); });
+  $('formCard').classList.add('hidden');
+  $('shareCard').classList.add('hidden');
+  $('thanks').classList.remove('hidden');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function copy(inp, btn){
+  inp.select();
+  var done=function(){ var t=btn.textContent; btn.textContent='Copied ✓'; setTimeout(function(){ btn.textContent=t; },1600); };
+  if(navigator.clipboard){ navigator.clipboard.writeText(inp.value).then(done,function(){ try{document.execCommand('copy');done();}catch(e){} }); }
+  else { try{document.execCommand('copy');done();}catch(e){} }
+}
+
+function init(c){
+  CFG=c;
+  if(c.title) $('title').textContent=c.title;
+  if(c.blurb) $('blurb').innerHTML=esc(c.blurb);
+  renderStats(c);
+  if(!c.open){ $('closed').classList.remove('hidden'); return; }
+  fillPlayers(c);
+  $('formCard').classList.remove('hidden');
+  $('shareCard').classList.remove('hidden');
+  onPlayerChange();
+  updateShare();
+}
+
+// error banner from a pay-link redirect (?e=...)
+(function(){ var e=qs('e'); if(e && ERR_PARAMS[e]){ var b=$('errBanner'); } })();
+
+document.addEventListener('DOMContentLoaded',function(){
+  Array.prototype.forEach.call(document.querySelectorAll('#kindSeg button'),function(b){ b.addEventListener('click',function(){ if(!b.disabled) setKind(b.dataset.kind); }); });
+  $('player').addEventListener('change',onPlayerChange);
+  ['perShot','cap'].forEach(function(id){ $(id).addEventListener('input',updateEst); });
+  $('pledgeForm').addEventListener('submit',submit);
+  $('copyBtn').addEventListener('click',function(){ copy($('shareUrl'), this); });
+  $('againBtn').addEventListener('click',function(){ $('thanks').classList.add('hidden'); $('formCard').classList.remove('hidden'); $('shareCard').classList.remove('hidden'); $('pledgeForm').reset(); setKind('per_shot'); onPlayerChange(); window.scrollTo({top:0,behavior:'smooth'}); });
+
+  var e=qs('e');
+  if(qs('demo')==='1'){ DEMO=true; init(DEMO_CFG); return; }
+  fetch('/api/pledge').then(function(r){return r.json();}).then(function(c){
+    init(c||{});
+    if(e && ERR_PARAMS[e] && c && c.open){ var warn=document.createElement('div'); warn.className='banner warn'; warn.textContent=ERR_PARAMS[e]; $('errBanner').appendChild(warn); }
+  }).catch(function(){ init({open:false}); });
+});
+</script>
+</body>
+</html>

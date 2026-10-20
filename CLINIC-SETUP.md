@@ -108,6 +108,44 @@ Pick any passcode you'll type to open `admin.html`.
 - [ ] Open **/admin.html**, enter your passcode, confirm the test shows up, try a refund.
 - [ ] Go live for real. 🏀
 
+## 7. Shoot-a-Thon (donations) — optional, reuses everything above
+
+A per-made-shot fundraiser: supporters **pledge** now (no card), then after the event you
+enter each player's made-shot count and the system emails everyone a secure pay-link for
+their total. Supporters can back a specific player (per made shot, with an optional cap) or
+give a flat one-time gift. Money routes exactly like clinics — collected by Always Competing
+Sports LLC and remitted to the booster club, which issues the tax-deductible receipt.
+
+**Good news: no new accounts.** It reuses the same Firebase, the same Stripe (and the **same
+Stripe webhook** — nothing to add there), the same SendGrid, and the same admin passcode.
+
+- [ ] **Re-publish the database security rules.** I added two collections (`pledges`,
+      `shootathon`) to `firestore.rules`. Until the rules are re-published, pledges can't be
+      saved. Firebase console → **Firestore → Rules** tab → paste the contents of
+      `firestore.rules` → **Publish** (or `firebase deploy --only firestore:rules`). *This is
+      the one required step — everything else below is done from the admin page.*
+- [ ] *(Optional)* Set the booster club's exact name + EIN so donation receipts name the
+      right 501(c)(3): `BOOSTER_NAME` = e.g. `Lower Merion Basketball Boosters`,
+      `BOOSTER_EIN` = e.g. `12-3456789`. If you skip these, receipts say "the organizing
+      booster club" (still accurate), with no EIN line.
+- [ ] Open **/shootathon.html**, sign in with your **admin passcode**. Under **Event setup**:
+      name it, set a goal, add your players, check **Open for pledges**, **Save**.
+- [ ] Share the links: the **public donate page** is `/donate.html`, and each player has their
+      own shareable link (Copy buttons are right there on the admin page).
+- [ ] **After the event:** enter each player's **made shots** → **Save** → **Send pay-links**.
+      Supporters get an email with their exact total and a secure "Donate" button. Use
+      **Sync payments** anytime to double-check anything that didn't confirm automatically.
+
+Preview it with no backend: **/shootathon.html?demo=1** and **/donate.html?demo=1**.
+
+**Important — deductible donations must land with the 501(c)(3).** This system collects
+through your LLC's Stripe (same as clinics) and remits to the booster club, and the receipts
+say the booster club provides the official acknowledgment. Confirm with the booster club that
+they'll issue the year-end tax acknowledgments (and that they're comfortable with this
+collect-and-remit arrangement) before you promote it as tax-deductible.
+
+---
+
 ## Env var checklist (all in Vercel)
 ```
 PAYMENT_PROVIDER          stripe | square
@@ -128,4 +166,7 @@ ADMIN_PASSWORD
 CHECKIN_PASSWORD          (optional — coach check-in page only)
 SITE_URL                  (optional)
 CRON_SECRET               (required — powers the payment safety net + reminder emails)
+BOOSTER_NAME              (optional — Shoot-a-Thon receipts name the 501(c)(3))
+BOOSTER_EIN               (optional — Shoot-a-Thon receipts show the EIN)
+SHOOTATHON_EVENT_ID       (optional — defaults to fall-2026)
 ```
