@@ -1,21 +1,20 @@
 // Vercel Serverless Function — /api/shootathon   (ADMIN only)
-// The organizer's side of the Shoot-a-Thon. Every action is gated by ADMIN_PASSWORD
-// sent in the x-admin-key header (never a URL query param), matched in constant time.
+// The organizer's side of the Shoot-a-Thon. Gated by ADMIN_PASSWORD in the x-admin-key header.
 //
 // POST { action, ... }:
-//   config      → the event config + every pledge (with computed amounts) + totals  [dashboard]
-//   set_event   → create/update the event (title, blurb, goal, open flag, player roster)
-//   set_makes   → set each player's made-shot count     { makes: { "<slug>": <n>, … } }
-//   send_links  → invoice every new pledge for its computed total + email the pay-link
+//   config      → event config (org goal + teams + players) + every pledge + totals   [dashboard]
+//   set_event   → create/update the event (title, blurb, org goal, open, teams[], players[])
+//   set_makes   → set each player's made-free-throw count   { makes: { "<slug>": <n>, … } }
+//   send_links  → invoice every new per-throw pledge for its computed total + email the pay-link
 //   resend      → re-email the pay-link for one invoiced pledge        { id }
 //   cancel      → cancel a not-yet-paid pledge                         { id }
 //   sync        → re-check invoiced pledges against the processor (backup for a missed webhook)
 //
-// The authoritative charge is ALWAYS recomputed here from the stored pledge + the makes in
-// the event doc (computePledgeCents) — never taken from a browser.
+// One-time donations are paid at donation time (not here). The per-throw charge is ALWAYS
+// recomputed here from the stored pledge × the makes in the event doc (computePledgeCents).
 
 import { fbConfigured, fbAdminConfigured, fsGet, fsPatch, fsPatchVerified, fsQuery } from './_firestore.js';
-import { SHOOTATHON, LIMITS, slugify, isSlug, intOrNull, computePledgeCents, pledgeDescription } from './_shootathon.js';
+import { SHOOTATHON, LIMITS, slugify, isSlug, intOrNull, computePledgeCents, pledgeDescription, normalizeTeam } from './_shootathon.js';
 import { clip, stripTags } from './_clinic.js';
 import { verifyPayment, finalizeDonationPaid } from './_finalize.js';
 import { sendMail, buildPayLinkEmail, emailConfigured, ADMIN_EMAIL } from './_email.js';
@@ -27,10 +26,7 @@ function ctEq(a, b) {
   for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return r === 0;
 }
-function authed(req) {
-  const want = process.env.ADMIN_PASSWORD || '';
-  return !!want && ctEq(req.headers['x-admin-key'] || '', want); // header only
-}
+function authed(req) { const want = process.env.ADMIN_PASSWORD || ''; return !!want && ctEq(req.headers['x-admin-key'] || '', want); }
 function safeId(id) { return /^[A-Za-z0-9_-]{1,128}$/.test(String(id || '')); }
 
 const EVENT_PATH = `shootathon/${SHOOTATHON.eventId}`;
@@ -42,15 +38,20 @@ function baseUrl(req) {
   return `${proto}://${host}`;
 }
 async function loadEvent() { return (await fsGet(EVENT_PATH)) || null; }
-function makesMap(event) {
-  const m = {};
-  ((event && event.players) || []).forEach((p) => { m[p.slug] = p.makes || 0; });
-  return m;
+function makesMap(event) { const m = {}; ((event && event.players) || []).forEach((p) => { m[p.slug] = p.makes || 0; }); return m; }
+function findPlayer(event, slug) { return ((event && event.players) || []).find((p) => p.slug === slug) || null; }
+function findTeam(event, slug) { return ((event && event.teams) || []).find((t) => t.slug === slug) || null; }
+function targetOf(p) {
+  if (p.target_type) return { type: p.target_type, slug: p.target_slug || '' };
+  if (p.player_slug && p.player_slug !== 'general') return { type: 'player', slug: p.player_slug };
+  return { type: 'org', slug: '' };
 }
-async function loadPledges() {
-  try { return await fsQuery('pledges', 'event_id', 'EQUAL', SHOOTATHON.eventId); } catch (e) { return []; }
+function targetName(event, tg) {
+  if (tg.type === 'team') { const t = findTeam(event, tg.slug); return t ? t.name : 'a team'; }
+  if (tg.type === 'player') { const p = findPlayer(event, tg.slug); return p ? p.name : 'a player'; }
+  return 'the whole program';
 }
-// The link we email — a durable page on our site (NOT a processor session, which would expire).
+async function loadPledges() { try { return await fsQuery('pledges', 'event_id', 'EQUAL', SHOOTATHON.eventId); } catch (e) { return []; } }
 function payLink(base, id) { return `${base}/donate-pay.html?p=${id}`; }
 
 // ── Actions ───────────────────────────────────────────────────────────────
@@ -58,65 +59,57 @@ async function actionConfig() {
   const event = await loadEvent();
   const mm = makesMap(event);
   const pledges = await loadPledges();
-  let pledgedCount = 0, paidCount = 0, raisedCents = 0, projectedCents = 0, perShotRateCents = 0, flatCents = 0;
+  let pledgeCount = 0, paidCount = 0, raisedCents = 0, projectedCents = 0;
   const rows = pledges.map((p) => {
-    const makes = p.player_slug === 'general' ? null : (mm[p.player_slug] || 0);
-    const computed = p.status === 'paid'
-      ? (p.amount_paid_cents || p.amount_cents || 0)
-      : computePledgeCents(p, makes);
-    if (p.status !== 'canceled') {
-      pledgedCount++;
-      if (p.kind === 'flat') flatCents += (p.flat_cents || 0); else perShotRateCents += (p.per_shot_cents || 0);
-      projectedCents += computed;
-    }
+    const tg = targetOf(p);
+    const makes = tg.type === 'player' ? (mm[tg.slug] || 0) : null;
+    const computed = p.status === 'paid' ? (p.amount_paid_cents || p.amount_cents || 0) : computePledgeCents(p, makes);
+    if (p.status !== 'canceled') { pledgeCount++; projectedCents += computed; }
     if (p.status === 'paid') { paidCount++; raisedCents += (p.amount_paid_cents || p.amount_cents || 0); }
     return {
-      id: p.id,
-      status: p.status,
-      kind: p.kind,
-      player_slug: p.player_slug,
-      donor_name: p.donor_name,
-      donor_email: p.donor_email,
-      anonymous: !!p.anonymous,
-      message: p.message || '',
-      per_shot_cents: p.per_shot_cents || 0,
-      cap_cents: p.cap_cents || 0,
-      flat_cents: p.flat_cents || 0,
-      amount_cents: p.amount_cents || 0,
-      computed_cents: computed,
-      makes,
-      description: pledgeDescription(p),
-      created: p.created || '',
-      paid_at: p.paid_at || '',
-      card_last4: p.card_last4 || '',
+      id: p.id, status: p.status, kind: p.kind,
+      target_type: tg.type, target_slug: tg.slug, target_name: targetName(event, tg),
+      donor_name: p.donor_name, donor_email: p.donor_email, anonymous: !!p.anonymous, message: p.message || '',
+      per_shot_cents: p.per_shot_cents || 0, cap_cents: p.cap_cents || 0, flat_cents: p.flat_cents || 0,
+      amount_cents: p.amount_cents || 0, computed_cents: computed, makes,
+      description: pledgeDescription(p), created: p.created || '', paid_at: p.paid_at || '', card_last4: p.card_last4 || '',
     };
   });
+  const ev = event || {};
   return {
     ok: true,
-    event: event ? {
-      event_id: SHOOTATHON.eventId, title: event.title || SHOOTATHON.title, blurb: event.blurb || '',
-      goal_cents: event.goal_cents || 0, open: !!event.open,
-      players: (event.players || []).map((p) => ({ slug: p.slug, name: p.name, makes: p.makes || 0 })),
-    } : { event_id: SHOOTATHON.eventId, title: SHOOTATHON.title, blurb: '', goal_cents: 0, open: false, players: [] },
-    totals: {
-      pledges: pledgedCount, paid: paidCount,
-      raised_cents: raisedCents, projected_cents: projectedCents,
-      per_shot_rate_cents: perShotRateCents, flat_cents: flatCents,
+    event: {
+      event_id: SHOOTATHON.eventId, title: ev.title || SHOOTATHON.title, blurb: ev.blurb || '',
+      open: !!ev.open, org_goal_cents: ev.org_goal_cents || 0,
+      teams: (ev.teams || []).map((t) => ({ slug: t.slug, name: t.name, goal_cents: t.goal_cents || 0 })),
+      players: (ev.players || []).map((p) => ({ slug: p.slug, name: p.name, team: p.team || '', goal_cents: p.goal_cents || 0, makes: p.makes || 0, blurb: p.blurb || '' })),
     },
+    totals: { pledges: pledgeCount, paid: paidCount, raised_cents: raisedCents, projected_cents: projectedCents },
     pledges: rows.sort((a, b) => String(b.created).localeCompare(String(a.created))),
   };
 }
 
 async function actionSetEvent(b) {
   const prev = await loadEvent();
-  const prevMakes = makesMap(prev);
   const patch = {};
   if (b.title != null) patch.title = stripTags(clip(b.title, 120)).trim() || SHOOTATHON.title;
   if (b.blurb != null) patch.blurb = stripTags(clip(b.blurb, 500)).trim();
-  if (b.goal_cents != null) { const g = intOrNull(b.goal_cents); patch.goal_cents = g == null ? 0 : Math.min(g, 100000000); }
   if (b.open != null) patch.open = !!b.open;
+  if (b.org_goal_cents != null) { const g = intOrNull(b.org_goal_cents); patch.org_goal_cents = g == null ? SHOOTATHON.defaultOrgGoalCents : Math.min(g, LIMITS.maxGoalCents); }
+
+  // Teams (process first so player team-refs can be validated against them).
+  let teams = (prev && Array.isArray(prev.teams)) ? prev.teams.slice() : [];
+  if (Array.isArray(b.teams)) {
+    if (b.teams.length > 30) return { status: 400, body: { error: 'too_many_teams' } };
+    const used = new Set(); teams = [];
+    for (const raw of b.teams) { const t = normalizeTeam(raw, used); if (t) teams.push(t); }
+    patch.teams = teams;
+  }
+  const isTeam = (slug) => teams.some((t) => t.slug === slug);
+
   if (Array.isArray(b.players)) {
-    if (b.players.length > 100) return { status: 400, body: { error: 'too_many_players' } };
+    if (b.players.length > 300) return { status: 400, body: { error: 'too_many_players' } };
+    const prevMakes = {}; ((prev && prev.players) || []).forEach((p) => { prevMakes[p.slug] = p.makes || 0; });
     const seen = new Set();
     const players = [];
     for (const raw of b.players) {
@@ -127,15 +120,18 @@ async function actionSetEvent(b) {
       let unique = slug, n = 2;
       while (seen.has(unique)) unique = `${slug}-${n++}`.slice(0, 40);
       seen.add(unique);
-      // Preserve a player's existing makes across edits (match by the previous slug or the new one).
+      let team = String((raw && raw.team) || '').trim().toLowerCase();
+      if (team && !isTeam(team)) team = ''; // drop a ref to a team that doesn't exist
+      const g = intOrNull(raw && raw.goal_cents);
+      const goal_cents = g == null ? SHOOTATHON.defaultPlayerGoalCents : Math.min(g, LIMITS.maxGoalCents);
       const makes = (raw && intOrNull(raw.makes) != null) ? Math.min(intOrNull(raw.makes), LIMITS.maxMakes)
         : (prevMakes[unique] != null ? prevMakes[unique] : (prevMakes[slug] || 0));
-      players.push({ slug: unique, name, makes });
+      players.push({ slug: unique, name, team, goal_cents, makes, blurb: stripTags(clip(raw && raw.blurb, 300)).trim() });
     }
     patch.players = players;
   }
   patch.updated_at = new Date().toISOString();
-  const w = await fsPatchVerified(EVENT_PATH, patch); // PATCH upserts: creates the doc if absent
+  const w = await fsPatchVerified(EVENT_PATH, patch);
   if (!w.ok) return { status: 502, body: { error: 'save_failed' } };
   return { status: 200, body: { ok: true } };
 }
@@ -162,17 +158,17 @@ async function actionSendLinks(req, b) {
   if (!event) return { status: 400, body: { error: 'no_event' } };
   const mm = makesMap(event);
   const base = baseUrl(req);
-  const onlyPledged = (b && b.id) ? [await fsGet(`pledges/${b.id}`)].filter(Boolean) : await loadPledges();
+  const list = (b && b.id) ? [await fsGet(`pledges/${b.id}`)].filter(Boolean) : await loadPledges();
   let invoiced = 0, emailed = 0, zero = 0, skipped = 0, failed = 0, remaining = 0;
-  const CAP = 150; // keep one invocation comfortably within the function time budget
-  for (const p of onlyPledged) {
+  const CAP = 150;
+  for (const p of list) {
     if (!p || !p.id) continue;
-    if (p.status !== 'pledged') { skipped++; continue; }
+    if (p.status !== 'pledged') { skipped++; continue; }  // only per-throw pledges reach 'pledged'
     if (invoiced + zero >= CAP) { remaining++; continue; }
-    const makes = p.player_slug === 'general' ? null : (mm[p.player_slug] || 0);
+    const tg = targetOf(p);
+    const makes = tg.type === 'player' ? (mm[tg.slug] || 0) : null;
     const amount = computePledgeCents(p, makes);
     if (amount <= 0) {
-      // Per-shot pledge whose player made 0 (or a sub-minimum total): nothing to collect.
       await fsPatch(`pledges/${p.id}`, { status: 'no_charge', amount_cents: 0, invoiced_at: new Date().toISOString() });
       zero++;
       continue;
@@ -181,9 +177,7 @@ async function actionSendLinks(req, b) {
     if (!w.ok) { failed++; continue; }
     invoiced++;
     try {
-      const merged = Object.assign({}, p, { status: 'invoiced', amount_cents: amount });
-      const pName = p.player_slug === 'general' ? '' : ((event.players || []).find((x) => x.slug === p.player_slug) || {}).name || '';
-      const { subject, html } = buildPayLinkEmail(merged, pName, payLink(base, p.id), makes);
+      const { subject, html } = buildPayLinkEmail(Object.assign({}, p, { status: 'invoiced', amount_cents: amount }), targetName(event, tg), payLink(base, p.id), makes);
       const ok = await sendMail({ to: p.donor_email, subject, html, bcc: ADMIN_EMAIL });
       await fsPatch(`pledges/${p.id}`, { paylink_email_sent: !!ok, paylink_email_at: new Date().toISOString() });
       if (ok) emailed++;
@@ -199,9 +193,9 @@ async function actionResend(req, b) {
   if (!p) return { status: 404, body: { error: 'not_found' } };
   if (p.status !== 'invoiced') return { status: 400, body: { error: 'not_invoiced' } };
   const event = await loadEvent();
-  const makes = p.player_slug === 'general' ? null : (makesMap(event)[p.player_slug] || 0);
-  const pName = p.player_slug === 'general' ? '' : ((event && event.players || []).find((x) => x.slug === p.player_slug) || {}).name || '';
-  const { subject, html } = buildPayLinkEmail(p, pName, payLink(baseUrl(req), p.id), makes);
+  const tg = targetOf(p);
+  const makes = tg.type === 'player' ? (makesMap(event)[tg.slug] || 0) : 0;
+  const { subject, html } = buildPayLinkEmail(p, targetName(event, tg), payLink(baseUrl(req), p.id), makes);
   const ok = await sendMail({ to: p.donor_email, subject, html, bcc: ADMIN_EMAIL });
   await fsPatch(`pledges/${b.id}`, { paylink_email_sent: !!ok, paylink_email_at: new Date().toISOString() });
   return { status: ok ? 200 : 502, body: ok ? { ok: true } : { error: 'send_failed' } };
@@ -211,7 +205,7 @@ async function actionCancel(b) {
   if (!safeId(b && b.id)) return { status: 400, body: { error: 'bad_id' } };
   const p = await fsGet(`pledges/${b.id}`);
   if (!p) return { status: 404, body: { error: 'not_found' } };
-  if (p.status === 'paid') return { status: 400, body: { error: 'already_paid' } }; // use a refund, not cancel
+  if (p.status === 'paid') return { status: 400, body: { error: 'already_paid' } };
   if (p.status === 'canceled') return { status: 200, body: { ok: true, already: true } };
   const w = await fsPatchVerified(`pledges/${b.id}`, { status: 'canceled', canceled_at: new Date().toISOString() });
   if (!w.ok) return { status: 502, body: { error: 'save_failed' } };
@@ -222,12 +216,9 @@ async function actionSync() {
   const pledges = await loadPledges();
   let checked = 0, paid = 0;
   for (const p of pledges) {
-    if (p.status !== 'invoiced') continue;
+    if (p.status !== 'invoiced' && p.status !== 'pending') continue;  // pending = an in-flight one-time donation
     checked++;
-    try {
-      const v = await verifyPayment(p);
-      if (v.paid) { await finalizeDonationPaid(p.id, p, v.patch); paid++; }
-    } catch (e) { /* best-effort backup */ }
+    try { const v = await verifyPayment(p); if (v.paid) { await finalizeDonationPaid(p.id, p, v.patch); paid++; } } catch (e) { /* best-effort */ }
   }
   return { status: 200, body: { ok: true, checked, paid } };
 }

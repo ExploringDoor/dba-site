@@ -93,11 +93,10 @@ function show(id){ ['loading','ready','paid','notready'].forEach(function(x){ $(
 
 var pid = qs('p') || '';
 if(qs('demo')==='1'){
-  var d={status:'invoiced',is_general:false,player_name:'Jimmy D',amount_cents:4200,per_shot_cents:50,makes:84};
   var row=function(k,v){ return '<div class="row"><span class="k">'+k+'</span><span>'+v+'</span></div>'; };
-  $('readyLead').innerHTML='Backing <b>Jimmy D</b> — thank you!';
-  $('amt').textContent=money(d.amount_cents);
-  $('recap').innerHTML=row('Supporting','Jimmy D')+row('Made shots','84 × '+money(50))+row('Total','<b>'+money(4200)+'</b>');
+  $('readyLead').innerHTML='Sponsoring <b>Jimmy Daniels</b> — thank you!';
+  $('amt').textContent=money(4200);
+  $('recap').innerHTML=row('Supporting','Jimmy Daniels')+row('Made free throws','84 × '+money(50))+row('Total','<b>'+money(4200)+'</b>');
   $('payBtn').setAttribute('href','#'); $('payBtn').textContent='Donate '+money(4200)+' →';
   show('ready');
 }
@@ -110,12 +109,13 @@ else {
     if(d.status!=='invoiced' || !(d.amount_cents>0)){ show('notready'); return; }
     // ready to pay
     var row=function(k,v){ return '<div class="row"><span class="k">'+k+'</span><span>'+v+'</span></div>'; };
-    var who = d.is_general ? 'The team (general fund)' : esc(d.player_name||'a player');
-    $('readyLead').innerHTML = d.is_general ? 'Thank you for supporting Downer Basketball Academy!' : ('Backing <b>'+who+'</b> — thank you!');
+    var isPlayer = d.target_type==='player';
+    var who = esc(d.target_name||'a player');
+    $('readyLead').innerHTML = isPlayer ? ('Sponsoring <b>'+who+'</b> — thank you!') : ('Thank you for supporting <b>'+who+'</b>!');
     $('amt').textContent = money(d.amount_cents);
     var html='';
     html += row('Supporting', who);
-    if(!d.is_general && d.makes!=null && d.per_shot_cents>0) html += row('Made shots', String(d.makes)+' × '+money(d.per_shot_cents));
+    if(isPlayer && d.makes!=null && d.per_shot_cents>0) html += row('Made free throws', String(d.makes)+' × '+money(d.per_shot_cents));
     html += row('Total', '<b>'+money(d.amount_cents)+'</b>');
     $('recap').innerHTML=html;
     $('payBtn').setAttribute('href','/api/pledge?pay='+encodeURIComponent(pid));

@@ -187,40 +187,34 @@ function donTaxFooter(paid) {
 }
 const donRow = (k, v, strong) => `<tr><td style="padding:9px 14px;color:#777;border-top:1px solid #eee;vertical-align:top;white-space:nowrap">${k}</td><td style="padding:9px 14px;border-top:1px solid #eee;text-align:right${strong ? ';font-weight:700' : ''}">${v}</td></tr>`;
 
-// 1) Sent the moment someone pledges (no card yet). Sets expectations for the pay-link later.
-export function buildPledgeEmail(pledge, playerName) {
-  const donor = donEsc((String(pledge.donor_name || '').trim().split(/\s+/)[0]) || 'there');
-  const backing = pledge.player_slug && pledge.player_slug !== 'general'
-    ? `to back <strong>${donEsc(playerName || 'your player')}</strong>` : 'to the team';
+// 1) Sent the moment someone makes a per-made-throw PLEDGE (no card yet). `targetName` is the
+// player they're sponsoring. Sets expectations for the pay-link after the event.
+export function buildPledgeEmail(pledge, targetName) {
+  const who = donEsc(targetName || 'your player');
   const desc = donEsc(pledgeDescription(pledge));
-  const next = pledge.kind === 'flat'
-    ? "After our Shoot-a-Thon we'll email you a secure link to complete your gift."
-    : "After the Shoot-a-Thon we'll count every made shot, then email you a secure link for your exact total — you only pay for shots actually made.";
   const inner = `
     <h2 style="margin:0 0 6px">Thanks for your pledge! &#127936;</h2>
-    <p style="color:#555;line-height:1.6;margin:0 0 16px">You've pledged <strong>${desc}</strong> ${backing} in the ${donEsc(pledge.clinic_title || SHOOTATHON.title)}. ${next} <strong>Nothing has been charged yet.</strong></p>
+    <p style="color:#555;line-height:1.6;margin:0 0 16px">You've pledged <strong>${desc}</strong> to sponsor <strong>${who}</strong> in the ${donEsc(SHOOTATHON.title)}. After the Shoot-a-Thon we'll count every made free throw, then email you a secure link for your exact total — you only pay for throws actually made. <strong>Nothing has been charged yet.</strong></p>
     <table style="width:100%;border-collapse:collapse;border:1px solid #eee;border-radius:8px;overflow:hidden;font-size:14px">
       <tr><td style="padding:9px 14px;color:#777;white-space:nowrap">Your pledge</td><td style="padding:9px 14px;text-align:right">${desc}</td></tr>
-      ${pledge.player_slug && pledge.player_slug !== 'general' ? donRow('Backing', donEsc(playerName || 'Player')) : donRow('Supporting', 'The team (general fund)')}
+      ${donRow('Sponsoring', who)}
     </table>
     ${donTaxFooter(false)}`;
   return { subject: 'Your Shoot-a-Thon pledge is in — thank you!', html: donShell('PLEDGE CONFIRMATION', inner) };
 }
 
 // 2) Sent after makes are counted: the exact total + a button to pay. `link` is a durable URL
-// on our site that mints a fresh checkout session at click-time (so it never expires).
-export function buildPayLinkEmail(pledge, playerName, link, makes) {
+// on our site that mints a fresh checkout session at click-time (so it never expires). Only
+// per-made-throw pledges reach here (one-time donations are paid at donation time).
+export function buildPayLinkEmail(pledge, targetName, link, makes) {
   const amount = dollars(pledge.amount_cents);
-  const donor = donEsc((String(pledge.donor_name || '').trim().split(/\s+/)[0]) || 'there');
+  const who = donEsc(targetName || 'your player');
   const href = donEsc(link);
-  const madeLine = (pledge.kind !== 'flat' && pledge.player_slug !== 'general')
-    ? `<p style="color:#555;line-height:1.6;margin:0 0 16px"><strong>${donEsc(playerName || 'Your player')}</strong> made <strong>${parseInt(makes, 10) || 0}</strong> shots! Your pledge of ${donEsc(pledgeDescription(pledge))} comes to <strong>${amount}</strong>.</p>`
-    : `<p style="color:#555;line-height:1.6;margin:0 0 16px">Thank you for pledging a <strong>${amount}</strong> gift to the ${donEsc(pledge.clinic_title || SHOOTATHON.title)}. Here's your secure link to complete it.</p>`;
   const inner = `
     <h2 style="margin:0 0 6px">Your Shoot-a-Thon total is ready</h2>
-    ${madeLine}
+    <p style="color:#555;line-height:1.6;margin:0 0 16px"><strong>${who}</strong> made <strong>${parseInt(makes, 10) || 0}</strong> free throws! Your pledge of ${donEsc(pledgeDescription(pledge))} comes to <strong>${amount}</strong>.</p>
     <table style="width:100%;border-collapse:collapse;border:1px solid #eee;border-radius:8px;overflow:hidden;font-size:14px;margin:0 0 20px">
-      ${pledge.player_slug && pledge.player_slug !== 'general' ? `<tr><td style="padding:9px 14px;color:#777;white-space:nowrap">Backing</td><td style="padding:9px 14px;text-align:right">${donEsc(playerName || 'Player')}</td></tr>${donRow('Made shots', String(parseInt(makes, 10) || 0))}${donRow('Your pledge', donEsc(pledgeDescription(pledge)))}` : `<tr><td style="padding:9px 14px;color:#777;white-space:nowrap">Your gift</td><td style="padding:9px 14px;text-align:right">One-time donation</td></tr>`}
+      ${donRow('Sponsoring', who)}${donRow('Made free throws', String(parseInt(makes, 10) || 0))}${donRow('Your pledge', donEsc(pledgeDescription(pledge)))}
       ${donRow('Total due', amount, true)}
     </table>
     <div style="text-align:center;margin:0 0 6px"><a href="${href}" style="display:inline-block;background:#8B1A2B;color:#fff;text-decoration:none;font-weight:700;font-size:16px;padding:14px 34px;border-radius:999px">Complete your ${amount} donation &rarr;</a></div>

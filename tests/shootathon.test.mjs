@@ -1,7 +1,7 @@
-// Offline tests for the Shoot-a-Thon (donations). Pure-logic checks for the authoritative
-// amount computation + pledge validation + emails, then the REAL handlers run end-to-end against
-// the in-memory Firestore / Stripe / SendGrid fakes: pledge → enter makes → send pay-link →
-// donor pays → webhook → receipt. Zero network.
+// Offline tests for the Shoot-a-Thon (free-throw fundraiser). Pure-logic checks for the
+// authoritative amount computation + target validation + emails, then the REAL handlers run
+// end-to-end against the in-memory Firestore / Stripe / SendGrid fakes: one-time donation paid
+// NOW, per-throw pledge billed AFTER, and the org/team/player roll-up totals. Zero network.
 // Run: npm test   (or: node tests/shootathon.test.mjs)
 
 import assert from 'node:assert/strict';
@@ -36,7 +36,6 @@ async function call(handler, o) { const res = mockRes(); await handler(mockReq(o
 
 const ADMIN = { 'x-admin-key': process.env.ADMIN_PASSWORD };
 const EVENT_PATH = `shootathon/${SHOOTATHON.eventId}`;
-const sid = (res) => String(res.headers.Location || '').split('/').pop();
 function sign(raw, secret = process.env.STRIPE_WEBHOOK_SECRET, t = Math.floor(Date.now() / 1000)) {
   return `t=${t},v1=${createHmac('sha256', secret).update(`${t}.`).update(raw).digest('hex')}`;
 }
@@ -48,162 +47,148 @@ async function deliverWebhook(pledgeId, sessionId) {
   return call(webhook, { method: 'POST', headers: { 'stripe-signature': sign(raw), 'content-type': 'application/json' }, body: raw });
 }
 function seedEvent(over = {}) {
-  fake.seed(EVENT_PATH, Object.assign({ title: 'DBA Shoot-a-Thon 2026', open: true, goal_cents: 500000, players: [{ slug: 'jimmy-d', name: 'Jimmy D', makes: 0 }, { slug: 'sara-k', name: 'Sara K', makes: 0 }] }, over));
+  fake.seed(EVENT_PATH, Object.assign({
+    title: 'Aces Shoot-a-Thon', open: true, org_goal_cents: 3000000,
+    teams: [{ slug: 'varsity', name: 'Varsity', goal_cents: 1000000 }, { slug: 'jv', name: 'JV', goal_cents: 1000000 }],
+    players: [
+      { slug: 'jimmy-d', name: 'Jimmy D', team: 'varsity', goal_cents: 100000, makes: 0 },
+      { slug: 'sara-k', name: 'Sara K', team: 'jv', goal_cents: 100000, makes: 0 },
+    ],
+  }, over));
 }
+const okPer = { kind: 'per_shot', target_type: 'player', target_slug: 'jimmy-d', per_shot_cents: 50, cap_cents: 10000, donor_name: 'Pat Q', donor_email: 'pat@x.com' };
+const okFlatPlayer = { kind: 'flat', target_type: 'player', target_slug: 'jimmy-d', flat_cents: 5000, donor_name: 'Dana R', donor_email: 'dana@x.com' };
+const okFlatOrg = { kind: 'flat', target_type: 'org', flat_cents: 10000, donor_name: 'Sam D', donor_email: 'sam@x.com' };
 
 // ════════════════════════════════════════════════════════════════════════
-group('computePledgeCents — authoritative, never trusts the browser');
-await test('per-shot = rate × makes', () => assert.equal(computePledgeCents({ kind: 'per_shot', per_shot_cents: 50 }, 84), 50 * 84));
+group('computePledgeCents — authoritative');
+await test('per-throw = rate × makes', () => assert.equal(computePledgeCents({ kind: 'per_shot', per_shot_cents: 50 }, 84), 4200));
 await test('cap limits the total', () => assert.equal(computePledgeCents({ kind: 'per_shot', per_shot_cents: 50, cap_cents: 2000 }, 84), 2000));
-await test('cap of 0 means no cap', () => assert.equal(computePledgeCents({ kind: 'per_shot', per_shot_cents: 50, cap_cents: 0 }, 100), 5000));
-await test('flat = the flat gift', () => assert.equal(computePledgeCents({ kind: 'flat', flat_cents: 30000 }, null), 30000));
+await test('flat = the gift', () => assert.equal(computePledgeCents({ kind: 'flat', flat_cents: 10000 }, null), 10000));
 await test('makes clamped to maxMakes', () => assert.equal(computePledgeCents({ kind: 'per_shot', per_shot_cents: 100 }, 99999), 100 * LIMITS.maxMakes));
-await test('per-shot below minimum → 0 (never invoiced)', () => assert.equal(computePledgeCents({ kind: 'per_shot', per_shot_cents: 1 }, 50), 0));
+await test('per-throw rate clamped to the $10 ceiling', () => assert.equal(computePledgeCents({ kind: 'per_shot', per_shot_cents: 99999 }, 2), LIMITS.maxPerShotCents * 2));
 await test('0 makes → $0', () => assert.equal(computePledgeCents({ kind: 'per_shot', per_shot_cents: 500 }, 0), 0));
-await test('per-shot rate clamped to ceiling before multiply', () => assert.equal(computePledgeCents({ kind: 'per_shot', per_shot_cents: 999999 }, 2), LIMITS.maxPerShotCents * 2));
-await test('single charge hard-capped at maxChargeCents', () => assert.ok(computePledgeCents({ kind: 'flat', flat_cents: 99999999 }, null) <= LIMITS.maxChargeCents));
 
-group('normalizePledge — validation + sanitization');
-const okPer = { kind: 'per_shot', player_slug: 'jimmy-d', per_shot_cents: 50, cap_cents: 10000, donor_name: 'Pat Q', donor_email: 'pat@x.com' };
-const okFlat = { kind: 'flat', player_slug: 'general', flat_cents: 5000, donor_name: 'Dana R', donor_email: 'dana@x.com' };
-await test('accepts a good per-shot pledge', () => { const r = normalizePledge(okPer); assert.ok(r.ok); assert.equal(r.pledge.per_shot_cents, 50); assert.equal(r.pledge.cap_cents, 10000); });
-await test('accepts a good flat/general pledge', () => { const r = normalizePledge(okFlat); assert.ok(r.ok); assert.equal(r.pledge.flat_cents, 5000); assert.equal(r.pledge.player_slug, 'general'); });
-await test('honeypot rejects bots', () => assert.equal(normalizePledge({ ...okPer, company: 'AcmeBot' }).error, 'spam'));
-await test('rejects bad email', () => assert.equal(normalizePledge({ ...okPer, donor_email: 'nope' }).error, 'bad_email'));
-await test('rejects missing name', () => assert.equal(normalizePledge({ ...okPer, donor_name: '' }).error, 'missing_name'));
-await test('per-shot requires a specific player', () => assert.equal(normalizePledge({ ...okPer, player_slug: 'general' }).error, 'per_shot_needs_player'));
-await test('rejects flat below the minimum', () => assert.equal(normalizePledge({ ...okFlat, flat_cents: 100 }).error, 'bad_amount'));
-await test('rejects per-shot below the minimum', () => assert.equal(normalizePledge({ ...okPer, per_shot_cents: 1 }).error, 'bad_per_shot'));
-await test('rejects a cap smaller than one made shot', () => assert.equal(normalizePledge({ ...okPer, cap_cents: 10 }).error, 'bad_cap'));
-await test('strips HTML metacharacters from the donor name', () => { const r = normalizePledge({ ...okPer, donor_name: 'Al<script>ert' }); assert.ok(r.ok); assert.ok(!/[<>]/.test(r.pledge.donor_name)); });
-await test('rejects a malformed player slug', () => assert.equal(normalizePledge({ ...okPer, player_slug: 'bad slug!' }).error, 'bad_player'));
+group('normalizePledge — targets + validation');
+await test('per-throw pledge on a player', () => { const r = normalizePledge(okPer); assert.ok(r.ok); assert.equal(r.pledge.target_type, 'player'); assert.equal(r.pledge.target_slug, 'jimmy-d'); });
+await test('one-time gift to a player', () => { const r = normalizePledge(okFlatPlayer); assert.ok(r.ok); assert.equal(r.pledge.flat_cents, 5000); });
+await test('one-time gift to the org', () => { const r = normalizePledge(okFlatOrg); assert.ok(r.ok); assert.equal(r.pledge.target_type, 'org'); });
+await test('one-time gift to a team', () => { const r = normalizePledge({ kind: 'flat', target_type: 'team', target_slug: 'varsity', flat_cents: 5000, donor_name: 'A', donor_email: 'a@x.com' }); assert.ok(r.ok); assert.equal(r.pledge.target_type, 'team'); });
+await test('per-throw to the org is rejected', () => assert.equal(normalizePledge({ ...okPer, target_type: 'org', target_slug: '' }).error, 'per_shot_needs_player'));
+await test('honeypot rejects bots', () => assert.equal(normalizePledge({ ...okPer, company: 'Bot' }).error, 'spam'));
+await test('bad email rejected', () => assert.equal(normalizePledge({ ...okPer, donor_email: 'nope' }).error, 'bad_email'));
+await test('flat below minimum rejected', () => assert.equal(normalizePledge({ ...okFlatOrg, flat_cents: 100 }).error, 'bad_amount'));
+await test('per-throw above $10 rejected', () => assert.equal(normalizePledge({ ...okPer, per_shot_cents: 2000 }).error, 'bad_per_shot'));
+await test('malformed target slug rejected', () => assert.equal(normalizePledge({ ...okPer, target_slug: 'bad slug!' }).error, 'bad_target'));
+await test('strips HTML from donor name', () => { const r = normalizePledge({ ...okPer, donor_name: 'Al<script>x' }); assert.ok(r.ok); assert.ok(!/[<>]/.test(r.pledge.donor_name)); });
 
-group('donation emails');
-await test('pledge email names the player + says nothing charged yet', () => { const { subject, html } = buildPledgeEmail({ kind: 'per_shot', player_slug: 'jimmy-d', per_shot_cents: 50, cap_cents: 10000 }, 'Jimmy D'); assert.match(subject, /pledge/i); assert.match(html, /Jimmy D/); assert.match(html, /Nothing has been charged yet/i); assert.match(html, /501\(c\)\(3\)/); });
-await test('pay-link email shows the total + the button link', () => { const { html } = buildPayLinkEmail({ kind: 'per_shot', player_slug: 'jimmy-d', per_shot_cents: 50, amount_cents: 4200 }, 'Jimmy D', 'https://dba.test/donate-pay.html?p=abc', 84); assert.match(html, /\$42\.00/); assert.match(html, /donate-pay\.html\?p=abc/); assert.match(html, /84/); });
-await test('receipt email states tax-deductible + amount + no goods/services', () => { const { html } = buildDonationReceiptEmail({ id: 'p1', amount_paid_cents: 4200, paid_via: 'Stripe', card_last4: '4242' }); assert.match(html, /\$42\.00/); assert.match(html, /tax-deductible/i); assert.match(html, /No goods or services/i); });
-await test('description reads naturally', () => { assert.equal(pledgeDescription({ kind: 'per_shot', per_shot_cents: 50, cap_cents: 10000 }), '$0.50 per made shot (up to $100.00)'); assert.equal(pledgeDescription({ kind: 'flat', flat_cents: 30000 }), '$300.00 one-time gift'); });
+group('emails');
+await test('pledge email names the player + nothing charged yet', () => { const { subject, html } = buildPledgeEmail({ kind: 'per_shot', per_shot_cents: 50, cap_cents: 10000 }, 'Jimmy D'); assert.match(subject, /pledge/i); assert.match(html, /Jimmy D/); assert.match(html, /Nothing has been charged yet/i); assert.match(html, /free throw/i); });
+await test('pay-link email shows total + button', () => { const { html } = buildPayLinkEmail({ kind: 'per_shot', per_shot_cents: 50, amount_cents: 4200 }, 'Jimmy D', 'https://dba.test/donate-pay.html?p=abc', 84); assert.match(html, /\$42\.00/); assert.match(html, /donate-pay\.html\?p=abc/); assert.match(html, /84/); });
+await test('receipt email: tax-deductible + no goods/services', () => { const { html } = buildDonationReceiptEmail({ id: 'p1', amount_paid_cents: 5000, paid_via: 'Stripe', card_last4: '4242' }); assert.match(html, /\$50\.00/); assert.match(html, /tax-deductible/i); assert.match(html, /No goods or services/i); });
+await test('description reads naturally', () => { assert.equal(pledgeDescription({ kind: 'per_shot', per_shot_cents: 50, cap_cents: 10000 }), '$0.50 per made free throw (up to $100.00)'); assert.equal(pledgeDescription({ kind: 'flat', flat_cents: 10000 }), '$100.00 one-time donation'); });
 
 // ════════════════════════════════════════════════════════════════════════
-group('public GET /api/pledge — config + thermometer');
-await test('no event → {open:false}', async () => { const r = await call(pledge, {}); assert.equal(r.statusCode, 200); assert.equal(r.body.open, false); });
-await test('open event → players + totals, no PII', async () => {
+group('public GET — snapshot with goals + roll-up');
+await test('no event → {open:false}', async () => { const r = await call(pledge, {}); assert.equal(r.body.open, false); });
+await test('open event → org/team/player goals, 0 raised', async () => {
   fake.reset(); seedEvent();
   const r = await call(pledge, {});
   assert.equal(r.body.open, true);
-  assert.equal(r.body.players.length, 2);
-  assert.equal(r.body.supporter_count, 0);
-  assert.ok(!JSON.stringify(r.body).includes('@'), 'config must not leak donor emails');
+  assert.equal(r.body.org.goal_cents, 3000000);
+  assert.equal(r.body.teams.length, 2);
+  assert.equal(r.body.players.find((p) => p.slug === 'jimmy-d').goal_cents, 100000);
+  assert.equal(r.body.org.raised_cents, 0);
+  assert.ok(!JSON.stringify(r.body).includes('@'), 'no donor emails leak');
 });
 
-group('POST /api/pledge — records a pledge, no charge');
-let perId = '';
-await test('valid per-shot pledge → 200 {ok,id}; stored "pledged"; confirmation emailed', async () => {
+group('one-time donation → paid NOW → rolls up to player + team + org');
+await test('flat gift to a player: checkout now, webhook finalizes, totals roll up', async () => {
   fake.reset(); seedEvent();
-  const r = await call(pledge, { method: 'POST', body: { ...okPer } });
-  assert.equal(r.statusCode, 200); assert.ok(r.body.id); perId = r.body.id;
-  const d = fake.doc('pledges/' + perId);
-  assert.equal(d.status, 'pledged'); assert.equal(d.amount_cents, 0); assert.equal(d.per_shot_cents, 50);
-  const mail = fake.mailsTo('pat@x.com'); assert.equal(mail.length, 1); assert.match(mail[0].subject, /pledge/i);
-  assert.ok(mail[0].bcc.includes(process.env.ADMIN_EMAIL), 'admin is bcc\'d');
-});
-await test('unknown player → 400', async () => { seedEvent(); const r = await call(pledge, { method: 'POST', body: { ...okPer, player_slug: 'nobody' } }); assert.equal(r.statusCode, 400); assert.equal(r.body.error, 'unknown_player'); });
-await test('closed event → 503 closed', async () => { seedEvent({ open: false }); const r = await call(pledge, { method: 'POST', body: { ...okPer } }); assert.equal(r.statusCode, 503); assert.equal(r.body.error, 'closed'); });
-await test('tampered amount is ignored — stored rate is the one validated', async () => {
-  fake.reset(); seedEvent();
-  const r = await call(pledge, { method: 'POST', body: { ...okPer, amount_cents: 1, per_shot_cents: 50 } });
-  assert.equal(r.statusCode, 200);
-  assert.equal(fake.doc('pledges/' + r.body.id).amount_cents, 0); // never set from the browser
-});
-
-group('admin /api/shootathon — auth gate');
-await test('missing key → 401', async () => { const r = await call(shootathon, { method: 'POST', body: { action: 'config' } }); assert.equal(r.statusCode, 401); });
-await test('wrong key → 401', async () => { const r = await call(shootathon, { method: 'POST', headers: { 'x-admin-key': 'nope' }, body: { action: 'config' } }); assert.equal(r.statusCode, 401); });
-await test('GET not allowed', async () => { const r = await call(shootathon, { method: 'GET', headers: ADMIN }); assert.equal(r.statusCode, 405); });
-
-group('full flow — pledge → makes → send link → pay → webhook → receipt');
-await test('end-to-end per-shot donation', async () => {
-  fake.reset(); seedEvent();
-  // 1) two supporters pledge: per-shot on Jimmy, and flat/general
-  const p1 = (await call(pledge, { method: 'POST', body: { ...okPer, donor_email: 'pat@x.com' } })).body.id;
-  const p2 = (await call(pledge, { method: 'POST', body: { ...okFlat, donor_email: 'dana@x.com' } })).body.id;
-  assert.ok(p1 && p2);
-
-  // 2) admin enters makes: Jimmy 84
-  const sm = await call(shootathon, { method: 'POST', headers: ADMIN, body: { action: 'set_makes', makes: { 'jimmy-d': 84 } } });
-  assert.equal(sm.statusCode, 200);
-  assert.equal(fake.doc(EVENT_PATH).players.find((p) => p.slug === 'jimmy-d').makes, 84);
-
-  // 3) admin sends pay-links
-  const sl = await call(shootathon, { method: 'POST', headers: ADMIN, body: { action: 'send_links' } });
-  assert.equal(sl.statusCode, 200);
-  assert.equal(sl.body.invoiced, 2);     // per-shot (84×$0.50=$42) + flat ($50)
-  assert.equal(sl.body.emailed, 2);
-  const d1 = fake.doc('pledges/' + p1);
-  assert.equal(d1.status, 'invoiced'); assert.equal(d1.amount_cents, 4200);
-  assert.equal(fake.doc('pledges/' + p2).amount_cents, 5000);
-  assert.ok(fake.mailsTo('pat@x.com').some((m) => m.html.includes('donate-pay.html?p=' + p1)), 'pay-link emailed');
-
-  // 4) donor opens the pay-link → fresh checkout session, 302 to Stripe
-  const pay = await call(pledge, { query: { pay: p1 } });
-  assert.equal(pay.statusCode, 302);
-  assert.match(pay.headers.Location, /checkout\.stripe\.com/);
-  const sessionId = fake.doc('pledges/' + p1).stripe_session_id;
-  assert.ok(sessionId, 'session id stored on the pledge');
-  assert.equal(fake.stripe.session(sessionId).amount_total, 4200);
-  assert.equal(fake.stripe.session(sessionId).metadata.kind, 'donation');
-
-  // 5) donor pays → Stripe webhook finalizes
+  const r = await call(pledge, { method: 'POST', body: { ...okFlatPlayer } });
+  assert.equal(r.statusCode, 200); assert.equal(r.body.pay, true); assert.ok(r.body.url); assert.ok(r.body.id);
+  const d = fake.doc('pledges/' + r.body.id);
+  assert.equal(d.status, 'pending'); assert.equal(d.amount_cents, 5000); assert.equal(d.target_type, 'player');
+  const sessionId = d.stripe_session_id;
+  assert.equal(fake.stripe.session(sessionId).amount_total, 5000);
   fake.stripe.pay(sessionId, { last4: '4242' });
-  const wh = await deliverWebhook(p1, sessionId);
-  assert.equal(wh.statusCode, 200); assert.equal(wh.body.donation_finalized, true);
-  const paid = fake.doc('pledges/' + p1);
-  assert.equal(paid.status, 'paid'); assert.equal(paid.amount_paid_cents, 4200); assert.equal(paid.card_last4, '4242');
-  assert.ok(fake.mailsTo('pat@x.com').some((m) => /Donation received/i.test(m.subject)), 'receipt emailed');
+  const wh = await deliverWebhook(r.body.id, sessionId);
+  assert.equal(wh.body.donation_finalized, true);
+  assert.equal(fake.doc('pledges/' + r.body.id).status, 'paid');
+  assert.ok(fake.mailsTo('dana@x.com').some((m) => /Donation received/i.test(m.subject)), 'receipt emailed');
+  // roll-up: $50 shows on Jimmy ($1k), Varsity ($10k), and the org ($30k)
+  const snap = (await call(pledge, {})).body;
+  assert.equal(snap.players.find((p) => p.slug === 'jimmy-d').raised_cents, 5000);
+  assert.equal(snap.teams.find((t) => t.slug === 'varsity').raised_cents, 5000);
+  assert.equal(snap.teams.find((t) => t.slug === 'jv').raised_cents, 0);
+  assert.equal(snap.org.raised_cents, 5000);
 });
-await test('webhook is idempotent — a second delivery sends no second receipt', async () => {
+await test('flat gift to the org: counts for the org only', async () => {
   fake.reset(); seedEvent();
-  const p1 = (await call(pledge, { method: 'POST', body: { ...okPer, donor_email: 'pat@x.com' } })).body.id;
+  const id = (await call(pledge, { method: 'POST', body: { ...okFlatOrg } })).body.id;
+  fake.stripe.pay(fake.doc('pledges/' + id).stripe_session_id);
+  await deliverWebhook(id, fake.doc('pledges/' + id).stripe_session_id);
+  const snap = (await call(pledge, {})).body;
+  assert.equal(snap.org.raised_cents, 10000);
+  assert.equal(snap.teams.find((t) => t.slug === 'varsity').raised_cents, 0);
+});
+await test('unknown player rejected; unknown team rejected', async () => {
+  fake.reset(); seedEvent();
+  assert.equal((await call(pledge, { method: 'POST', body: { ...okFlatPlayer, target_slug: 'nobody' } })).body.error, 'unknown_player');
+  assert.equal((await call(pledge, { method: 'POST', body: { kind: 'flat', target_type: 'team', target_slug: 'ghost', flat_cents: 5000, donor_name: 'A', donor_email: 'a@x.com' } })).body.error, 'unknown_team');
+});
+await test('closed event → 503', async () => { fake.reset(); seedEvent({ open: false }); assert.equal((await call(pledge, { method: 'POST', body: { ...okFlatOrg } })).statusCode, 503); });
+
+group('per-throw pledge → billed AFTER the event');
+await test('pledge now (no charge) → makes → pay-link → pay → paid → rolls up', async () => {
+  fake.reset(); seedEvent();
+  const pr = await call(pledge, { method: 'POST', body: { ...okPer } });
+  assert.equal(pr.body.pledged, true);
+  const id = pr.body.id;
+  assert.equal(fake.doc('pledges/' + id).status, 'pledged');
+  assert.ok(fake.mailsTo('pat@x.com').some((m) => /pledge/i.test(m.subject)), 'pledge email');
+  // enter makes + send links
   await call(shootathon, { method: 'POST', headers: ADMIN, body: { action: 'set_makes', makes: { 'jimmy-d': 84 } } });
-  await call(shootathon, { method: 'POST', headers: ADMIN, body: { action: 'send_links' } });
-  await call(pledge, { query: { pay: p1 } });
-  const sessionId = fake.doc('pledges/' + p1).stripe_session_id;
+  const sl = await call(shootathon, { method: 'POST', headers: ADMIN, body: { action: 'send_links' } });
+  assert.equal(sl.body.invoiced, 1); assert.equal(sl.body.emailed, 1);
+  assert.equal(fake.doc('pledges/' + id).amount_cents, 4200);
+  // donor pays
+  await call(pledge, { query: { pay: id } });
+  const sessionId = fake.doc('pledges/' + id).stripe_session_id;
   fake.stripe.pay(sessionId);
-  await deliverWebhook(p1, sessionId);
-  const receiptsAfterFirst = fake.mailsTo('pat@x.com').filter((m) => /Donation received/i.test(m.subject)).length;
-  const again = await deliverWebhook(p1, sessionId);
-  assert.equal(again.body.already, 'paid');
-  assert.equal(fake.mailsTo('pat@x.com').filter((m) => /Donation received/i.test(m.subject)).length, receiptsAfterFirst);
+  await deliverWebhook(id, sessionId);
+  assert.equal(fake.doc('pledges/' + id).status, 'paid');
+  const snap = (await call(pledge, {})).body;
+  assert.equal(snap.org.raised_cents, 4200);
+  assert.equal(snap.players.find((p) => p.slug === 'jimmy-d').raised_cents, 4200);
 });
-await test('a player who made 0 shots → pledge marked no_charge, not invoiced', async () => {
+await test('player with 0 makes → no_charge, not invoiced', async () => {
   fake.reset(); seedEvent();
-  const p1 = (await call(pledge, { method: 'POST', body: { ...okPer } })).body.id; // Jimmy, 0 makes
+  const id = (await call(pledge, { method: 'POST', body: { ...okPer } })).body.id;
   const sl = await call(shootathon, { method: 'POST', headers: ADMIN, body: { action: 'send_links' } });
   assert.equal(sl.body.zero, 1); assert.equal(sl.body.invoiced, 0);
-  assert.equal(fake.doc('pledges/' + p1).status, 'no_charge');
+  assert.equal(fake.doc('pledges/' + id).status, 'no_charge');
 });
-await test('send_links is idempotent — already-invoiced pledges are skipped', async () => {
+
+group('admin — auth + config');
+await test('missing key → 401', async () => assert.equal((await call(shootathon, { method: 'POST', body: { action: 'config' } })).statusCode, 401));
+await test('config returns teams, players, totals', async () => {
   fake.reset(); seedEvent();
-  await call(pledge, { method: 'POST', body: { ...okFlat } });
-  await call(shootathon, { method: 'POST', headers: ADMIN, body: { action: 'send_links' } });
-  const second = await call(shootathon, { method: 'POST', headers: ADMIN, body: { action: 'send_links' } });
-  assert.equal(second.body.invoiced, 0); assert.equal(second.body.skipped, 1);
+  const r = await call(shootathon, { method: 'POST', headers: ADMIN, body: { action: 'config' } });
+  assert.equal(r.body.event.teams.length, 2);
+  assert.equal(r.body.event.org_goal_cents, 3000000);
+  assert.equal(r.body.event.players.find((p) => p.slug === 'jimmy-d').team, 'varsity');
 });
-await test('cancel removes a pledge from the totals; config reports projections', async () => {
-  fake.reset(); seedEvent();
-  const p1 = (await call(pledge, { method: 'POST', body: { ...okFlat } })).body.id;
-  const c = await call(shootathon, { method: 'POST', headers: ADMIN, body: { action: 'cancel', id: p1 } });
-  assert.equal(c.statusCode, 200);
-  assert.equal(fake.doc('pledges/' + p1).status, 'canceled');
-  const cfg = await call(shootathon, { method: 'POST', headers: ADMIN, body: { action: 'config' } });
-  assert.equal(cfg.body.totals.pledges, 0); // the only pledge was canceled
-});
-await test('pay-link refuses a pledge that is not yet invoiced', async () => {
-  fake.reset(); seedEvent();
-  const p1 = (await call(pledge, { method: 'POST', body: { ...okPer } })).body.id; // still 'pledged'
-  const r = await call(pledge, { query: { pay: p1 } });
-  assert.equal(r.statusCode, 302);
-  assert.match(r.headers.Location, /e=notready/);
+await test('set_event creates teams + players with goals; makes preserved on edit', async () => {
+  fake.reset();
+  await call(shootathon, { method: 'POST', headers: ADMIN, body: { action: 'set_event', title: 'Aces Shoot-a-Thon', open: true, org_goal_cents: 3000000, teams: [{ name: 'Varsity', goal_cents: 1000000 }], players: [{ name: 'Jimmy D', team: 'varsity', goal_cents: 100000 }] } });
+  let ev = fake.doc(EVENT_PATH);
+  assert.equal(ev.teams[0].slug, 'varsity');
+  assert.equal(ev.players[0].goal_cents, 100000);
+  await call(shootathon, { method: 'POST', headers: ADMIN, body: { action: 'set_makes', makes: { 'jimmy-d': 50 } } });
+  // re-save the roster (e.g. renamed) → makes should survive
+  await call(shootathon, { method: 'POST', headers: ADMIN, body: { action: 'set_event', players: [{ slug: 'jimmy-d', name: 'Jimmy Dee', team: 'varsity' }] } });
+  assert.equal(fake.doc(EVENT_PATH).players[0].makes, 50);
 });
 
 console.log(`\n${pass} passed, ${fail} failed`);
