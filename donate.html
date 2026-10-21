@@ -102,6 +102,16 @@ h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:2.2rem;margin:
 .hidden{display:none}
 .banner{border-radius:12px;padding:11px 15px;margin-bottom:16px;font-size:.9rem;background:rgba(212,80,106,.12);border:1px solid rgba(212,80,106,.4);color:var(--txt-m)}
 .closed{text-align:center;padding:50px 20px}
+.matchbar{background:linear-gradient(90deg,var(--mrn),var(--pink));color:#fff;border-radius:12px;padding:12px 16px;margin-bottom:16px;text-align:center;font-weight:600;font-size:.95rem;box-shadow:0 2px 14px rgba(168,46,82,.3)}
+.therm.met > i{background:linear-gradient(90deg,var(--ok),#67d98a)}
+.therm-nums .met-tag{font-family:'Saira Condensed',sans-serif;color:var(--ok);font-size:1.05rem}
+.faq{background:var(--glass);border:1px solid var(--glass-b);border-radius:var(--r);padding:4px 20px;margin-bottom:18px}
+.faq summary{cursor:pointer;padding:14px 0;font-weight:600;color:var(--txt);list-style:none}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::before{content:'›';display:inline-block;margin-right:10px;color:var(--pink);transition:transform .2s}
+.faq[open] summary::before{transform:rotate(90deg)}
+.faq ul{margin:0 0 16px 0;padding-left:20px;color:var(--txt-m);font-size:.9rem;line-height:1.7}
+.faq li{margin-bottom:7px}.faq li b{color:var(--txt)}
 .spinner{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;display:inline-block;animation:spin 1s linear infinite;vertical-align:-3px}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.spinner{animation:none}.therm>i{transition:none}}
@@ -142,9 +152,10 @@ function playerBy(slug){ return (CFG.players||[]).find(function(x){return x.slug
 function playersOf(teamSlug){ return (CFG.players||[]).filter(function(p){return p.team===teamSlug;}); }
 
 function therm(raised,goal){
+  var met=goal>0&&(raised||0)>=goal;
   var pct=goal>0?Math.min(100,Math.round((raised||0)/goal*100)):0;
-  return '<div class="therm"><i style="width:'+pct+'%"></i></div>'+
-    '<div class="therm-nums"><span><b>'+money(raised||0)+'</b> raised</span>'+(goal>0?'<span class="pct">'+pct+'%</span><span class="dim">of '+money(goal)+'</span>':'')+'</div>';
+  return '<div class="therm'+(met?' met':'')+'"><i style="width:'+pct+'%"></i></div>'+
+    '<div class="therm-nums"><span><b>'+money(raised||0)+'</b> raised</span>'+(goal>0?(met?'<span class="met-tag">🎉 Goal met!</span>':'<span class="pct">'+pct+'%</span>')+'<span class="dim">of '+money(goal)+'</span>':'')+'</div>';
 }
 
 function recentFor(filter){
@@ -210,6 +221,12 @@ function renderOrg(){
        '<div class="grid" id="searchResults"></div>';
   }
   h+=recentFor(null);
+  h+='<details class="faq"><summary>How it works</summary><ul>'+
+    '<li><b>Sponsor a player per made free throw</b> — e.g. $0.50 × 100 free throws = $50. You’re billed only <b>after</b> the event, for throws actually made.</li>'+
+    '<li><b>Or donate once, now</b> — any amount, charged right away.</li>'+
+    '<li>Every gift counts toward the player, their team, <b>and</b> the whole program’s goal.</li>'+
+    '<li><b>Tax-deductible</b> — your receipt comes from the booster club, a 501(c)(3). No goods or services are provided in exchange.</li>'+
+    '</ul></details>';
   $('wrap').innerHTML=h;
   var s=$('search'); if(s){ s.addEventListener('input',runSearch); runSearch(); }
 }
@@ -249,8 +266,18 @@ function renderTeam(slug){
     });
     h+='</div>';
   } else { h+='<p class="dim">Players will appear here soon.</p>'; }
+  var tlink=location.origin+location.pathname+'?team='+encodeURIComponent(slug);
+  var ttext='Support the Lower Merion Aces '+t.name+' in our Shoot-a-Thon! Donate here: '+tlink;
+  h+='<div class="sec-h">Share '+esc(t.name)+'</div><div class="card">'+
+      '<div class="share-row"><input readonly value="'+esc(tlink)+'"><button class="btn ghost" type="button" id="tCopy">Copy link</button></div>'+
+      '<div class="share-btns">'+
+        '<a href="https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(tlink)+'" target="_blank" rel="noopener">📘 Facebook</a>'+
+        '<a href="https://twitter.com/intent/tweet?url='+encodeURIComponent(tlink)+'&text='+encodeURIComponent(ttext)+'" target="_blank" rel="noopener">𝕏 Post</a>'+
+        '<a href="sms:?&body='+encodeURIComponent(ttext)+'">💬 Text</a>'+
+      '</div></div>';
   h+=recentFor({type:'team',slug:slug});
   $('wrap').innerHTML=h;
+  if($('tCopy')) $('tCopy').addEventListener('click',function(){ copyText(tlink,this); });
 }
 
 function renderPlayer(slug){
@@ -433,9 +460,10 @@ function route(){
   else if(team) renderTeam(team);
   else renderOrg();
   var e=qs('e'); if(e&&ERR_PARAMS[e]){ var b=document.createElement('div'); b.className='banner'; b.textContent=ERR_PARAMS[e]; $('wrap').insertBefore(b,$('wrap').firstChild); }
+  if(CFG.match_text){ var mb=document.createElement('div'); mb.className='matchbar'; mb.innerHTML='🔥 '+esc(CFG.match_text); $('wrap').insertBefore(mb,$('wrap').firstChild); }
 }
 
-var DEMO_CFG={ open:true, title:'Aces Shoot-a-Thon', blurb:"Sponsor an Aces player per made free throw — or make a one-time donation. Every gift counts toward their goal, their team's, and our whole program's.", event_date:'2026-12-15', about:"Lower Merion Boys Basketball will host its team-wide Shoot-a-Thon on December 15th! During the event every athlete will shoot 100 free throws. We're looking for sponsors for every MADE free throw — pledge anything from $0.25 to $10 per made free throw, or make a one-time donation. Funds raised help cover staffing and supplemental training for our younger Aces on the freshman and JV teams.", supporter_count:34,
+var DEMO_CFG={ open:true, title:'Aces Shoot-a-Thon', match_text:'All gifts matched up to $5,000 through Friday!', blurb:"Sponsor an Aces player per made free throw — or make a one-time donation. Every gift counts toward their goal, their team's, and our whole program's.", event_date:'2026-12-15', about:"Lower Merion Boys Basketball will host its team-wide Shoot-a-Thon on December 15th! During the event every athlete will shoot 100 free throws. We're looking for sponsors for every MADE free throw — pledge anything from $0.25 to $10 per made free throw, or make a one-time donation. Funds raised help cover staffing and supplemental training for our younger Aces on the freshman and JV teams.", supporter_count:34,
   org:{goal_cents:3000000,raised_cents:1284000},
   teams:[{slug:'varsity',name:'Varsity',goal_cents:1000000,raised_cents:742000},{slug:'jv',name:'JV',goal_cents:1000000,raised_cents:310000},{slug:'freshman',name:'Freshman',goal_cents:1000000,raised_cents:232000}],
   players:[{slug:'jimmy-d',name:'Jimmy Daniels',team:'varsity',goal_cents:100000,raised_cents:68000,blurb:"Senior guard. Help me hit my $1,000 goal — I’ll be draining free throws all day!"},{slug:'marcus-l',name:'Marcus Lee',team:'varsity',goal_cents:100000,raised_cents:52000,blurb:''},{slug:'sara-k',name:'Sara Kim',team:'jv',goal_cents:100000,raised_cents:41000,blurb:''},{slug:'andre-w',name:'Andre White',team:'freshman',goal_cents:100000,raised_cents:12000,blurb:''}],

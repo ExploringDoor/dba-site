@@ -194,7 +194,7 @@ async function handleGet(req, res) {
   let pledges = [];
   try { pledges = await fsQuery('pledges', 'event_id', 'EQUAL', SHOOTATHON.eventId); } catch (e) { pledges = []; }
   const snap = buildSnapshot(event, pledges);
-  return res.status(200).json(Object.assign({ open: true, ready: providerReady(), title: event.title || SHOOTATHON.title, blurb: event.blurb || '', event_date: event.event_date || '', about: event.about || '' }, snap));
+  return res.status(200).json(Object.assign({ open: true, ready: providerReady(), title: event.title || SHOOTATHON.title, blurb: event.blurb || '', event_date: event.event_date || '', about: event.about || '', match_text: event.match_text || '' }, snap));
 }
 
 // ── POST ─────────────────────────────────────────────────────────────────

@@ -81,7 +81,7 @@ async function actionConfig() {
     event: {
       event_id: SHOOTATHON.eventId, title: ev.title || SHOOTATHON.title, blurb: ev.blurb || '',
       open: !!ev.open, org_goal_cents: ev.org_goal_cents || 0,
-      event_date: ev.event_date || '', about: ev.about || '',
+      event_date: ev.event_date || '', about: ev.about || '', match_text: ev.match_text || '',
       teams: (ev.teams || []).map((t) => ({ slug: t.slug, name: t.name, goal_cents: t.goal_cents || 0 })),
       players: (ev.players || []).map((p) => ({ slug: p.slug, name: p.name, team: p.team || '', goal_cents: p.goal_cents || 0, makes: p.makes || 0, blurb: p.blurb || '' })),
     },
@@ -96,6 +96,7 @@ async function actionSetEvent(b) {
   if (b.title != null) patch.title = stripTags(clip(b.title, 120)).trim() || SHOOTATHON.title;
   if (b.blurb != null) patch.blurb = stripTags(clip(b.blurb, 500)).trim();
   if (b.about != null) patch.about = stripTags(clip(b.about, 2000)).trim();
+  if (b.match_text != null) patch.match_text = stripTags(clip(b.match_text, 200)).trim();
   if (b.event_date != null) { const d = String(b.event_date || '').trim(); patch.event_date = /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : ''; }
   if (b.open != null) patch.open = !!b.open;
   if (b.org_goal_cents != null) { const g = intOrNull(b.org_goal_cents); patch.org_goal_cents = g == null ? SHOOTATHON.defaultOrgGoalCents : Math.min(g, LIMITS.maxGoalCents); }

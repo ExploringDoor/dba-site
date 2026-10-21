@@ -103,6 +103,7 @@ tr:last-child td{border-bottom:none}
     </div>
     <div class="fld"><label>Short blurb (optional)</label><input class="inp" id="evBlurb" maxlength="500" placeholder="Sponsor an Aces player per made free throw!"></div>
     <div class="fld"><label>About the event (optional — shown on the main page)</label><textarea class="inp" id="evAbout" rows="4" maxlength="2000" placeholder="During the event every athlete will shoot 100 free throws…"></textarea></div>
+    <div class="fld"><label>Matching-gift banner (optional — leave blank for none)</label><input class="inp" id="evMatch" maxlength="200" placeholder="e.g. All gifts matched up to $5,000 through Friday!"></div>
 
     <div class="subh">Teams <span style="text-transform:none;letter-spacing:0;font-weight:400">— name + goal</span></div>
     <div id="teamRows"></div>
@@ -111,6 +112,16 @@ tr:last-child td{border-bottom:none}
     <div class="subh">Players <span style="text-transform:none;letter-spacing:0;font-weight:400">— name, team, goal</span></div>
     <div id="playerRows"></div>
     <button class="btn sm" id="addPlayer" type="button">+ Add player</button>
+    <details style="margin-top:10px"><summary style="cursor:pointer;font-size:.82rem;color:var(--dim)">+ Bulk add (paste a whole roster)</summary>
+      <div style="margin-top:8px">
+        <textarea class="inp" id="bulkNames" rows="4" placeholder="One name per line:&#10;Israel Ingram&#10;Colin Beck&#10;William Yard"></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap">
+          <span style="font-size:.8rem;color:var(--dim)">Team:</span><select class="inp" id="bulkTeam" style="width:auto;flex:none"></select>
+          <button class="btn sm" id="bulkAdd" type="button">Add all</button>
+          <span style="font-size:.8rem;color:var(--dim)">→ then <b>Save setup</b></span>
+        </div>
+      </div>
+    </details>
 
     <label class="chk" style="margin:16px 0"><input type="checkbox" id="evOpen"><span><b>Open for donations</b> — the public page accepts donations when this is on</span></label>
     <div><button class="btn primary" id="saveSetup" type="button">Save setup</button></div>
@@ -141,6 +152,7 @@ tr:last-child td{border-bottom:none}
 
   <!-- PLEDGES -->
   <div class="sec" style="padding-bottom:10px">
+    <button class="btn sm" id="csvBtn" type="button" style="float:right">⬇ Export CSV</button>
     <h2>Donations &amp; pledges</h2>
     <p class="hint" id="pledgeHint"></p>
     <div class="tbl-wrap">
@@ -215,6 +227,27 @@ function renderMakes(){
 }
 $('addTeam').addEventListener('click',function(){ state.teams.push({slug:'',name:'',goal_cents:1000000}); renderTeams(); renderPlayers(); });
 $('addPlayer').addEventListener('click',function(){ state.players.push({slug:'',name:'',team:'',goal_cents:100000,makes:0}); renderPlayers(); renderMakes(); });
+$('bulkAdd').addEventListener('click',function(){
+  var names=($('bulkNames').value||'').split('\n').map(function(s){return s.trim();}).filter(Boolean);
+  if(!names.length) return;
+  var team=$('bulkTeam').value;
+  names.forEach(function(n){ state.players.push({slug:'',name:n,team:team,goal_cents:100000,makes:0}); });
+  $('bulkNames').value='';
+  renderPlayers(); renderMakes();
+  setStatus($('setupStatus'), names.length+' player'+(names.length===1?'':'s')+' added below — review, then click Save setup.','ok');
+});
+function csvCell(v){ v=String(v==null?'':v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
+$('csvBtn').addEventListener('click',function(){
+  var rows=(state.cfg&&state.cfg.pledges)||[];
+  if(!rows.length){ alert('No donations to export yet.'); return; }
+  var head=['Supporter','Email','Supporting','Type','Pledge','Made','Amount','Status','Date','Message','Anonymous'];
+  var lines=[head.join(',')];
+  rows.forEach(function(p){
+    lines.push([p.donor_name,p.donor_email,p.target_name,(p.kind==='per_shot'?'Per throw':'One-time'),p.description,(p.makes==null?'':p.makes),(p.computed_cents/100).toFixed(2),p.status,String(p.paid_at||p.created||'').slice(0,10),p.message||'',(p.anonymous?'yes':'')].map(csvCell).join(','));
+  });
+  var blob=new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='aces-shootathon-donations.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(function(){URL.revokeObjectURL(a.href);},1000);
+});
 
 /* ── render ── */
 function render(){
@@ -224,8 +257,9 @@ function render(){
     '<div class="tile"><div class="n">'+(t.paid||0)+'</div><div class="l">Paid</div></div>'+
     '<div class="tile"><div class="n">'+money(t.raised_cents||0)+'</div><div class="l">Raised</div></div>'+
     '<div class="tile"><div class="n">'+money(t.projected_cents||0)+'</div><div class="l">Projected</div></div>';
-  $('evTitle').value=ev.title||''; $('evBlurb').value=ev.blurb||''; $('evGoal').value=ev.org_goal_cents?(ev.org_goal_cents/100):''; $('evOpen').checked=!!ev.open; $('evDate').value=ev.event_date||''; $('evAbout').value=ev.about||'';
+  $('evTitle').value=ev.title||''; $('evBlurb').value=ev.blurb||''; $('evGoal').value=ev.org_goal_cents?(ev.org_goal_cents/100):''; $('evOpen').checked=!!ev.open; $('evDate').value=ev.event_date||''; $('evAbout').value=ev.about||''; $('evMatch').value=ev.match_text||'';
   renderTeams(); renderPlayers(); renderMakes();
+  $('bulkTeam').innerHTML=teamOptions('');
 
   // public links
   var origin=location.origin; var pl='<div class="subh" style="margin-top:18px">Public links</div><div class="linkbox"><input class="inp" readonly value="'+origin+'/donate.html"><button class="btn sm" type="button" data-copy="'+origin+'/donate.html">Copy main page</button></div>';
@@ -259,7 +293,7 @@ function setStatus(el,msg,cls){ el.textContent=msg||''; el.className='statusline
 /* ── actions ── */
 $('saveSetup').addEventListener('click',function(){
   if(blockDemo($('setupStatus'))) return;
-  var body={ title:$('evTitle').value.trim(), blurb:$('evBlurb').value.trim(), about:$('evAbout').value.trim(), event_date:$('evDate').value, org_goal_cents:toCents($('evGoal').value), open:$('evOpen').checked,
+  var body={ title:$('evTitle').value.trim(), blurb:$('evBlurb').value.trim(), about:$('evAbout').value.trim(), match_text:$('evMatch').value.trim(), event_date:$('evDate').value, org_goal_cents:toCents($('evGoal').value), open:$('evOpen').checked,
     teams: state.teams.filter(function(t){return (t.name||'').trim();}).map(function(t){ return t.slug?{slug:t.slug,name:t.name.trim(),goal_cents:t.goal_cents||0}:{name:t.name.trim(),goal_cents:t.goal_cents||0}; }),
     players: state.players.filter(function(p){return (p.name||'').trim();}).map(function(p){ var o={name:p.name.trim(),team:p.team||'',goal_cents:p.goal_cents||0,makes:p.makes||0}; if(p.slug)o.slug=p.slug; return o; }) };
   setStatus($('setupStatus'),'Saving…');
@@ -288,7 +322,7 @@ function doCancel(id){ if(blockDemo($('sendStatus'))) return; if(!confirm('Cance
 
 /* ── demo ── */
 var DEMO={ ok:true,
-  event:{ event_id:'fall-2026', title:'Aces Shoot-a-Thon', blurb:'Sponsor an Aces player per made free throw!', open:true, org_goal_cents:3000000,
+  event:{ event_id:'fall-2026', title:'Aces Shoot-a-Thon', blurb:'Sponsor an Aces player per made free throw!', about:'During the event every athlete shoots 100 free throws. Sponsors pledge per made shot.', event_date:'2026-12-15', match_text:'All gifts matched up to $5,000 through Friday!', open:true, org_goal_cents:3000000,
     teams:[{slug:'varsity',name:'Varsity',goal_cents:1000000},{slug:'jv',name:'JV',goal_cents:1000000},{slug:'freshman',name:'Freshman',goal_cents:1000000}],
     players:[{slug:'jimmy-d',name:'Jimmy Daniels',team:'varsity',goal_cents:100000,makes:84},{slug:'marcus-l',name:'Marcus Lee',team:'varsity',goal_cents:100000,makes:0},{slug:'sara-k',name:'Sara Kim',team:'jv',goal_cents:100000,makes:71}] },
   totals:{ pledges:4, paid:2, raised_cents:12000, projected_cents:46000 },
