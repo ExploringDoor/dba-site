@@ -177,7 +177,7 @@ async function handleGet(req, res) {
     const tg = targetOf(pledge);
     return res.status(200).json({
       status: pledge.status, kind: pledge.kind,
-      target_type: tg.type, target_name: targetName(event, tg.type, tg.slug),
+      target_type: tg.type, target_slug: tg.slug, target_name: targetName(event, tg.type, tg.slug),
       amount_cents: pledge.amount_cents || 0, per_shot_cents: pledge.per_shot_cents || 0,
       makes: tg.type === 'player' ? makesFor(event, tg.slug) : null,
       description: pledgeDescription(pledge),
@@ -194,7 +194,7 @@ async function handleGet(req, res) {
   let pledges = [];
   try { pledges = await fsQuery('pledges', 'event_id', 'EQUAL', SHOOTATHON.eventId); } catch (e) { pledges = []; }
   const snap = buildSnapshot(event, pledges);
-  return res.status(200).json(Object.assign({ open: true, ready: providerReady(), title: event.title || SHOOTATHON.title, blurb: event.blurb || '', event_date: event.event_date || '', about: event.about || '', match_text: event.match_text || '' }, snap));
+  return res.status(200).json(Object.assign({ open: true, ready: providerReady(), title: event.title || SHOOTATHON.title, blurb: event.blurb || '', event_date: event.event_date || '', about: event.about || '', match_text: event.match_text || '', booster_name: SHOOTATHON.boosterName, booster_ein: SHOOTATHON.boosterEin }, snap));
 }
 
 // ── POST ─────────────────────────────────────────────────────────────────

@@ -30,6 +30,9 @@ h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:2.1rem;margin-
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 28px;border-radius:12px;font-weight:700;font-size:.95rem;text-decoration:none;background:var(--mrn);color:#fff;transition:background .25s}
 .btn:hover{background:var(--mrn-h)}
 .muted{font-size:.8rem;color:var(--dim);margin-top:20px;line-height:1.6}
+.sbtns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.sbtns a,.sbtns button{display:inline-flex;align-items:center;gap:6px;background:var(--glass);border:1px solid var(--glass-b);border-radius:10px;padding:10px 14px;color:var(--txt);cursor:pointer;font-family:inherit;font-weight:600;font-size:.84rem;text-decoration:none}
+.sbtns a:hover,.sbtns button:hover{border-color:var(--mrn)}
 footer{text-align:center;padding:26px 16px;font-size:.78rem;color:#9B95A0;border-top:1px solid rgba(255,255,255,.07)}
 </style>
 </head>
@@ -44,12 +47,41 @@ footer{text-align:center;padding:26px 16px;font-size:.78rem;color:#9B95A0;border
     <div class="badge">🏀</div>
     <h1>Thank you for your donation!</h1>
     <p class="lead">Your gift supports Downer Basketball Academy's players. A receipt is on its way to your email — check spam just in case.</p>
-    <a href="donate.html" class="btn">Back to the Shoot-a-Thon</a>
+    <div id="shareBlock" style="display:none;margin-top:22px;border-top:1px solid var(--glass-b);padding-top:20px">
+      <p style="color:var(--txt-m);font-size:.95rem;margin-bottom:12px" id="shareLead">Double your impact — ask a friend to chip in!</p>
+      <div class="sbtns" id="sbtns"></div>
+    </div>
+    <a href="donate.html" class="btn" style="margin-top:22px">Back to the Shoot-a-Thon</a>
     <p class="muted">Your contribution supports the organizing booster club, a 501(c)(3). Payments are collected by Always Competing Sports LLC on its behalf and remitted in full. No goods or services were provided in exchange for this contribution.<br>Questions? Email <a href="mailto:aceshoops@gmail.com" style="color:var(--txt-m);text-decoration:underline">aceshoops@gmail.com</a></p>
   </div>
 </div>
 
 <footer>Site by <a href="https://mainline-webdesign.com/" target="_blank" rel="noopener" style="color:#9B95A0;text-decoration:underline">Main Line Web Design</a></footer>
-<script>try{if(window.gtag)gtag('event','donation_complete');}catch(e){}</script>
+<script>
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];}); }
+function showShare(d){
+  var base=location.origin+'/donate.html';
+  var link = d.target_type==='player'? base+'?player='+encodeURIComponent(d.target_slug) : d.target_type==='team'? base+'?team='+encodeURIComponent(d.target_slug) : base;
+  var who = d.target_type==='org' ? 'the Aces' : (d.target_name||'the Aces');
+  var text = "I just donated to "+who+" in the Lower Merion Aces Shoot-a-Thon 🏀 Join me: "+link;
+  document.getElementById('shareLead').innerHTML='Double your impact — ask a friend to chip in for <b>'+esc(who)+'</b>!';
+  document.getElementById('sbtns').innerHTML=
+    '<a href="https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(link)+'" target="_blank" rel="noopener">📘 Facebook</a>'+
+    '<a href="https://twitter.com/intent/tweet?url='+encodeURIComponent(link)+'&text='+encodeURIComponent(text)+'" target="_blank" rel="noopener">𝕏 Post</a>'+
+    '<a href="sms:?&body='+encodeURIComponent(text)+'">💬 Text</a>'+
+    '<button type="button" id="copyBtn">🔗 Copy link</button>';
+  document.getElementById('shareBlock').style.display='block';
+  var cb=document.getElementById('copyBtn'); if(cb) cb.addEventListener('click',function(){ try{navigator.clipboard&&navigator.clipboard.writeText(link);}catch(e){} var o=cb.textContent; cb.textContent='Copied ✓'; setTimeout(function(){cb.textContent=o;},1500); });
+  if(navigator.share){ var b=document.createElement('button'); b.type='button'; b.textContent='↗ Share…'; b.addEventListener('click',function(){ navigator.share({text:text,url:link}).catch(function(){}); }); document.getElementById('sbtns').appendChild(b); }
+}
+(function(){
+  try{if(window.gtag)gtag('event','donation_complete');}catch(e){}
+  var q=new URLSearchParams(location.search);
+  if(q.get('demo')==='1'){ showShare({target_type:'player',target_slug:'jimmy-daniels',target_name:'Jimmy Daniels'}); return; }
+  var pid=q.get('pledge')||'';
+  if(!pid) return;
+  fetch('/api/pledge?info='+encodeURIComponent(pid)).then(function(r){return r.json();}).then(function(d){ if(d&&d.target_type) showShare(d); }).catch(function(){});
+})();
+</script>
 </body>
 </html>

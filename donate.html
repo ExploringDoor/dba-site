@@ -112,6 +112,9 @@ h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:2.2rem;margin:
 .faq[open] summary::before{transform:rotate(90deg)}
 .faq ul{margin:0 0 16px 0;padding-left:20px;color:var(--txt-m);font-size:.9rem;line-height:1.7}
 .faq li{margin-bottom:7px}.faq li b{color:var(--txt)}
+.trust{text-align:center;font-size:.76rem;color:var(--dim);line-height:1.65;margin-top:22px;padding:16px 10px;border-top:1px solid var(--glass-b)}
+.trust b{color:var(--txt-m)}.trust a{color:var(--dim);text-decoration:underline}
+.trust .lock{display:block;margin-bottom:5px;color:var(--txt-m);font-weight:600}
 .spinner{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;display:inline-block;animation:spin 1s linear infinite;vertical-align:-3px}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.spinner{animation:none}.therm>i{transition:none}}
@@ -461,9 +464,12 @@ function route(){
   else renderOrg();
   var e=qs('e'); if(e&&ERR_PARAMS[e]){ var b=document.createElement('div'); b.className='banner'; b.textContent=ERR_PARAMS[e]; $('wrap').insertBefore(b,$('wrap').firstChild); }
   if(CFG.match_text){ var mb=document.createElement('div'); mb.className='matchbar'; mb.innerHTML='🔥 '+esc(CFG.match_text); $('wrap').insertBefore(mb,$('wrap').firstChild); }
+  var ts=document.createElement('div'); ts.className='trust';
+  ts.innerHTML='<div class="lock">🔒 Secure checkout by Stripe</div>Your gift supports <b>'+esc(CFG.booster_name||'the organizing booster club')+'</b>, a registered 501(c)(3)'+(CFG.booster_ein?' · EIN '+esc(CFG.booster_ein):'')+'. No goods or services are provided in exchange. Questions? <a href="mailto:aceshoops@gmail.com">aceshoops@gmail.com</a>';
+  $('wrap').appendChild(ts);
 }
 
-var DEMO_CFG={ open:true, title:'Aces Shoot-a-Thon', match_text:'All gifts matched up to $5,000 through Friday!', blurb:"Sponsor an Aces player per made free throw — or make a one-time donation. Every gift counts toward their goal, their team's, and our whole program's.", event_date:'2026-12-15', about:"Lower Merion Boys Basketball will host its team-wide Shoot-a-Thon on December 15th! During the event every athlete will shoot 100 free throws. We're looking for sponsors for every MADE free throw — pledge anything from $0.25 to $10 per made free throw, or make a one-time donation. Funds raised help cover staffing and supplemental training for our younger Aces on the freshman and JV teams.", supporter_count:34,
+var DEMO_CFG={ open:true, title:'Aces Shoot-a-Thon', booster_name:'Lower Merion Basketball Boosters', booster_ein:'', match_text:'All gifts matched up to $5,000 through Friday!', blurb:"Sponsor an Aces player per made free throw — or make a one-time donation. Every gift counts toward their goal, their team's, and our whole program's.", event_date:'2026-12-15', about:"Lower Merion Boys Basketball will host its team-wide Shoot-a-Thon on December 15th! During the event every athlete will shoot 100 free throws. We're looking for sponsors for every MADE free throw — pledge anything from $0.25 to $10 per made free throw, or make a one-time donation. Funds raised help cover staffing and supplemental training for our younger Aces on the freshman and JV teams.", supporter_count:34,
   org:{goal_cents:3000000,raised_cents:1284000},
   teams:[{slug:'varsity',name:'Varsity',goal_cents:1000000,raised_cents:742000},{slug:'jv',name:'JV',goal_cents:1000000,raised_cents:310000},{slug:'freshman',name:'Freshman',goal_cents:1000000,raised_cents:232000}],
   players:[{slug:'jimmy-d',name:'Jimmy Daniels',team:'varsity',goal_cents:100000,raised_cents:68000,blurb:"Senior guard. Help me hit my $1,000 goal — I’ll be draining free throws all day!"},{slug:'marcus-l',name:'Marcus Lee',team:'varsity',goal_cents:100000,raised_cents:52000,blurb:''},{slug:'sara-k',name:'Sara Kim',team:'jv',goal_cents:100000,raised_cents:41000,blurb:''},{slug:'andre-w',name:'Andre White',team:'freshman',goal_cents:100000,raised_cents:12000,blurb:''}],
