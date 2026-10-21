@@ -13,6 +13,7 @@
 <title>Shoot-a-Thon — Downer Basketball Academy</title>
 <meta name="description" content="Sponsor an Aces player per made free throw, or make a one-time donation, in our Shoot-a-Thon.">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Outfit:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@300;400;500&family=Saira+Condensed:wght@600;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--mrn:#8B1A2B;--mrn-h:#A82E42;--pink:#D4506A;--bg:#0A0A0C;--bg2:#101014;--glass:rgba(255,255,255,.035);--glass-b:rgba(255,255,255,.07);--txt:#F0ECE8;--txt-m:rgba(240,236,232,.82);--dim:#9B95A0;--ok:#3fae5a;--r:16px}
@@ -57,6 +58,19 @@ h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:2.2rem;margin:
 .supp .s .who{color:var(--txt)}.supp .s .who b{font-weight:600}
 .supp .s .msg{color:var(--dim);font-style:italic;max-width:60%;text-align:right}
 .chip{display:inline-block;background:var(--bg);border:1px solid var(--glass-b);border-radius:999px;padding:6px 13px;font-size:.82rem;color:var(--txt-m);margin:0 6px 6px 0}
+.chip b{color:var(--txt)}
+.lb{padding:4px 0}
+.lrow{display:flex;align-items:center;gap:12px;padding:11px 18px;border-bottom:1px solid var(--glass-b)}
+.lrow:last-child{border-bottom:none}
+.lrow:hover{background:rgba(255,255,255,.03)}
+.lrow .rank{font-family:'Saira Condensed',sans-serif;font-weight:800;color:var(--pink);font-size:1.1rem;width:22px;text-align:center}
+.lrow .lname{flex:1;font-weight:500}
+.lrow .lamt{font-family:'Saira Condensed',sans-serif;color:#fff;font-size:1.05rem;letter-spacing:.5px}
+.share-btns{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.share-btns a,.share-btns button{flex:1;min-width:92px;display:inline-flex;align-items:center;justify-content:center;gap:6px;background:var(--bg);border:1px solid var(--glass-b);border-radius:10px;padding:11px 8px;color:var(--txt);cursor:pointer;font-family:inherit;font-weight:600;font-size:.84rem;text-decoration:none}
+.share-btns a:hover,.share-btns button:hover{border-color:var(--pink)}
+#qrbox{background:#fff;padding:12px;border-radius:12px;display:inline-block;margin:10px 0 4px}
+#qrbox img,#qrbox canvas{display:block}
 .about{color:var(--txt-m);font-size:.95rem;margin-top:12px;white-space:pre-wrap}
 .share-row{display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap}
 .share-row input{flex:1;min-width:180px;background:var(--bg);border:1px solid var(--glass-b);border-radius:10px;padding:10px 12px;color:var(--txt);font-family:'IBM Plex Mono',monospace;font-size:.78rem}
@@ -77,6 +91,10 @@ h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:2.2rem;margin:
 .money-in{position:relative}.money-in .pre{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--dim)}.money-in .inp{padding-left:28px}
 .row2{display:flex;gap:12px}.row2>*{flex:1}
 .est{background:var(--bg);border:1px dashed var(--glass-b);border-radius:12px;padding:11px 14px;font-size:.86rem;color:var(--txt-m);margin-bottom:14px}.est b{color:#fff}
+.quick{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.quick button{flex:1;min-width:62px;background:var(--bg);border:1px solid var(--glass-b);border-radius:10px;padding:11px 6px;color:var(--txt);cursor:pointer;font-family:inherit;font-weight:600;font-size:.95rem}
+.quick button:hover{border-color:var(--pink)}
+.quick button.on{border-color:var(--pink);background:rgba(212,80,106,.12)}
 .check{display:flex;align-items:flex-start;gap:9px;font-size:.86rem;color:var(--txt-m);cursor:pointer;margin-bottom:14px}.check input{margin-top:3px}
 .err{color:var(--pink);font-size:.84rem;margin-top:8px;min-height:1.1em}
 .mclose{float:right;background:none;border:none;color:var(--dim);font-size:1.4rem;cursor:pointer;line-height:1;margin:-6px -4px 0 0}
@@ -146,18 +164,34 @@ function recentFor(filter){
 }
 
 // ── Views ──────────────────────────────────────────────────────────────────
+function eventCountdown(){
+  if(!CFG.event_date) return '';
+  var d=new Date(CFG.event_date+'T23:59:59'); if(isNaN(d)) return '';
+  var dateStr=d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  var days=Math.ceil((d-new Date())/86400000);
+  var label=days>1?days+' days left':days===1?'1 day left':days===0?'Today!':'';
+  return '<div style="margin:2px 0 0"><span class="chip">📅 '+esc(dateStr)+(label?' · <b>'+label+'</b>':'')+'</span></div>';
+}
+function leaderboard(){
+  var players=(CFG.players||[]).filter(function(p){return p.raised_cents>0;}).sort(function(a,b){return b.raised_cents-a.raised_cents;}).slice(0,8);
+  if(!players.length) return '';
+  var rows=players.map(function(p,i){ return '<a class="lrow" href="?player='+encodeURIComponent(p.slug)+'"><span class="rank">'+(i+1)+'</span><span class="lname">'+esc(p.name)+(teamName(p.team)?'<span class="dim"> · '+esc(teamName(p.team))+'</span>':'')+'</span><span class="lamt">'+money(p.raised_cents)+'</span></a>'; }).join('');
+  return '<div class="sec-h">🏆 Top fundraisers</div><div class="card lb">'+rows+'</div>';
+}
 function renderOrg(){
   var o=CFG.org||{};
-  var teams=(CFG.teams||[]);
+  var teams=(CFG.teams||[]).slice().sort(function(a,b){return (b.raised_cents||0)-(a.raised_cents||0);});
   var h='';
   h+='<div class="card" style="text-align:center">'+
       '<div class="kicker">🏀 Shoot-a-Thon</div>'+
       '<h1>'+esc(CFG.title||'Shoot-a-Thon')+'</h1>'+
       '<p class="lead" style="margin:0 auto 6px">'+esc(CFG.blurb||"Sponsor an Aces player per made free throw — or make a one-time donation. Every gift counts toward their goal, their team's, and our whole program's.")+'</p>'+
+      eventCountdown()+
       '<div style="max-width:480px;margin:18px auto 14px">'+therm(o.raised_cents,o.goal_cents)+'</div>'+
       '<div style="margin-top:6px"><span class="chip"><b>'+(CFG.supporter_count||0)+'</b> supporter'+((CFG.supporter_count===1)?'':'s')+'</span></div>'+
       '<div style="margin-top:16px"><button class="btn" onclick="openDonate(\'org\',\'\')">Donate to the whole program</button></div>'+
     '</div>';
+  if(CFG.about){ h+='<div class="card"><div class="sec-h" style="margin:0 0 8px">About</div><div class="about" style="margin-top:0">'+esc(CFG.about)+'</div></div>'; }
   if(teams.length){
     h+='<div class="sec-h">Teams</div><div class="grid">';
     teams.forEach(function(t){
@@ -170,6 +204,7 @@ function renderOrg(){
     });
     h+='</div>';
   }
+  h+=leaderboard();
   if((CFG.players||[]).length){
     h+='<div class="sec-h">Find a player</div><input class="search" id="search" placeholder="Search for a player…" autocomplete="off">'+
        '<div class="grid" id="searchResults"></div>';
@@ -231,21 +266,33 @@ function renderPlayer(slug){
       '<p class="dim" style="font-size:.8rem;margin-top:12px;text-align:center">Pledge per made free throw (billed after the event) or give a one-time donation now.</p>'+
     '</div>';
   // share
-  var link=location.origin+location.pathname+'?player='+encodeURIComponent(p.slug);
-  h+='<div class="sec-h">Share '+esc(p.name)+"'s page</div><div class=\"card\">"+
-      '<div class="share-row"><input id="shareUrl" readonly value="'+esc(link)+'"><button class="btn ghost" type="button" data-copy="url">Copy link</button></div>'+
-      '<div class="share-row"><button class="btn ghost" type="button" data-copy="email">Copy email</button><button class="btn ghost" type="button" data-copy="text">Copy text message</button></div>'+
-      '<p class="dim" style="font-size:.8rem;margin-top:4px">Share with aunts, uncles, cousins, and friends — even out of town. Every pledge adds up!</p>'+
-    '</div>';
-  h+=recentFor({type:'player',slug:slug});
-  $('wrap').innerHTML=h;
   var pname=p.name;
+  var link=location.origin+location.pathname+'?player='+encodeURIComponent(p.slug);
   var tmpl={
     url:link,
     email:"Hi Friends and Family,\n\nI'm part of the Lower Merion Aces and I'll be shooting free throws in our team's Shoot-a-Thon! You can sponsor me per MADE free throw (anything from $0.25 to $10) or make a one-time donation.\n\nClick my link to pledge: "+link+"\n\nPlease help me reach my goal — I'll be practicing! 🏀\n\nThanks,\n"+pname,
     text:"Hi! I'm shooting in the Lower Merion Aces Shoot-a-Thon 🏀 Sponsor me per made free throw or donate here: "+link
   };
+  h+='<div class="sec-h">Share '+esc(pname)+"'s page</div><div class=\"card\">"+
+      '<div class="share-row"><input id="shareUrl" readonly value="'+esc(link)+'"><button class="btn ghost" type="button" data-copy="url">Copy link</button></div>'+
+      '<div class="share-btns">'+
+        '<a href="https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(link)+'" target="_blank" rel="noopener">📘 Facebook</a>'+
+        '<a href="https://twitter.com/intent/tweet?url='+encodeURIComponent(link)+'&text='+encodeURIComponent(tmpl.text)+'" target="_blank" rel="noopener">𝕏 Post</a>'+
+        '<a href="sms:?&body='+encodeURIComponent(tmpl.text)+'">💬 Text</a>'+
+        '<button type="button" id="nativeShare" style="display:none">↗ Share…</button>'+
+      '</div>'+
+      '<div class="share-btns"><button class="btn ghost" type="button" data-copy="email" style="flex:1">✉️ Copy email</button><button class="btn ghost" type="button" data-copy="text" style="flex:1">💬 Copy text</button></div>'+
+      '<div style="text-align:center;margin-top:6px"><div id="qrbox"></div><div><button class="btn ghost" type="button" id="dlQr" style="width:auto">⬇ Download QR code</button></div></div>'+
+      '<p class="dim" style="font-size:.8rem;margin-top:10px;text-align:center">Share with aunts, uncles, cousins, and friends — even out of town. Every pledge adds up!</p>'+
+    '</div>';
+  h+=recentFor({type:'player',slug:slug});
+  $('wrap').innerHTML=h;
   Array.prototype.forEach.call(document.querySelectorAll('[data-copy]'),function(b){ b.addEventListener('click',function(){ copyText(tmpl[b.getAttribute('data-copy')], b); }); });
+  if(navigator.share){ var ns=$('nativeShare'); ns.style.display=''; ns.addEventListener('click',function(){ navigator.share({title:pname+' — Aces Shoot-a-Thon',text:tmpl.text,url:link}).catch(function(){}); }); }
+  // QR code (library loaded from cdnjs; degrade gracefully if blocked)
+  if(window.QRCode){ try{ new QRCode($('qrbox'),{text:link,width:150,height:150,colorDark:'#000',colorLight:'#fff'}); }catch(e){} }
+  if(!$('qrbox').firstChild){ $('qrbox').style.display='none'; $('dlQr').style.display='none'; }
+  else { $('dlQr').addEventListener('click',function(){ var cv=$('qrbox').querySelector('canvas'); var img=$('qrbox').querySelector('img'); var url=cv?cv.toDataURL('image/png'):(img?img.src:''); if(!url) return; var a=document.createElement('a'); a.href=url; a.download=pname.replace(/\s+/g,'-').toLowerCase()+'-shootathon-qr.png'; document.body.appendChild(a); a.click(); document.body.removeChild(a); }); }
 }
 
 function copyText(txt,btn){
@@ -293,24 +340,44 @@ function renderModal(){
 }
 function renderModalFields(){
   if(MODAL.type==='player') Array.prototype.forEach.call(document.querySelectorAll('#mSeg button'),function(b){ b.setAttribute('aria-pressed',String(b.getAttribute('data-k')===MODAL.kind)); });
+  var feeLabel='<label class="check"><input type="checkbox" id="coverFee"><span>'+(MODAL.kind==='per_shot'?'Also cover the ~3% card fee so 100% reaches the Aces (added to your total after the event)':'Add the ~3% card fee so <b>100% of my gift</b> reaches the Aces')+'</span></label>';
   var h='';
   if(MODAL.kind==='per_shot'){
-    h='<div class="row2"><div class="fg"><label>Per made free throw</label><div class="money-in"><span class="pre">$</span><input class="inp" id="perShot" inputmode="decimal" placeholder="0.50"></div></div>'+
+    h='<div class="quick" id="quick">'+[25,50,100,200].map(function(c){return '<button type="button" data-amt="'+c+'">'+money(c)+'</button>';}).join('')+'</div>'+
+      '<div class="row2"><div class="fg"><label>Per made free throw</label><div class="money-in"><span class="pre">$</span><input class="inp" id="perShot" inputmode="decimal" placeholder="0.50"></div></div>'+
       '<div class="fg"><label>Cap <span class="dim">(optional)</span></label><div class="money-in"><span class="pre">$</span><input class="inp" id="cap" inputmode="decimal" placeholder="no limit"></div></div></div>'+
-      '<div class="est" id="est">Enter an amount to see an estimate.</div>';
+      '<div class="est" id="est">Enter an amount to see an estimate.</div>'+feeLabel;
   } else {
-    h='<div class="fg"><label>Donation amount</label><div class="money-in"><span class="pre">$</span><input class="inp" id="flat" inputmode="decimal" placeholder="50"></div></div>';
+    h='<div class="quick" id="quick">'+[2500,5000,10000,25000].map(function(c){return '<button type="button" data-amt="'+c+'">'+money(c)+'</button>';}).join('')+'</div>'+
+      '<div class="fg"><label>Or enter an amount</label><div class="money-in"><span class="pre">$</span><input class="inp" id="flat" inputmode="decimal" placeholder="50"></div></div>'+
+      feeLabel+'<div class="est" id="charged" style="display:none"></div>';
   }
   $('mFields').innerHTML=h;
+  Array.prototype.forEach.call(document.querySelectorAll('#quick button'),function(b){ b.addEventListener('click',function(){
+    var c=parseInt(b.getAttribute('data-amt'),10);
+    if(MODAL.kind==='per_shot'){ $('perShot').value=(c/100); mEst(); } else { $('flat').value=(c/100); mCharged(); }
+    Array.prototype.forEach.call(document.querySelectorAll('#quick button'),function(x){ x.classList.toggle('on',x===b); });
+  }); });
+  var cf=$('coverFee'); if(cf) cf.addEventListener('change', MODAL.kind==='per_shot'?mEst:mCharged);
   var sub=$('dsubmit');
-  if(MODAL.kind==='per_shot'){ sub.textContent='Pledge now'; ['perShot','cap'].forEach(function(id){ $(id).addEventListener('input',mEst); }); mEst(); }
-  else { sub.textContent='Continue to payment →'; }
+  if(MODAL.kind==='per_shot'){ sub.textContent='Pledge now'; ['perShot','cap'].forEach(function(id){ $(id).addEventListener('input',function(){ clearQuick(); mEst(); }); }); mEst(); }
+  else { sub.textContent='Continue to payment →'; $('flat').addEventListener('input',function(){ clearQuick(); mCharged(); }); }
+}
+function clearQuick(){ Array.prototype.forEach.call(document.querySelectorAll('#quick button'),function(x){ x.classList.remove('on'); }); }
+function feeCents(base){ if(!base||base<=0) return 0; var charged=Math.ceil((base+30)/(1-0.029)); return Math.max(0,charged-base); }
+function mCharged(){
+  var base=dollarsToCents($('flat').value), cf=$('coverFee')&&$('coverFee').checked, box=$('charged');
+  if(!base){ box.style.display='none'; return; }
+  var fee=cf?feeCents(base):0;
+  box.style.display='block';
+  box.innerHTML="You'll be charged <b>"+money(base+fee)+'</b>'+(fee>0?' ('+money(base)+' gift + '+money(fee)+' fee)':'')+'.';
 }
 function mEst(){
   var per=dollarsToCents($('perShot').value), cap=dollarsToCents($('cap').value);
   if(!per){ $('est').innerHTML='Enter an amount to see an estimate.'; return; }
   var ex=100, raw=per*ex, capped=(cap&&cap>0)?Math.min(raw,cap):raw;
-  $('est').innerHTML='If '+esc(MODAL.name)+' makes <b>'+ex+'</b> free throws, that’s <b>'+money(capped)+'</b>'+((cap&&cap>0)?' (capped at '+money(cap)+')':'')+'. You only pay for throws made.';
+  var cf=$('coverFee')&&$('coverFee').checked;
+  $('est').innerHTML='If '+esc(MODAL.name)+' makes <b>'+ex+'</b> free throws, that’s <b>'+money(capped)+'</b>'+((cap&&cap>0)?' (capped at '+money(cap)+')':'')+'. You only pay for throws made.'+(cf?' Plus ~3% to cover the card fee.':'');
 }
 function mErr(m){ $('derr').textContent=m||''; }
 
@@ -319,7 +386,7 @@ function submitDonate(e){
   var name=$('dname').value.trim(), email=$('demail').value.trim();
   if(!name) return mErr('Please enter your name.');
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return mErr('Please enter a valid email.');
-  var payload={ dba_ref:(document.querySelector('[name=dba_ref]').value||'').trim(), kind:MODAL.kind, target_type:MODAL.type, target_slug:MODAL.slug, donor_name:name, donor_email:email, message:$('dmsg').value.trim(), anonymous:$('danon').checked };
+  var payload={ dba_ref:(document.querySelector('[name=dba_ref]').value||'').trim(), kind:MODAL.kind, target_type:MODAL.type, target_slug:MODAL.slug, donor_name:name, donor_email:email, message:$('dmsg').value.trim(), anonymous:$('danon').checked, cover_fee:($('coverFee')&&$('coverFee').checked)?true:false };
   if(MODAL.kind==='per_shot'){
     var per=dollarsToCents($('perShot').value);
     if(!per||per<LIMITS.minPerShot) return mErr('Enter at least $0.25 per made free throw.');
@@ -368,7 +435,7 @@ function route(){
   var e=qs('e'); if(e&&ERR_PARAMS[e]){ var b=document.createElement('div'); b.className='banner'; b.textContent=ERR_PARAMS[e]; $('wrap').insertBefore(b,$('wrap').firstChild); }
 }
 
-var DEMO_CFG={ open:true, title:'Aces Shoot-a-Thon', blurb:"Sponsor an Aces player per made free throw — or make a one-time donation. Every gift counts toward their goal, their team's, and our whole program's.", supporter_count:34,
+var DEMO_CFG={ open:true, title:'Aces Shoot-a-Thon', blurb:"Sponsor an Aces player per made free throw — or make a one-time donation. Every gift counts toward their goal, their team's, and our whole program's.", event_date:'2026-12-15', about:"Lower Merion Boys Basketball will host its team-wide Shoot-a-Thon on December 15th! During the event every athlete will shoot 100 free throws. We're looking for sponsors for every MADE free throw — pledge anything from $0.25 to $10 per made free throw, or make a one-time donation. Funds raised help cover staffing and supplemental training for our younger Aces on the freshman and JV teams.", supporter_count:34,
   org:{goal_cents:3000000,raised_cents:1284000},
   teams:[{slug:'varsity',name:'Varsity',goal_cents:1000000,raised_cents:742000},{slug:'jv',name:'JV',goal_cents:1000000,raised_cents:310000},{slug:'freshman',name:'Freshman',goal_cents:1000000,raised_cents:232000}],
   players:[{slug:'jimmy-d',name:'Jimmy Daniels',team:'varsity',goal_cents:100000,raised_cents:68000,blurb:"Senior guard. Help me hit my $1,000 goal — I’ll be draining free throws all day!"},{slug:'marcus-l',name:'Marcus Lee',team:'varsity',goal_cents:100000,raised_cents:52000,blurb:''},{slug:'sara-k',name:'Sara Kim',team:'jv',goal_cents:100000,raised_cents:41000,blurb:''},{slug:'andre-w',name:'Andre White',team:'freshman',goal_cents:100000,raised_cents:12000,blurb:''}],

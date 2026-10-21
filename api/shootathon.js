@@ -14,7 +14,7 @@
 // recomputed here from the stored pledge × the makes in the event doc (computePledgeCents).
 
 import { fbConfigured, fbAdminConfigured, fsGet, fsPatch, fsPatchVerified, fsQuery } from './_firestore.js';
-import { SHOOTATHON, LIMITS, slugify, isSlug, intOrNull, computePledgeCents, pledgeDescription, normalizeTeam } from './_shootathon.js';
+import { SHOOTATHON, LIMITS, slugify, isSlug, intOrNull, computePledgeCents, pledgeDescription, normalizeTeam, coverFeeCents } from './_shootathon.js';
 import { clip, stripTags } from './_clinic.js';
 import { verifyPayment, finalizeDonationPaid } from './_finalize.js';
 import { sendMail, buildPayLinkEmail, emailConfigured, ADMIN_EMAIL } from './_email.js';
@@ -81,6 +81,7 @@ async function actionConfig() {
     event: {
       event_id: SHOOTATHON.eventId, title: ev.title || SHOOTATHON.title, blurb: ev.blurb || '',
       open: !!ev.open, org_goal_cents: ev.org_goal_cents || 0,
+      event_date: ev.event_date || '', about: ev.about || '',
       teams: (ev.teams || []).map((t) => ({ slug: t.slug, name: t.name, goal_cents: t.goal_cents || 0 })),
       players: (ev.players || []).map((p) => ({ slug: p.slug, name: p.name, team: p.team || '', goal_cents: p.goal_cents || 0, makes: p.makes || 0, blurb: p.blurb || '' })),
     },
@@ -94,6 +95,8 @@ async function actionSetEvent(b) {
   const patch = {};
   if (b.title != null) patch.title = stripTags(clip(b.title, 120)).trim() || SHOOTATHON.title;
   if (b.blurb != null) patch.blurb = stripTags(clip(b.blurb, 500)).trim();
+  if (b.about != null) patch.about = stripTags(clip(b.about, 2000)).trim();
+  if (b.event_date != null) { const d = String(b.event_date || '').trim(); patch.event_date = /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : ''; }
   if (b.open != null) patch.open = !!b.open;
   if (b.org_goal_cents != null) { const g = intOrNull(b.org_goal_cents); patch.org_goal_cents = g == null ? SHOOTATHON.defaultOrgGoalCents : Math.min(g, LIMITS.maxGoalCents); }
 
@@ -167,13 +170,15 @@ async function actionSendLinks(req, b) {
     if (invoiced + zero >= CAP) { remaining++; continue; }
     const tg = targetOf(p);
     const makes = tg.type === 'player' ? (mm[tg.slug] || 0) : null;
-    const amount = computePledgeCents(p, makes);
-    if (amount <= 0) {
+    const computed = computePledgeCents(p, makes);
+    if (computed <= 0) {
       await fsPatch(`pledges/${p.id}`, { status: 'no_charge', amount_cents: 0, invoiced_at: new Date().toISOString() });
       zero++;
       continue;
     }
-    const w = await fsPatchVerified(`pledges/${p.id}`, { status: 'invoiced', amount_cents: amount, invoiced_at: new Date().toISOString() });
+    const fee = p.cover_fee ? coverFeeCents(computed) : 0;   // donor opted to cover the processing fee
+    const amount = computed + fee;
+    const w = await fsPatchVerified(`pledges/${p.id}`, { status: 'invoiced', amount_cents: amount, fee_cents: fee, invoiced_at: new Date().toISOString() });
     if (!w.ok) { failed++; continue; }
     invoiced++;
     try {

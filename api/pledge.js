@@ -12,7 +12,7 @@
 // The per-shot charge is always recomputed server-side from the stored pledge × admin-entered makes.
 
 import { fbConfigured, fbAdminConfigured, fsGet, fsCreate, fsQuery, fsPatch, fsPatchVerified } from './_firestore.js';
-import { SHOOTATHON, normalizePledge, pledgeDescription, computePledgeCents } from './_shootathon.js';
+import { SHOOTATHON, normalizePledge, pledgeDescription, computePledgeCents, coverFeeCents } from './_shootathon.js';
 import { sendMail, buildPledgeEmail, emailConfigured, ADMIN_EMAIL } from './_email.js';
 
 const PROVIDER = (process.env.PAYMENT_PROVIDER || '').toLowerCase();
@@ -111,7 +111,9 @@ function buildSnapshot(event, pledges) {
     supporters++;
     const tg = targetOf(p);
     const paid = p.status === 'paid';
-    const amt = paid ? (p.amount_paid_cents || p.amount_cents || 0) : 0;
+    // The thermometer reflects the DONATION value (net of any fee the donor chose to cover —
+    // that extra just offsets Stripe, it isn't a bigger gift to the cause).
+    const amt = paid ? Math.max(0, (p.amount_paid_cents || p.amount_cents || 0) - (p.fee_cents || 0)) : 0;
     if (amt > 0) {
       orgRaised += amt;
       if (tg.type === 'player') {
@@ -192,7 +194,7 @@ async function handleGet(req, res) {
   let pledges = [];
   try { pledges = await fsQuery('pledges', 'event_id', 'EQUAL', SHOOTATHON.eventId); } catch (e) { pledges = []; }
   const snap = buildSnapshot(event, pledges);
-  return res.status(200).json(Object.assign({ open: true, ready: providerReady(), title: event.title || SHOOTATHON.title, blurb: event.blurb || '' }, snap));
+  return res.status(200).json(Object.assign({ open: true, ready: providerReady(), title: event.title || SHOOTATHON.title, blurb: event.blurb || '', event_date: event.event_date || '', about: event.about || '' }, snap));
 }
 
 // ── POST ─────────────────────────────────────────────────────────────────
@@ -216,9 +218,11 @@ async function handlePost(req, res) {
   // ── ONE-TIME DONATION → pay now ──
   if (pledge.kind === 'flat') {
     if (!providerReady()) return res.status(503).json({ error: 'not_configured' });
-    const amount = pledge.flat_cents;
+    const base = pledge.flat_cents;
+    const fee = pledge.cover_fee ? coverFeeCents(base) : 0;   // authoritative — never trust the browser
+    const amount = base + fee;
     const created = await fsCreate('pledges', Object.assign({}, pledge, {
-      status: 'pending', amount_cents: amount, amount_paid_cents: 0, created: now, pledge_ip: ip,
+      status: 'pending', amount_cents: amount, fee_cents: fee, amount_paid_cents: 0, created: now, pledge_ip: ip,
     }));
     const id = created && created.name ? String(created.name).split('/').pop() : null;
     if (!id) return res.status(500).json({ error: 'save_failed' });

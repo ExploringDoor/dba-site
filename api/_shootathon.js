@@ -123,6 +123,7 @@ export function normalizePledge(body) {
     donor_email,
     message: stripTags(clip(b.message, 280)).trim(),
     anonymous: b.anonymous ? true : false,
+    cover_fee: b.cover_fee ? true : false,
   };
 
   if (kind === 'flat') {
@@ -145,6 +146,16 @@ export function normalizePledge(body) {
 }
 
 export function dollars(cents) { return '$' + ((cents || 0) / 100).toFixed(2); }
+
+// Stripe's standard fee (2.9% + $0.30). "Cover the fee" grosses the charge up so the booster
+// nets the donor's intended gift: charged = (base + 30) / (1 - 0.029); the fee is the difference.
+export const STRIPE_FEE_PCT = 0.029, STRIPE_FEE_FIXED_CENTS = 30;
+export function coverFeeCents(baseCents) {
+  const b = Math.max(0, Math.round(baseCents || 0));
+  if (b <= 0) return 0;
+  const charged = Math.ceil((b + STRIPE_FEE_FIXED_CENTS) / (1 - STRIPE_FEE_PCT));
+  return Math.max(0, charged - b);
+}
 
 // A short, human description of a pledge/donation (emails + admin list).
 export function pledgeDescription(pledge) {

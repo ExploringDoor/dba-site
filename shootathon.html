@@ -99,8 +99,10 @@ tr:last-child td{border-bottom:none}
     <div class="row2">
       <div class="fld"><label>Event title</label><input class="inp" id="evTitle" placeholder="Aces Shoot-a-Thon"></div>
       <div class="fld" style="max-width:200px"><label>Organization goal ($)</label><div class="pre"><span>$</span><input class="inp" id="evGoal" inputmode="decimal" placeholder="30000"></div></div>
+      <div class="fld" style="max-width:200px"><label>Event date</label><input class="inp" id="evDate" type="date"></div>
     </div>
     <div class="fld"><label>Short blurb (optional)</label><input class="inp" id="evBlurb" maxlength="500" placeholder="Sponsor an Aces player per made free throw!"></div>
+    <div class="fld"><label>About the event (optional — shown on the main page)</label><textarea class="inp" id="evAbout" rows="4" maxlength="2000" placeholder="During the event every athlete will shoot 100 free throws…"></textarea></div>
 
     <div class="subh">Teams <span style="text-transform:none;letter-spacing:0;font-weight:400">— name + goal</span></div>
     <div id="teamRows"></div>
@@ -222,7 +224,7 @@ function render(){
     '<div class="tile"><div class="n">'+(t.paid||0)+'</div><div class="l">Paid</div></div>'+
     '<div class="tile"><div class="n">'+money(t.raised_cents||0)+'</div><div class="l">Raised</div></div>'+
     '<div class="tile"><div class="n">'+money(t.projected_cents||0)+'</div><div class="l">Projected</div></div>';
-  $('evTitle').value=ev.title||''; $('evBlurb').value=ev.blurb||''; $('evGoal').value=ev.org_goal_cents?(ev.org_goal_cents/100):''; $('evOpen').checked=!!ev.open;
+  $('evTitle').value=ev.title||''; $('evBlurb').value=ev.blurb||''; $('evGoal').value=ev.org_goal_cents?(ev.org_goal_cents/100):''; $('evOpen').checked=!!ev.open; $('evDate').value=ev.event_date||''; $('evAbout').value=ev.about||'';
   renderTeams(); renderPlayers(); renderMakes();
 
   // public links
@@ -257,7 +259,7 @@ function setStatus(el,msg,cls){ el.textContent=msg||''; el.className='statusline
 /* ── actions ── */
 $('saveSetup').addEventListener('click',function(){
   if(blockDemo($('setupStatus'))) return;
-  var body={ title:$('evTitle').value.trim(), blurb:$('evBlurb').value.trim(), org_goal_cents:toCents($('evGoal').value), open:$('evOpen').checked,
+  var body={ title:$('evTitle').value.trim(), blurb:$('evBlurb').value.trim(), about:$('evAbout').value.trim(), event_date:$('evDate').value, org_goal_cents:toCents($('evGoal').value), open:$('evOpen').checked,
     teams: state.teams.filter(function(t){return (t.name||'').trim();}).map(function(t){ return t.slug?{slug:t.slug,name:t.name.trim(),goal_cents:t.goal_cents||0}:{name:t.name.trim(),goal_cents:t.goal_cents||0}; }),
     players: state.players.filter(function(p){return (p.name||'').trim();}).map(function(p){ var o={name:p.name.trim(),team:p.team||'',goal_cents:p.goal_cents||0,makes:p.makes||0}; if(p.slug)o.slug=p.slug; return o; }) };
   setStatus($('setupStatus'),'Saving…');

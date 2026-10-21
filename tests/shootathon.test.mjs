@@ -7,7 +7,7 @@
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
 import * as fake from './_fake.js';
-import { computePledgeCents, normalizePledge, pledgeDescription, LIMITS, SHOOTATHON } from '../api/_shootathon.js';
+import { computePledgeCents, normalizePledge, pledgeDescription, coverFeeCents, LIMITS, SHOOTATHON } from '../api/_shootathon.js';
 import { buildPledgeEmail, buildPayLinkEmail, buildDonationReceiptEmail } from '../api/_email.js';
 import pledge from '../api/pledge.js';
 import shootathon from '../api/shootathon.js';
@@ -189,6 +189,43 @@ await test('set_event creates teams + players with goals; makes preserved on edi
   // re-save the roster (e.g. renamed) → makes should survive
   await call(shootathon, { method: 'POST', headers: ADMIN, body: { action: 'set_event', players: [{ slug: 'jimmy-d', name: 'Jimmy Dee', team: 'varsity' }] } });
   assert.equal(fake.doc(EVENT_PATH).players[0].makes, 50);
+});
+
+group('cover-the-fee + event story');
+await test('coverFeeCents grosses up so the club nets the gift', () => {
+  const fee = coverFeeCents(5000); // $50 gift
+  assert.ok(fee > 150 && fee < 220, 'fee ~ $1.81 for a $50 gift, got ' + fee);
+  const charged = 5000 + fee;
+  assert.ok((charged - fee) === 5000, 'net to club = the gift');
+});
+await test('normalizePledge captures cover_fee', () => { assert.equal(normalizePledge({ ...okFlatOrg, cover_fee: true }).pledge.cover_fee, true); assert.equal(normalizePledge(okFlatOrg).pledge.cover_fee, false); });
+await test('flat gift with cover_fee charges base+fee; thermometer shows the base (net)', async () => {
+  fake.reset(); seedEvent();
+  const r = await call(pledge, { method: 'POST', body: { ...okFlatPlayer, cover_fee: true } }); // $50 to Jimmy
+  const d = fake.doc('pledges/' + r.body.id);
+  const fee = coverFeeCents(5000);
+  assert.equal(d.fee_cents, fee);
+  assert.equal(d.amount_cents, 5000 + fee);
+  assert.equal(fake.stripe.session(d.stripe_session_id).amount_total, 5000 + fee);
+  fake.stripe.pay(d.stripe_session_id);
+  await deliverWebhook(r.body.id, d.stripe_session_id);
+  const snap = (await call(pledge, {})).body;
+  assert.equal(snap.players.find((p) => p.slug === 'jimmy-d').raised_cents, 5000); // net of the covered fee
+  assert.equal(snap.org.raised_cents, 5000);
+});
+await test('set_event stores event date + about; snapshot returns them', async () => {
+  fake.reset(); seedEvent();
+  await call(shootathon, { method: 'POST', headers: ADMIN, body: { action: 'set_event', event_date: '2026-12-15', about: 'Every athlete shoots 100 free throws.' } });
+  const cfg = await call(shootathon, { method: 'POST', headers: ADMIN, body: { action: 'config' } });
+  assert.equal(cfg.body.event.event_date, '2026-12-15');
+  const snap = (await call(pledge, {})).body;
+  assert.equal(snap.event_date, '2026-12-15');
+  assert.match(snap.about, /100 free throws/);
+});
+await test('set_event rejects a malformed event date (stored blank)', async () => {
+  fake.reset(); seedEvent();
+  await call(shootathon, { method: 'POST', headers: ADMIN, body: { action: 'set_event', event_date: 'not-a-date' } });
+  assert.equal(fake.doc(EVENT_PATH).event_date, '');
 });
 
 console.log(`\n${pass} passed, ${fail} failed`);
