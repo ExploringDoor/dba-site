@@ -228,7 +228,7 @@ function renderOrg(){
     '<li><b>Sponsor a player per made free throw</b> — e.g. $0.50 × 100 free throws = $50. You’re billed only <b>after</b> the event, for throws actually made.</li>'+
     '<li><b>Or donate once, now</b> — any amount, charged right away.</li>'+
     '<li>Every gift counts toward the player, their team, <b>and</b> the whole program’s goal.</li>'+
-    '<li><b>Where it goes</b> — your gift supports the Aces through the organizing booster club. Payments are collected by Always Competing Sports LLC and remitted in full.</li>'+
+    '<li><b>Where it goes</b> — your gift supports the Lower Merion Boys Basketball team. Payments are collected by Always Competing Sports LLC and remitted in full.</li>'+
     '</ul></details>';
   $('wrap').innerHTML=h;
   var s=$('search'); if(s){ s.addEventListener('input',runSearch); runSearch(); }
@@ -361,7 +361,7 @@ function renderModal(){
      '<label class="check"><input type="checkbox" id="danon"><span>Give anonymously (hide my name from the public list)</span></label>'+
      '<button class="btn full" id="dsubmit" type="submit">Continue</button>'+
      '<div class="err" id="derr"></div>'+
-     '<p class="dim" style="font-size:.74rem;margin-top:12px;text-align:center">Secure checkout. Your gift supports the Aces through the organizing booster club, collected and remitted by Always Competing Sports LLC.</p>'+
+     '<p class="dim" style="font-size:.74rem;margin-top:12px;text-align:center">Secure checkout. Your gift supports the Lower Merion Boys Basketball team, collected and remitted by Always Competing Sports LLC.</p>'+
      '</form>';
   $('modal').innerHTML=h;
   if(isPlayer) Array.prototype.forEach.call(document.querySelectorAll('#mSeg button'),function(b){ b.addEventListener('click',function(){ setMKind(b.getAttribute('data-k')); }); });
@@ -465,11 +465,11 @@ function route(){
   var e=qs('e'); if(e&&ERR_PARAMS[e]){ var b=document.createElement('div'); b.className='banner'; b.textContent=ERR_PARAMS[e]; $('wrap').insertBefore(b,$('wrap').firstChild); }
   if(CFG.match_text){ var mb=document.createElement('div'); mb.className='matchbar'; mb.innerHTML='🔥 '+esc(CFG.match_text); $('wrap').insertBefore(mb,$('wrap').firstChild); }
   var ts=document.createElement('div'); ts.className='trust';
-  ts.innerHTML='<div class="lock">🔒 Secure checkout by Stripe</div>Your gift supports <b>'+esc(CFG.booster_name||'the organizing booster club')+'</b> through the Aces Shoot-a-Thon. Payments are collected by Always Competing Sports LLC on their behalf and remitted in full. Questions? <a href="mailto:aceshoops@gmail.com">aceshoops@gmail.com</a>';
+  ts.innerHTML='<div class="lock">🔒 Secure checkout by Stripe</div>Your gift supports <b>'+esc(CFG.booster_name||'the Lower Merion Boys Basketball team')+'</b> through the Aces Shoot-a-Thon. Payments are collected by Always Competing Sports LLC on their behalf and remitted in full. Questions? <a href="mailto:aceshoops@gmail.com">aceshoops@gmail.com</a>';
   $('wrap').appendChild(ts);
 }
 
-var DEMO_CFG={ open:true, title:'Aces Shoot-a-Thon', booster_name:'Lower Merion Basketball Boosters', booster_ein:'', match_text:'All gifts matched up to $5,000 through Friday!', blurb:"Sponsor an Aces player per made free throw — or make a one-time donation. Every gift counts toward their goal, their team's, and our whole program's.", event_date:'2026-12-15', about:"Lower Merion Boys Basketball will host its team-wide Shoot-a-Thon on December 15th! During the event every athlete will shoot 100 free throws. We're looking for sponsors for every MADE free throw — pledge anything from $0.25 to $10 per made free throw, or make a one-time donation. Funds raised help cover staffing and supplemental training for our younger Aces on the freshman and JV teams.", supporter_count:34,
+var DEMO_CFG={ open:true, title:'Aces Shoot-a-Thon', booster_name:'the Lower Merion Boys Basketball team', booster_ein:'', match_text:'All gifts matched up to $5,000 through Friday!', blurb:"Sponsor an Aces player per made free throw — or make a one-time donation. Every gift counts toward their goal, their team's, and our whole program's.", event_date:'2026-12-15', about:"Lower Merion Boys Basketball will host its team-wide Shoot-a-Thon on December 15th! During the event every athlete will shoot 100 free throws. We're looking for sponsors for every MADE free throw — pledge anything from $0.25 to $10 per made free throw, or make a one-time donation. Funds raised help cover staffing and supplemental training for our younger Aces on the freshman and JV teams.", supporter_count:34,
   org:{goal_cents:3000000,raised_cents:1284000},
   teams:[{slug:'varsity',name:'Varsity',goal_cents:1000000,raised_cents:742000},{slug:'jv',name:'JV',goal_cents:1000000,raised_cents:310000},{slug:'freshman',name:'Freshman',goal_cents:1000000,raised_cents:232000}],
   players:[{slug:'jimmy-d',name:'Jimmy Daniels',team:'varsity',goal_cents:100000,raised_cents:68000,blurb:"Senior guard. Help me hit my $1,000 goal — I’ll be draining free throws all day!"},{slug:'marcus-l',name:'Marcus Lee',team:'varsity',goal_cents:100000,raised_cents:52000,blurb:''},{slug:'sara-k',name:'Sara Kim',team:'jv',goal_cents:100000,raised_cents:41000,blurb:''},{slug:'andre-w',name:'Andre White',team:'freshman',goal_cents:100000,raised_cents:12000,blurb:''}],

@@ -230,7 +230,7 @@ export function buildDonationReceiptEmail(pledge) {
   const date = donEsc(fmtDate(pledge.paid_at || pledge.created));
   const inner = `
     <h2 style="margin:0 0 6px">Thank you for your donation! &#127936;</h2>
-    <p style="color:#555;line-height:1.6;margin:0 0 18px">Your Shoot-a-Thon donation has been received. Thank you for supporting Downer Basketball Academy's players.</p>
+    <p style="color:#555;line-height:1.6;margin:0 0 18px">Your Shoot-a-Thon donation has been received. Thank you for supporting the Lower Merion Boys Basketball team.</p>
     <table style="width:100%;border-collapse:collapse;border:1px solid #eee;border-radius:8px;overflow:hidden;font-size:14px">
       <tr><td style="padding:9px 14px;color:#777;white-space:nowrap">Receipt #</td><td style="padding:9px 14px;text-align:right;font-family:monospace">${id}</td></tr>
       ${date ? donRow('Date', date) : ''}

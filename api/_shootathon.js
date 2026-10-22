@@ -29,7 +29,7 @@ import { clip, stripTags, validEmail } from './_clinic.js';
 export const SHOOTATHON = {
   eventId: process.env.SHOOTATHON_EVENT_ID || 'fall-2026',
   title: 'Aces Shoot-a-Thon',
-  boosterName: process.env.BOOSTER_NAME || "the clinic's organizing booster club",
+  boosterName: process.env.BOOSTER_NAME || 'the Lower Merion Boys Basketball team',
   boosterEin: process.env.BOOSTER_EIN || '',
   // Default goals (the admin can override any of these in the event doc).
   defaultOrgGoalCents: 3000000,     // $30,000 — the whole organization
