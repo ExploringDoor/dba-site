@@ -175,15 +175,13 @@ function donShell(kicker, inner) {
       <div style="border:1px solid #eee;border-top:none;padding:24px;border-radius:0 0 12px 12px">${inner}</div>
     </div>`;
 }
-// The deductibility language. Kept accurate: Always Competing Sports LLC only COLLECTS and
-// remits; the 501(c)(3) booster club is the donee and issues the official acknowledgment.
+// Neutral footer. The tax-deductibility / 501(c)(3) claim is intentionally OMITTED until Adam
+// confirms the booster club's charitable status + that it issues donor acknowledgments; it can
+// be added back here (and on the donate pages) once confirmed.
 function donTaxFooter(paid) {
   const booster = donEsc(SHOOTATHON.boosterName);
-  const ein = SHOOTATHON.boosterEin ? ` Tax ID (EIN): ${donEsc(SHOOTATHON.boosterEin)}.` : '';
-  const receipt = paid
-    ? 'This email is your payment confirmation. No goods or services were provided in exchange for this contribution, so it may qualify as tax-deductible; the booster club will provide the official acknowledgment for your records.'
-    : 'No goods or services are provided in exchange for this contribution, so it may qualify as tax-deductible once completed.';
-  return `<p style="color:#999;font-size:12px;line-height:1.6;margin:16px 0 0">Your gift supports <strong>${booster}</strong>, a 501(c)(3) nonprofit.${ein} Payments are collected by Always Competing Sports LLC on its behalf and remitted in full. ${receipt} Questions? Reply to this email or contact aceshoops@gmail.com.</p>`;
+  const line = paid ? 'This email is your record of the donation.' : '';
+  return `<p style="color:#999;font-size:12px;line-height:1.6;margin:16px 0 0">Your gift supports <strong>${booster}</strong> through the Aces Shoot-a-Thon. Payments are collected by Always Competing Sports LLC on its behalf and remitted in full. ${line} Questions? Reply to this email or contact aceshoops@gmail.com.</p>`;
 }
 const donRow = (k, v, strong) => `<tr><td style="padding:9px 14px;color:#777;border-top:1px solid #eee;vertical-align:top;white-space:nowrap">${k}</td><td style="padding:9px 14px;border-top:1px solid #eee;text-align:right${strong ? ';font-weight:700' : ''}">${v}</td></tr>`;
 
