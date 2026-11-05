@@ -13,6 +13,7 @@
 //   Firestore: FIREBASE_PROJECT_ID, FIREBASE_API_KEY, FB_ADMIN_EMAIL, FB_ADMIN_PASSWORD
 //   Optional: SITE_URL (e.g. https://www.downerbasketballacademy.com) for redirect links
 
+import { SITE_TAG } from './_site.js';
 import { fbConfigured, fbAdminConfigured, fsCreate, fsPatch, fsPatchVerified, fsQuery } from './_firestore.js';
 import { normalizeRegistration, expectedCents, cleanSessions, priceBreakdown, pastSessionIds, CLINIC, aidCodeValid } from './_clinic.js';
 import { sessionStatus, isCanceled, canceledIds } from './_status.js';
@@ -54,6 +55,8 @@ async function createStripeCheckout({ regId, reg, cents, base }) {
   params.set('customer_email', reg.parent_email);
   params.set('client_reference_id', regId);
   params.set('metadata[rid]', regId);
+  params.set('metadata[site]', SITE_TAG);
+  params.set('payment_intent_data[metadata][site]', SITE_TAG);
   params.set('payment_intent_data[metadata][rid]', regId);
   params.set('line_items[0][quantity]', '1');
   params.set('line_items[0][price_data][currency]', 'usd');
@@ -198,6 +201,7 @@ export default async function handler(req, res) {
   if (FREE) {
     const nowFree = new Date().toISOString();
     const createdFree = await fsCreate('registrations', Object.assign({}, reg, {
+      site: SITE_TAG,
       status: 'paid',
       payment_provider: 'financial_aid',
       paid_via: 'Financial Aid',
@@ -227,6 +231,7 @@ export default async function handler(req, res) {
   // for this family even if prices change later in the season.
   const split = priceBreakdown(Object.assign({}, reg, { amount_cents: cents }));
   const created = await fsCreate('registrations', Object.assign({}, reg, {
+    site: SITE_TAG,
     status: 'pending',
     payment_provider: PROVIDER,
     amount_cents: cents,

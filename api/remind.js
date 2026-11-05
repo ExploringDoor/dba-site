@@ -9,6 +9,7 @@
 // trigger it with the x-admin-key header.
 // Env: CRON_SECRET, ADMIN_PASSWORD, SENDGRID_API_KEY + MAIL_FROM, + Firestore vars.
 
+import { ownsRecord } from './_site.js';
 import { fbConfigured, fbAdminConfigured, fsList, fsPatchVerified } from './_firestore.js';
 import { SESSIONS, cleanSessions } from './_clinic.js';
 import { sendMail, buildReminderEmail, emailConfigured } from './_email.js';
@@ -59,6 +60,7 @@ export default async function handler(req, res) {
   let sent = 0, already = 0, failed = 0;
   const targets = [];
   for (const reg of all) {
+    if (!ownsRecord(reg)) continue;                              // the other site's family (shared DB, see _site.js)
     if (String(reg.id || '').startsWith('_')) continue;          // internal docs (cron heartbeat, status)
     if (reg.status !== 'paid' || !reg.parent_email) continue;    // only real, paid registrations
     if (reg[flag]) { already++; continue; }                       // already reminded for this session

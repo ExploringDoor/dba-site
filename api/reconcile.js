@@ -9,6 +9,7 @@
 // call it with the x-admin-key header.
 // Env: CRON_SECRET (for the cron), ADMIN_PASSWORD (for manual), + Firestore/provider vars.
 
+import { ownsRecord } from './_site.js';
 import { fbConfigured, fbAdminConfigured, fsList, fsPatch, fsPatchVerified } from './_firestore.js';
 import { verifyPayment, finalizePaid, maybeSendConfirmation } from './_finalize.js';
 
@@ -39,7 +40,8 @@ export default async function handler(req, res) {
   const now = Date.now();
   // fsList THROWS if Firestore can't be read (→ 500, no heartbeat) — a failed read must never
   // paint the dashboard's green "safety-net running" light.
-  const all = await fsList('registrations');
+  // Shared database: only this site's registrations (see _site.js).
+  const all = (await fsList('registrations')).filter(ownsRecord);
   const allPending = all.filter((r) => r.status === 'pending').sort((a, b) => String(a.created || '').localeCompare(String(b.created || '')));
   const pending = allPending.slice(0, MAX_PENDING_PER_RUN);
 

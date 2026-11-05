@@ -12,6 +12,7 @@ import { buildPledgeEmail, buildPayLinkEmail, buildDonationReceiptEmail } from '
 import pledge from '../api/pledge.js';
 import shootathon from '../api/shootathon.js';
 import webhook from '../api/webhook-stripe.js';
+import { SITE_TAG } from '../api/_site.js';
 
 fake.install();
 
@@ -40,7 +41,7 @@ function sign(raw, secret = process.env.STRIPE_WEBHOOK_SECRET, t = Math.floor(Da
   return `t=${t},v1=${createHmac('sha256', secret).update(`${t}.`).update(raw).digest('hex')}`;
 }
 function donationEvent(pledgeId, sessionId) {
-  return JSON.stringify({ id: 'evt_' + pledgeId, object: 'event', type: 'checkout.session.completed', data: { object: { id: sessionId, object: 'checkout.session', client_reference_id: pledgeId, metadata: { kind: 'donation', pledge_id: pledgeId }, payment_status: 'paid' } } });
+  return JSON.stringify({ id: 'evt_' + pledgeId, object: 'event', type: 'checkout.session.completed', data: { object: { id: sessionId, object: 'checkout.session', client_reference_id: pledgeId, metadata: { kind: 'donation', pledge_id: pledgeId, site: SITE_TAG }, payment_status: 'paid' } } });
 }
 async function deliverWebhook(pledgeId, sessionId) {
   const raw = donationEvent(pledgeId, sessionId);

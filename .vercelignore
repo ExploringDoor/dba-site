@@ -1,0 +1,8 @@
+# Never served: tests, docs and local tooling (the site is served straight from the repo root).
+tests/
+scripts/
+scratch-tmp/
+.claude/
+CLAUDE.md
+README-CLINICS.md
+CLINIC-SETUP.md

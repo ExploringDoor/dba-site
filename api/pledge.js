@@ -11,6 +11,7 @@
 // Donations roll up: a gift to a player counts toward that player, their team, and the org.
 // The per-shot charge is always recomputed server-side from the stored pledge × admin-entered makes.
 
+import { SITE_TAG } from './_site.js';
 import { fbConfigured, fbAdminConfigured, fsGet, fsCreate, fsQuery, fsPatch, fsPatchVerified } from './_firestore.js';
 import { SHOOTATHON, normalizePledge, pledgeDescription, computePledgeCents, coverFeeCents } from './_shootathon.js';
 import { sendMail, buildPledgeEmail, emailConfigured, ADMIN_EMAIL } from './_email.js';
@@ -72,7 +73,7 @@ async function createDonationCheckout({ pledgeId, amountCents, label, donorEmail
     const d = await r.json();
     const link = d && d.payment_link;
     if (!r.ok || !link || !link.url) throw new Error('square: ' + ((d.errors && d.errors[0] && (d.errors[0].detail || d.errors[0].code)) || ('http ' + r.status)));
-    return { url: link.url, patch: { square_link_id: link.id || '', square_order_id: link.order_id || '', payment_provider: 'square' } };
+    return { url: link.url, patch: { square_link_id: link.id || '', square_order_id: link.order_id || '', payment_provider: 'square', site: SITE_TAG } };
   }
   const params = new URLSearchParams();
   params.set('mode', 'payment');
@@ -82,6 +83,8 @@ async function createDonationCheckout({ pledgeId, amountCents, label, donorEmail
   params.set('client_reference_id', pledgeId);
   params.set('metadata[kind]', 'donation');
   params.set('metadata[pledge_id]', pledgeId);
+  params.set('metadata[site]', SITE_TAG);
+  params.set('payment_intent_data[metadata][site]', SITE_TAG);
   params.set('payment_intent_data[metadata][kind]', 'donation');
   params.set('payment_intent_data[metadata][pledge_id]', pledgeId);
   params.set('line_items[0][quantity]', '1');
@@ -95,7 +98,7 @@ async function createDonationCheckout({ pledgeId, amountCents, label, donorEmail
   });
   const d = await r.json();
   if (!r.ok || !d.url) throw new Error('stripe: ' + ((d.error && d.error.message) || ('http ' + r.status)));
-  return { url: d.url, patch: { stripe_session_id: d.id, stripe_payment_intent: d.payment_intent || '', payment_provider: 'stripe' } };
+  return { url: d.url, patch: { stripe_session_id: d.id, stripe_payment_intent: d.payment_intent || '', payment_provider: 'stripe', site: SITE_TAG } };
 }
 
 // ── Build the public snapshot with rolled-up raised totals ─────────────────
@@ -222,6 +225,7 @@ async function handlePost(req, res) {
     const fee = pledge.cover_fee ? coverFeeCents(base) : 0;   // authoritative — never trust the browser
     const amount = base + fee;
     const created = await fsCreate('pledges', Object.assign({}, pledge, {
+      site: SITE_TAG,
       status: 'pending', amount_cents: amount, fee_cents: fee, amount_paid_cents: 0, created: now, pledge_ip: ip,
     }));
     const id = created && created.name ? String(created.name).split('/').pop() : null;
@@ -239,6 +243,7 @@ async function handlePost(req, res) {
 
   // ── PER-MADE-THROW PLEDGE → record now, bill after the event ──
   const created = await fsCreate('pledges', Object.assign({}, pledge, {
+    site: SITE_TAG,
     status: 'pledged', amount_cents: 0, amount_paid_cents: 0, created: now, pledge_ip: ip,
   }));
   const id = created && created.name ? String(created.name).split('/').pop() : null;

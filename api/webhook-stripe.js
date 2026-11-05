@@ -13,6 +13,7 @@
 // Idempotent: finalizePaid no-ops on an already-paid registration and terminal statuses
 // are never re-flipped, so Stripe's automatic retries are harmless.
 
+import { ownsSession } from './_site.js';
 import crypto from 'node:crypto';
 import { fsGet, fsPatchVerified } from './_firestore.js';
 import { verifyPayment, finalizePaid, finalizeDonationPaid } from './_finalize.js';
@@ -68,6 +69,8 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true, ignored: type || 'unknown' });
   }
   const session = (event.data && event.data.object) || {};
+  // Shared Stripe account: the other site's checkouts are its own webhook's job (see _site.js).
+  if (!ownsSession(session)) return res.status(200).json({ ok: true, ignored: 'other_site' });
 
   // Shoot-a-Thon donation? Pledges live in their own collection and finalize via their own
   // path (checkout metadata.kind === 'donation'). Handle them before the registration logic.

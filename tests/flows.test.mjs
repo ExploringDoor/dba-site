@@ -20,6 +20,7 @@ import refund from '../api/refund.js';
 import checkin from '../api/checkin.js';
 import moveSession from '../api/move-session.js';
 import notify from '../api/notify.js';
+import { SITE_TAG } from '../api/_site.js';
 import { PRICE } from '../api/_clinic.js';
 
 fake.install();
@@ -60,7 +61,7 @@ const MIN = 60 * 1000, HOUR = 60 * MIN, DAY = 24 * HOUR;
 
 // Stripe webhook helpers — a real HMAC over the raw bytes, like Stripe sends.
 function stripeEvent(rid, sessionId, extra) {
-  return JSON.stringify({ id: 'evt_' + rid, object: 'event', type: 'checkout.session.completed', data: { object: { id: sessionId, object: 'checkout.session', client_reference_id: rid, metadata: { rid }, payment_status: 'paid', ...(extra || {}) } } });
+  return JSON.stringify({ id: 'evt_' + rid, object: 'event', type: 'checkout.session.completed', data: { object: { id: sessionId, object: 'checkout.session', client_reference_id: rid, metadata: { rid, site: SITE_TAG }, payment_status: 'paid', ...(extra || {}) } } });
 }
 function sign(raw, secret = process.env.STRIPE_WEBHOOK_SECRET, t = Math.floor(Date.now() / 1000)) {
   return `t=${t},v1=${createHmac('sha256', secret).update(`${t}.`).update(raw).digest('hex')}`;

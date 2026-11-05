@@ -17,6 +17,7 @@
 // ./_env.js must be evaluated before ../api/_firestore.js (it reads env at import), which is why
 // it is the first import here and why flows.test.mjs imports this file before any api module.
 
+import { SITE_TAG } from '../api/_site.js';
 import './_env.js';
 import { toFirestore, fromFirestore, fromFsValue } from '../api/_firestore.js';
 import { expectedCents, cleanSessions, SESSION_IDS, CLINIC } from '../api/_clinic.js';
@@ -450,6 +451,7 @@ export function regDoc(o = {}) {
     waiver_name: 'Jane Doe', waiver_at: '2026-09-01T12:00:00.000Z', waiver_ip: '203.0.113.9',
     status, payment_provider: 'stripe', amount_cents: expectedCents({ sessions, players }), amount_refunded_cents: 0, currency: 'USD',
     created: '2026-09-01T12:00:00.000Z',
+    site: SITE_TAG, // this deployment's own family (shared DB, see api/_site.js)
   };
   if (status !== 'pending' && status !== 'abandoned' && status !== 'error') {
     Object.assign(base, { paid_at: '2026-09-01T12:01:00.000Z', paid_via: 'Stripe', card_last4: '4242', stripe_session_id: '', stripe_payment_intent: '', amount_captured_cents: base.amount_cents, confirm_email_sent: true, confirm_email_at: '2026-09-01T12:01:01.000Z' });
