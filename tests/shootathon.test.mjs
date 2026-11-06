@@ -280,5 +280,79 @@ await test('refund: needs the admin passcode', async () => {
   assert.equal(fake.state.stripe.refunds.length, 0);
 });
 
+group('admin: cash/check gifts, edit, remove, restore, mark paid, receipt');
+const adm = (body) => call(shootathon, { method: 'POST', headers: ADMIN, body });
+await test('cash gift counts toward player, team and org; receipt optional', async () => {
+  fake.reset(); seedEvent();
+  const r = await adm({ action: 'add_offline', donor_name: 'Grandma Jo', donor_email: 'jo@x.com', target_type: 'player', target_slug: 'jimmy-d', amount_cents: 2000, method: 'check', check_no: '1042', send_receipt: true });
+  assert.equal(r.statusCode, 200); assert.ok(r.body.id); assert.equal(r.body.emailed, true);
+  const d = fake.doc('pledges/' + r.body.id);
+  assert.equal(d.status, 'paid'); assert.equal(d.offline, true); assert.equal(d.paid_via, 'Check'); assert.equal(d.check_no, '1042');
+  const snap = (await call(pledge, {})).body;
+  assert.equal(snap.players.find((p) => p.slug === 'jimmy-d').raised_cents, 2000);
+  assert.equal(snap.teams.find((t) => t.slug === 'varsity').raised_cents, 2000);
+  assert.equal(snap.org.raised_cents, 2000);
+  assert.ok(fake.mailsTo('jo@x.com').some((m) => /Donation received/i.test(m.subject)));
+});
+await test('cash gift needs a name and a real amount; email is optional', async () => {
+  fake.reset(); seedEvent();
+  assert.equal((await adm({ action: 'add_offline', donor_name: '', amount_cents: 2000 })).body.error, 'missing_name');
+  assert.equal((await adm({ action: 'add_offline', donor_name: 'A', amount_cents: 0 })).body.error, 'bad_amount');
+  assert.equal((await adm({ action: 'add_offline', donor_name: 'A', amount_cents: 2000, target_type: 'player', target_slug: 'nobody' })).body.error, 'unknown_player');
+  assert.equal((await adm({ action: 'add_offline', donor_name: 'A', amount_cents: 2000 })).statusCode, 200);
+});
+await test('edit fixes donor info and moves a gift to another player; card amount stays put', async () => {
+  const { id } = await paidOrgGift();
+  const r = await adm({ action: 'edit', id, donor_name: 'Sam Davis', donor_email: 'SAMD@x.com', anonymous: true, target_type: 'player', target_slug: 'sara-k', amount_cents: 1 });
+  assert.equal(r.statusCode, 200);
+  const d = fake.doc('pledges/' + id);
+  assert.equal(d.donor_name, 'Sam Davis'); assert.equal(d.donor_email, 'samd@x.com'); assert.equal(d.anonymous, true);
+  assert.equal(d.target_slug, 'sara-k'); assert.equal(d.amount_paid_cents, 10000);
+  const snap = (await call(pledge, {})).body;
+  assert.equal(snap.players.find((p) => p.slug === 'sara-k').raised_cents, 10000);
+  assert.equal(snap.teams.find((t) => t.slug === 'jv').raised_cents, 10000);
+});
+await test('edit can change a cash gift amount and method', async () => {
+  fake.reset(); seedEvent();
+  const id = (await adm({ action: 'add_offline', donor_name: 'A', amount_cents: 2000 })).body.id;
+  await adm({ action: 'edit', id, amount_cents: 2500, method: 'venmo' });
+  const d = fake.doc('pledges/' + id); assert.equal(d.amount_paid_cents, 2500); assert.equal(d.paid_via, 'Venmo');
+});
+await test('remove hides an unpaid pledge everywhere; restore brings it back', async () => {
+  fake.reset(); seedEvent();
+  const id = (await call(pledge, { method: 'POST', body: { ...okPer } })).body.id;
+  assert.equal((await call(pledge, {})).body.supporter_count, 1);
+  assert.equal((await adm({ action: 'remove', id })).statusCode, 200);
+  assert.equal(fake.doc('pledges/' + id).status, 'removed');
+  assert.equal((await call(pledge, {})).body.supporter_count, 0);
+  assert.equal((await adm({ action: 'config' })).body.totals.pledges, 0);
+  assert.equal((await adm({ action: 'restore', id })).statusCode, 200);
+  assert.equal(fake.doc('pledges/' + id).status, 'pledged');
+});
+await test('remove refuses card money and payments in flight', async () => {
+  const { id } = await paidOrgGift();
+  assert.equal((await adm({ action: 'remove', id })).body.error, 'paid_by_card');
+  fake.reset(); seedEvent();
+  const pend = (await call(pledge, { method: 'POST', body: { ...okFlatOrg } })).body.id;
+  assert.equal((await adm({ action: 'remove', id: pend })).body.error, 'payment_in_flight');
+});
+await test('mark paid settles a per-throw pledge by check at the made-throw total', async () => {
+  fake.reset(); seedEvent({ players: [{ slug: 'jimmy-d', name: 'Jimmy D', team: 'varsity', goal_cents: 100000, makes: 84 }] });
+  const id = (await call(pledge, { method: 'POST', body: { ...okPer } })).body.id;
+  const r = await adm({ action: 'mark_paid', id, method: 'check' });
+  assert.equal(r.statusCode, 200);
+  const d = fake.doc('pledges/' + id); assert.equal(d.status, 'paid'); assert.equal(d.amount_paid_cents, 4200); assert.equal(d.paid_via, 'Check');
+  assert.equal((await call(pledge, {})).body.org.raised_cents, 4200);
+});
+await test('receipt re-sends for a paid gift only', async () => {
+  const { id } = await paidOrgGift();
+  const before = fake.mailsTo('sam@x.com').length;
+  assert.equal((await adm({ action: 'receipt', id })).statusCode, 200);
+  assert.equal(fake.mailsTo('sam@x.com').length, before + 1);
+  fake.reset(); seedEvent();
+  const open = (await call(pledge, { method: 'POST', body: { ...okPer } })).body.id;
+  assert.equal((await adm({ action: 'receipt', id: open })).body.error, 'not_paid');
+});
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

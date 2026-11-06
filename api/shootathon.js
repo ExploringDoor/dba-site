@@ -9,16 +9,24 @@
 //   resend      → re-email the pay-link for one invoiced pledge        { id }
 //   cancel      → cancel a not-yet-paid pledge                         { id }
 //   refund      → refund a paid donation in full + email the donor    { id }
+//   edit        → fix a donation's donor name/email/message/anonymous, who it supports, and
+//                 (cash/check gifts only) the amount and method       { id, ... }
+//   remove      → hide a donation that holds no card money (test entries, mistakes)   { id }
+//   restore     → undo a remove                                        { id }
+//   add_offline → record a cash/check gift so it counts toward the goals  { donor_name, amount_cents, ... }
+//   mark_paid   → a per-throw pledge paid by cash/check instead of the pay-link   { id, method }
+//   receipt     → re-email the receipt for a paid donation              { id }
 //   sync        → re-check invoiced pledges against the processor (backup for a missed webhook)
 //
 // One-time donations are paid at donation time (not here). The per-throw charge is ALWAYS
 // recomputed here from the stored pledge × the makes in the event doc (computePledgeCents).
 
-import { fbConfigured, fbAdminConfigured, fsGet, fsGetMeta, fsPatch, fsPatchVerified, fsQuery } from './_firestore.js';
+import { fbConfigured, fbAdminConfigured, fsGet, fsGetMeta, fsCreate, fsPatch, fsPatchVerified, fsQuery } from './_firestore.js';
 import { SHOOTATHON, LIMITS, slugify, isSlug, intOrNull, computePledgeCents, pledgeDescription, normalizeTeam, coverFeeCents } from './_shootathon.js';
-import { clip, stripTags } from './_clinic.js';
+import { clip, stripTags, validEmail } from './_clinic.js';
 import { verifyPayment, finalizeDonationPaid } from './_finalize.js';
-import { sendMail, buildPayLinkEmail, buildDonationRefundEmail, emailConfigured, ADMIN_EMAIL } from './_email.js';
+import { sendMail, buildPayLinkEmail, buildDonationRefundEmail, buildDonationReceiptEmail, emailConfigured, ADMIN_EMAIL } from './_email.js';
+import { SITE_TAG } from './_site.js';
 import { refundStripe, refundSquare } from './_refund.js';
 
 function ctEq(a, b) {
@@ -68,7 +76,7 @@ async function actionConfig() {
     const settled = p.status === 'paid' || p.status === 'refunded';
     const computed = settled ? (p.amount_paid_cents || p.amount_cents || 0) : computePledgeCents(p, makes);
     if (p.status === 'refunded') refundedCents += (p.amount_refunded_cents || 0);
-    else if (p.status !== 'canceled') { pledgeCount++; projectedCents += computed; }
+    else if (p.status !== 'canceled' && p.status !== 'removed') { pledgeCount++; projectedCents += computed; }
     if (p.status === 'paid') { paidCount++; raisedCents += (p.amount_paid_cents || p.amount_cents || 0); }
     return {
       id: p.id, status: p.status, kind: p.kind,
@@ -77,7 +85,10 @@ async function actionConfig() {
       per_shot_cents: p.per_shot_cents || 0, cap_cents: p.cap_cents || 0, flat_cents: p.flat_cents || 0,
       amount_cents: p.amount_cents || 0, computed_cents: computed, makes,
       description: pledgeDescription(p), created: p.created || '', paid_at: p.paid_at || '', card_last4: p.card_last4 || '',
-      refunded_at: p.refunded_at || '',
+      refunded_at: p.refunded_at || '', amount_refunded_cents: p.amount_refunded_cents || 0,
+      fee_cents: p.fee_cents || 0, cover_fee: !!p.cover_fee, paid_via: p.paid_via || '', offline: !!p.offline,
+      check_no: p.check_no || '', note: p.note || '', invoiced_at: p.invoiced_at || '', removed_at: p.removed_at || '',
+      refundable: p.status === 'paid' && !!(p.stripe_payment_intent || p.square_payment_id),
     };
   });
   const ev = event || {};
@@ -257,6 +268,144 @@ async function actionRefund(b) {
   return { status: 200, body: { ok: true, refunded_cents: cents } };
 }
 
+const OFFLINE_METHODS = { cash: 'Cash', check: 'Check', venmo: 'Venmo', zelle: 'Zelle', other: 'Other' };
+function cleanTarget(event, b, kind) {
+  const type = ['org', 'team', 'player'].includes(b.target_type) ? b.target_type : 'org';
+  const slug = type === 'org' ? '' : String(b.target_slug || '').trim().toLowerCase();
+  if (type === 'player' && !findPlayer(event, slug)) return { error: 'unknown_player' };
+  if (type === 'team' && !findTeam(event, slug)) return { error: 'unknown_team' };
+  if (kind === 'per_shot' && type !== 'player') return { error: 'per_shot_needs_player' };
+  return { target_type: type, target_slug: slug };
+}
+function cleanDonor(b, needEmail) {
+  const out = {};
+  if (b.donor_name != null) { out.donor_name = stripTags(clip(b.donor_name, 120)).trim(); if (!out.donor_name) return { error: 'missing_name' }; }
+  if (b.donor_email != null) {
+    out.donor_email = clip(b.donor_email, 200).trim().toLowerCase();
+    if ((out.donor_email || needEmail) && !validEmail(out.donor_email)) return { error: 'bad_email' };
+  }
+  if (b.message != null) out.message = stripTags(clip(b.message, 280)).trim();
+  if (b.anonymous != null) out.anonymous = !!b.anonymous;
+  if (b.note != null) out.note = stripTags(clip(b.note, 500)).trim();
+  return out;
+}
+
+async function actionEdit(b) {
+  if (!safeId(b && b.id)) return { status: 400, body: { error: 'bad_id' } };
+  const p = await fsGet(`pledges/${b.id}`);
+  if (!p) return { status: 404, body: { error: 'not_found' } };
+  const patch = cleanDonor(b, false);
+  if (patch.error) return { status: 400, body: { error: patch.error } };
+  if (b.target_type != null) {
+    const tg = cleanTarget(await loadEvent(), b, p.kind);
+    if (tg.error) return { status: 400, body: { error: tg.error } };
+    Object.assign(patch, tg);
+  }
+  // Amount and method only change on gifts we recorded by hand; card money is whatever the processor took.
+  if (p.offline) {
+    if (b.amount_cents != null) {
+      const a = intOrNull(b.amount_cents);
+      if (a == null || a < 100 || a > LIMITS.maxFlatCents) return { status: 400, body: { error: 'bad_amount' } };
+      Object.assign(patch, { amount_cents: a, amount_paid_cents: a, flat_cents: a });
+    }
+    if (b.method != null && OFFLINE_METHODS[b.method]) patch.paid_via = OFFLINE_METHODS[b.method];
+    if (b.check_no != null) patch.check_no = stripTags(clip(b.check_no, 40)).trim();
+  }
+  patch.edited_at = new Date().toISOString();
+  const w = await fsPatchVerified(`pledges/${b.id}`, patch);
+  if (!w.ok) return { status: 502, body: { error: 'save_failed' } };
+  return { status: 200, body: { ok: true } };
+}
+
+// Hide, never hard delete: the record stays in the database and Restore brings it back.
+// Card money can't be hidden (refund it instead), so totals always match the processor.
+async function actionRemove(b) {
+  if (!safeId(b && b.id)) return { status: 400, body: { error: 'bad_id' } };
+  const p = await fsGet(`pledges/${b.id}`);
+  if (!p) return { status: 404, body: { error: 'not_found' } };
+  if (p.status === 'removed') return { status: 200, body: { ok: true, already: true } };
+  if (p.status === 'paid' && !p.offline) return { status: 400, body: { error: 'paid_by_card' } };
+  if (p.status === 'invoiced' || p.status === 'pending') return { status: 400, body: { error: 'payment_in_flight' } };
+  const w = await fsPatchVerified(`pledges/${b.id}`, { status: 'removed', status_before_remove: p.status || '', removed_at: new Date().toISOString() });
+  if (!w.ok) return { status: 502, body: { error: 'save_failed' } };
+  return { status: 200, body: { ok: true } };
+}
+async function actionRestore(b) {
+  if (!safeId(b && b.id)) return { status: 400, body: { error: 'bad_id' } };
+  const p = await fsGet(`pledges/${b.id}`);
+  if (!p) return { status: 404, body: { error: 'not_found' } };
+  if (p.status !== 'removed') return { status: 400, body: { error: 'not_removed' } };
+  const w = await fsPatchVerified(`pledges/${b.id}`, { status: p.status_before_remove || 'canceled', removed_at: '' });
+  if (!w.ok) return { status: 502, body: { error: 'save_failed' } };
+  return { status: 200, body: { ok: true } };
+}
+
+async function sendReceipt(p) {
+  if (!p.donor_email || !emailConfigured()) return false;
+  const { subject, html } = buildDonationReceiptEmail(p);
+  return sendMail({ to: p.donor_email, subject, html, bcc: ADMIN_EMAIL });
+}
+
+async function actionAddOffline(b) {
+  const event = await loadEvent();
+  if (!event) return { status: 400, body: { error: 'no_event' } };
+  const donor = cleanDonor(Object.assign({ donor_name: '', donor_email: '' }, b), false);
+  if (donor.error) return { status: 400, body: { error: donor.error } };
+  const tg = cleanTarget(event, b, 'flat');
+  if (tg.error) return { status: 400, body: { error: tg.error } };
+  const a = intOrNull(b && b.amount_cents);
+  if (a == null || a < 100 || a > LIMITS.maxFlatCents) return { status: 400, body: { error: 'bad_amount' } };
+  const method = OFFLINE_METHODS[b.method] || 'Cash';
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(String(b.date || '')) ? new Date(b.date + 'T12:00:00Z').toISOString() : new Date().toISOString();
+  const doc = Object.assign({
+    event_id: SHOOTATHON.eventId, site: SITE_TAG, kind: 'flat', offline: true,
+    flat_cents: a, per_shot_cents: 0, cap_cents: 0, cover_fee: false, fee_cents: 0,
+    amount_cents: a, amount_paid_cents: a, status: 'paid', paid_via: method,
+    check_no: stripTags(clip(b.check_no, 40)).trim(), created: day, paid_at: day,
+    message: '', anonymous: false, note: '',
+  }, donor, tg);
+  const created = await fsCreate('pledges', doc);
+  const id = created && created.name ? String(created.name).split('/').pop() : null;
+  if (!id) return { status: 502, body: { error: 'save_failed' } };
+  let emailed = false;
+  if (b.send_receipt) { try { emailed = await sendReceipt(Object.assign({ id }, doc)); } catch (e) { /* gift is saved either way */ } }
+  return { status: 200, body: { ok: true, id, emailed } };
+}
+
+// A per-throw pledge settled outside the pay-link (handed a check after the event, say).
+async function actionMarkPaid(b) {
+  if (!safeId(b && b.id)) return { status: 400, body: { error: 'bad_id' } };
+  const p = await fsGet(`pledges/${b.id}`);
+  if (!p) return { status: 404, body: { error: 'not_found' } };
+  if (p.status !== 'pledged' && p.status !== 'invoiced') return { status: 400, body: { error: 'not_open' } };
+  let amount = p.status === 'invoiced' ? (p.amount_cents || 0) : 0;
+  if (!amount) {
+    const event = await loadEvent();
+    const tg = targetOf(p);
+    amount = computePledgeCents(p, tg.type === 'player' ? (makesMap(event)[tg.slug] || 0) : null);
+  }
+  if (b.amount_cents != null) { const a = intOrNull(b.amount_cents); if (a != null && a > 0) amount = a; }
+  if (amount <= 0) return { status: 400, body: { error: 'nothing_owed' } };
+  const now = new Date().toISOString();
+  const patch = { status: 'paid', offline: true, paid_via: OFFLINE_METHODS[b.method] || 'Cash', check_no: stripTags(clip(b.check_no, 40)).trim(), amount_cents: amount, amount_paid_cents: amount, paid_at: now };
+  const w = await fsPatchVerified(`pledges/${b.id}`, patch);
+  if (!w.ok) return { status: 502, body: { error: 'save_failed' } };
+  let emailed = false;
+  if (b.send_receipt) { try { emailed = await sendReceipt(Object.assign({}, p, patch)); } catch (e) { /* saved either way */ } }
+  return { status: 200, body: { ok: true, emailed } };
+}
+
+async function actionReceipt(b) {
+  if (!safeId(b && b.id)) return { status: 400, body: { error: 'bad_id' } };
+  if (!emailConfigured()) return { status: 503, body: { error: 'email_not_configured' } };
+  const p = await fsGet(`pledges/${b.id}`);
+  if (!p) return { status: 404, body: { error: 'not_found' } };
+  if (p.status !== 'paid') return { status: 400, body: { error: 'not_paid' } };
+  if (!p.donor_email) return { status: 400, body: { error: 'no_email' } };
+  const ok = await sendReceipt(p);
+  return { status: ok ? 200 : 502, body: ok ? { ok: true } : { error: 'send_failed' } };
+}
+
 async function actionSync() {
   const pledges = await loadPledges();
   let checked = 0, paid = 0;
@@ -285,6 +434,12 @@ export default async function handler(req, res) {
     if (action === 'resend') { const r = await actionResend(req, b); return res.status(r.status).json(r.body); }
     if (action === 'cancel') { const r = await actionCancel(b); return res.status(r.status).json(r.body); }
     if (action === 'refund') { const r = await actionRefund(b); return res.status(r.status).json(r.body); }
+    if (action === 'edit') { const r = await actionEdit(b); return res.status(r.status).json(r.body); }
+    if (action === 'remove') { const r = await actionRemove(b); return res.status(r.status).json(r.body); }
+    if (action === 'restore') { const r = await actionRestore(b); return res.status(r.status).json(r.body); }
+    if (action === 'add_offline') { const r = await actionAddOffline(b); return res.status(r.status).json(r.body); }
+    if (action === 'mark_paid') { const r = await actionMarkPaid(b); return res.status(r.status).json(r.body); }
+    if (action === 'receipt') { const r = await actionReceipt(b); return res.status(r.status).json(r.body); }
     if (action === 'sync') { const r = await actionSync(); return res.status(r.status).json(r.body); }
     return res.status(400).json({ error: 'unknown_action' });
   } catch (e) {
