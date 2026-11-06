@@ -336,6 +336,13 @@ await test('remove refuses card money and payments in flight', async () => {
   const pend = (await call(pledge, { method: 'POST', body: { ...okFlatOrg } })).body.id;
   assert.equal((await adm({ action: 'remove', id: pend })).body.error, 'payment_in_flight');
 });
+await test('remove takes an abandoned checkout older than a day', async () => {
+  fake.reset(); seedEvent();
+  const pend = (await call(pledge, { method: 'POST', body: { ...okFlatOrg } })).body.id;
+  fake.seed('pledges/' + pend, Object.assign({}, fake.doc('pledges/' + pend), { created: new Date(Date.now() - 2 * 864e5).toISOString() }));
+  assert.equal((await adm({ action: 'remove', id: pend })).statusCode, 200);
+  assert.equal(fake.doc('pledges/' + pend).status, 'removed');
+});
 await test('mark paid settles a per-throw pledge by check at the made-throw total', async () => {
   fake.reset(); seedEvent({ players: [{ slug: 'jimmy-d', name: 'Jimmy D', team: 'varsity', goal_cents: 100000, makes: 84 }] });
   const id = (await call(pledge, { method: 'POST', body: { ...okPer } })).body.id;

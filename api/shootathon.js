@@ -325,7 +325,9 @@ async function actionRemove(b) {
   if (!p) return { status: 404, body: { error: 'not_found' } };
   if (p.status === 'removed') return { status: 200, body: { ok: true, already: true } };
   if (p.status === 'paid' && !p.offline) return { status: 400, body: { error: 'paid_by_card' } };
-  if (p.status === 'invoiced' || p.status === 'pending') return { status: 400, body: { error: 'payment_in_flight' } };
+  // Stripe checkout links expire after 24 hours, so a 'pending' older than that was abandoned.
+  const staleCheckout = p.status === 'pending' && Date.now() - Date.parse(p.created || 0) > 864e5;
+  if (p.status === 'invoiced' || (p.status === 'pending' && !staleCheckout)) return { status: 400, body: { error: 'payment_in_flight' } };
   const w = await fsPatchVerified(`pledges/${b.id}`, { status: 'removed', status_before_remove: p.status || '', removed_at: new Date().toISOString() });
   if (!w.ok) return { status: 502, body: { error: 'save_failed' } };
   return { status: 200, body: { ok: true } };
