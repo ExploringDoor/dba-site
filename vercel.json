@@ -3,22 +3,107 @@
   "outputDirectory": ".",
   "framework": null,
   "functions": {
-    "api/reconcile.js": { "maxDuration": 120 },
-    "api/remind.js": { "maxDuration": 120 },
-    "api/notify.js": { "maxDuration": 60 }
+    "api/reconcile.js": {
+      "maxDuration": 120
+    },
+    "api/remind.js": {
+      "maxDuration": 120
+    },
+    "api/notify.js": {
+      "maxDuration": 60
+    }
   },
   "crons": [
-    { "path": "/api/reconcile", "schedule": "*/15 * * * *" },
-    { "path": "/api/remind", "schedule": "0 20 * * *" }
+    {
+      "path": "/api/reconcile",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/remind",
+      "schedule": "0 20 * * *"
+    }
   ],
   "headers": [
-    { "source": "/(.*)", "headers": [
-      { "key": "X-Content-Type-Options", "value": "nosniff" },
-      { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
-      { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-      { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), payment=(self)" }
-    ] },
-    { "source": "/(.*).html", "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }] },
-    { "source": "/img/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] }
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=(), payment=(self)"
+        }
+      ]
+    },
+    {
+      "source": "/(.*).html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/img/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400"
+        }
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/donate",
+      "destination": "https://aces-basketball.vercel.app/donate.html",
+      "permanent": false
+    },
+    {
+      "source": "/donate.html",
+      "destination": "https://aces-basketball.vercel.app/donate.html",
+      "permanent": false
+    },
+    {
+      "source": "/donate-pay.html",
+      "destination": "https://aces-basketball.vercel.app/donate-pay.html",
+      "permanent": false
+    },
+    {
+      "source": "/donate-success.html",
+      "destination": "https://aces-basketball.vercel.app/donate-success.html",
+      "permanent": false
+    },
+    {
+      "source": "/shootathon",
+      "destination": "https://aces-basketball.vercel.app/shootathon.html",
+      "permanent": false
+    },
+    {
+      "source": "/shootathon.html",
+      "destination": "https://aces-basketball.vercel.app/shootathon.html",
+      "permanent": false
+    },
+    {
+      "source": "/api/pledge",
+      "destination": "https://aces-basketball.vercel.app/api/pledge",
+      "permanent": false
+    },
+    {
+      "source": "/api/shootathon",
+      "destination": "https://aces-basketball.vercel.app/api/shootathon",
+      "permanent": false
+    }
   ]
 }
