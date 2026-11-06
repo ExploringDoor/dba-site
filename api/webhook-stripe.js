@@ -80,6 +80,7 @@ export default async function handler(req, res) {
     let pledge = await fsGet(`pledges/${pid}`);
     if (!pledge) return res.status(200).json({ ok: true, ignored: 'pledge_not_found' });
     if (pledge.status === 'paid') return res.status(200).json({ ok: true, already: 'paid' });
+    if (pledge.status === 'refunded') return res.status(200).json({ ok: true, already: 'refunded' });
     try {
       // A donor may have opened the pay-link more than once (several sessions). Verify the ONE
       // that actually fired by pointing the pledge at this event's session id before verifying.

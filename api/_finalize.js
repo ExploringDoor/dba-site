@@ -142,6 +142,7 @@ export async function maybeSendDonationReceipt(id, pledge) {
 
 export async function finalizeDonationPaid(id, pledge, verifyPatch) {
   if (pledge.status === 'paid') { await maybeSendDonationReceipt(id, pledge); return pledge; }
+  if (pledge.status === 'refunded') return pledge; // refunded by the admin: a late webhook or sync must not re-mark it paid
   const vp = verifyPatch || {};
   const captured = typeof vp.amount_captured_cents === 'number' ? vp.amount_captured_cents : (pledge.amount_cents || 0);
   const patch = Object.assign({ status: 'paid', paid_at: new Date().toISOString(), amount_paid_cents: captured }, vp);

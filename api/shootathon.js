@@ -8,16 +8,18 @@
 //   send_links  → invoice every new per-throw pledge for its computed total + email the pay-link
 //   resend      → re-email the pay-link for one invoiced pledge        { id }
 //   cancel      → cancel a not-yet-paid pledge                         { id }
+//   refund      → refund a paid donation in full + email the donor    { id }
 //   sync        → re-check invoiced pledges against the processor (backup for a missed webhook)
 //
 // One-time donations are paid at donation time (not here). The per-throw charge is ALWAYS
 // recomputed here from the stored pledge × the makes in the event doc (computePledgeCents).
 
-import { fbConfigured, fbAdminConfigured, fsGet, fsPatch, fsPatchVerified, fsQuery } from './_firestore.js';
+import { fbConfigured, fbAdminConfigured, fsGet, fsGetMeta, fsPatch, fsPatchVerified, fsQuery } from './_firestore.js';
 import { SHOOTATHON, LIMITS, slugify, isSlug, intOrNull, computePledgeCents, pledgeDescription, normalizeTeam, coverFeeCents } from './_shootathon.js';
 import { clip, stripTags } from './_clinic.js';
 import { verifyPayment, finalizeDonationPaid } from './_finalize.js';
-import { sendMail, buildPayLinkEmail, emailConfigured, ADMIN_EMAIL } from './_email.js';
+import { sendMail, buildPayLinkEmail, buildDonationRefundEmail, emailConfigured, ADMIN_EMAIL } from './_email.js';
+import { refundStripe, refundSquare } from './_refund.js';
 
 function ctEq(a, b) {
   a = String(a || ''); b = String(b || '');
@@ -59,12 +61,14 @@ async function actionConfig() {
   const event = await loadEvent();
   const mm = makesMap(event);
   const pledges = await loadPledges();
-  let pledgeCount = 0, paidCount = 0, raisedCents = 0, projectedCents = 0;
+  let pledgeCount = 0, paidCount = 0, raisedCents = 0, projectedCents = 0, refundedCents = 0;
   const rows = pledges.map((p) => {
     const tg = targetOf(p);
     const makes = tg.type === 'player' ? (mm[tg.slug] || 0) : null;
-    const computed = p.status === 'paid' ? (p.amount_paid_cents || p.amount_cents || 0) : computePledgeCents(p, makes);
-    if (p.status !== 'canceled') { pledgeCount++; projectedCents += computed; }
+    const settled = p.status === 'paid' || p.status === 'refunded';
+    const computed = settled ? (p.amount_paid_cents || p.amount_cents || 0) : computePledgeCents(p, makes);
+    if (p.status === 'refunded') refundedCents += (p.amount_refunded_cents || 0);
+    else if (p.status !== 'canceled') { pledgeCount++; projectedCents += computed; }
     if (p.status === 'paid') { paidCount++; raisedCents += (p.amount_paid_cents || p.amount_cents || 0); }
     return {
       id: p.id, status: p.status, kind: p.kind,
@@ -73,6 +77,7 @@ async function actionConfig() {
       per_shot_cents: p.per_shot_cents || 0, cap_cents: p.cap_cents || 0, flat_cents: p.flat_cents || 0,
       amount_cents: p.amount_cents || 0, computed_cents: computed, makes,
       description: pledgeDescription(p), created: p.created || '', paid_at: p.paid_at || '', card_last4: p.card_last4 || '',
+      refunded_at: p.refunded_at || '',
     };
   });
   const ev = event || {};
@@ -85,7 +90,7 @@ async function actionConfig() {
       teams: (ev.teams || []).map((t) => ({ slug: t.slug, name: t.name, goal_cents: t.goal_cents || 0 })),
       players: (ev.players || []).map((p) => ({ slug: p.slug, name: p.name, team: p.team || '', goal_cents: p.goal_cents || 0, makes: p.makes || 0, blurb: p.blurb || '' })),
     },
-    totals: { pledges: pledgeCount, paid: paidCount, raised_cents: raisedCents, projected_cents: projectedCents },
+    totals: { pledges: pledgeCount, paid: paidCount, raised_cents: raisedCents, projected_cents: projectedCents, refunded_cents: refundedCents },
     pledges: rows.sort((a, b) => String(b.created).localeCompare(String(a.created))),
   };
 }
@@ -218,6 +223,40 @@ async function actionCancel(b) {
   return { status: 200, body: { ok: true } };
 }
 
+// Full refund of a paid donation, through the provider that took it. The pledge becomes
+// 'refunded', which drops it from every total and the public supporter list.
+async function actionRefund(b) {
+  if (!safeId(b && b.id)) return { status: 400, body: { error: 'bad_id' } };
+  const meta = await fsGetMeta(`pledges/${b.id}`);
+  if (!meta) return { status: 404, body: { error: 'not_found' } };
+  const p = meta.doc;
+  if (p.status === 'refunded') return { status: 400, body: { error: 'already_refunded' } };
+  if (p.status !== 'paid') return { status: 400, body: { error: 'not_paid' } };
+  if (!(p.stripe_payment_intent || p.square_payment_id)) return { status: 400, body: { error: 'not_refundable' } };
+  const cents = p.amount_paid_cents || p.amount_cents || 0;
+  if (cents <= 0) return { status: 400, body: { error: 'nothing_to_refund' } };
+
+  let out = null;
+  try {
+    out = p.payment_provider === 'square' ? await refundSquare(p, cents, `rf_${p.id}_full`) : await refundStripe(p, cents, `rf_${p.id}_full`);
+  } catch (e) {
+    return { status: 502, body: { error: 'refund_failed', detail: String(e.message || e).slice(0, 200) } };
+  }
+  const patch = { status: 'refunded', amount_refunded_cents: cents, refunded_at: new Date().toISOString(), last_refund_id: out.id || '' };
+  const w = await fsPatchVerified(`pledges/${b.id}`, patch, 4, { ifUpdateTime: meta.updateTime });
+  if (!w.ok) {
+    // Money went back at the processor but the record didn't update. Say so; never invite a second refund.
+    return { status: 500, body: { error: 'refund_sent_but_record_not_updated', refund_id: out.id || '', message: `The refund of $${(cents / 100).toFixed(2)} went through (refund ${out.id || ''}), but this donation's record could not be updated. Reload before doing anything else. Do NOT refund again.` } };
+  }
+  try {
+    if (p.donor_email && emailConfigured()) {
+      const { subject, html } = buildDonationRefundEmail(Object.assign({}, p, patch), cents);
+      await sendMail({ to: p.donor_email, subject, html, bcc: ADMIN_EMAIL });
+    }
+  } catch (e) { /* the refund already succeeded */ }
+  return { status: 200, body: { ok: true, refunded_cents: cents } };
+}
+
 async function actionSync() {
   const pledges = await loadPledges();
   let checked = 0, paid = 0;
@@ -245,6 +284,7 @@ export default async function handler(req, res) {
     if (action === 'send_links') { const r = await actionSendLinks(req, b); return res.status(r.status).json(r.body); }
     if (action === 'resend') { const r = await actionResend(req, b); return res.status(r.status).json(r.body); }
     if (action === 'cancel') { const r = await actionCancel(b); return res.status(r.status).json(r.body); }
+    if (action === 'refund') { const r = await actionRefund(b); return res.status(r.status).json(r.body); }
     if (action === 'sync') { const r = await actionSync(); return res.status(r.status).json(r.body); }
     return res.status(400).json({ error: 'unknown_action' });
   } catch (e) {

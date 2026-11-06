@@ -241,6 +241,23 @@ export function buildDonationReceiptEmail(pledge) {
   return { subject: `Donation received — thank you! (${amount})`, html: donShell('DONATION RECEIPT', inner) };
 }
 
+// Sent when the admin refunds a Shoot-a-Thon donation from /shootathon.html.
+export function buildDonationRefundEmail(pledge, refundedCents) {
+  const amount = dollars(refundedCents);
+  const id = donEsc(pledge.id || '');
+  const last4 = donEsc(pledge.card_last4 || '');
+  const inner = `
+    <h2 style="margin:0 0 6px">Your donation has been refunded</h2>
+    <p style="color:#555;line-height:1.6;margin:0 0 18px">We've refunded your Shoot-a-Thon donation. It should appear on your original payment method within <strong>5&ndash;10 business days</strong>.</p>
+    <table style="width:100%;border-collapse:collapse;border:1px solid #eee;border-radius:8px;overflow:hidden;font-size:14px">
+      <tr><td style="padding:9px 14px;color:#777;white-space:nowrap">Receipt #</td><td style="padding:9px 14px;text-align:right;font-family:monospace">${id}</td></tr>
+      ${donRow('Refunded', amount, true)}
+      ${last4 ? donRow('To', 'Card ending ' + last4) : ''}
+    </table>
+    <p style="color:#777;font-size:13px;line-height:1.6;margin:18px 0 0">Questions? Just reply to this email.</p>`;
+  return { subject: `Donation refunded (${amount})`, html: donShell('REFUND RECEIPT', inner) };
+}
+
 // Branded "see you tomorrow" reminder for ONE clinic session (sent by api/remind.js
 // the day before). `session` is an entry from SESSIONS in _clinic.js.
 export function buildReminderEmail(reg, session) {

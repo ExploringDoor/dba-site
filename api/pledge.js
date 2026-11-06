@@ -110,7 +110,7 @@ function buildSnapshot(event, pledges) {
   let orgRaised = 0, supporters = 0;
   const recent = [];
   for (const p of pledges) {
-    if (p.status === 'canceled') continue;
+    if (p.status === 'canceled' || p.status === 'refunded') continue;
     supporters++;
     const tg = targetOf(p);
     const paid = p.status === 'paid';

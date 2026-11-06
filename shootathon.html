@@ -63,7 +63,7 @@ th{font-size:.68rem;text-transform:uppercase;letter-spacing:.6px;color:var(--dim
 td.wrap{white-space:normal}
 tr:last-child td{border-bottom:none}
 .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.72rem;font-weight:600}
-.pill.pledged{background:#eef;color:#3b4fb0}.pill.invoiced{background:#fff3d6;color:#a9780c}.pill.paid{background:#e4f5e9;color:#2f9e4f}.pill.pending{background:#fde9e9;color:#b02a2a}.pill.canceled{background:#f2f2f2;color:#888;text-decoration:line-through}.pill.no_charge{background:#f2f2f2;color:#888}.pill.error{background:#fde9e9;color:#b02a2a}
+.pill.pledged{background:#eef;color:#3b4fb0}.pill.invoiced{background:#fff3d6;color:#a9780c}.pill.paid{background:#e4f5e9;color:#2f9e4f}.pill.pending{background:#fde9e9;color:#b02a2a}.pill.canceled{background:#f2f2f2;color:#888;text-decoration:line-through}.pill.no_charge{background:#f2f2f2;color:#888}.pill.error{background:#fde9e9;color:#b02a2a}.pill.refunded{background:#f0f0f0;color:#666}
 .empty{padding:24px;text-align:center;color:var(--dim)}
 .linkbox{display:flex;gap:8px;align-items:center;margin-top:8px}
 .linkbox .inp{font-family:'IBM Plex Mono',monospace;font-size:.76rem}
@@ -162,6 +162,7 @@ tr:last-child td{border-bottom:none}
       </table>
       <div class="empty" id="pledgeEmpty" style="display:none">No donations yet.</div>
     </div>
+    <div class="statusline" id="pledgeStatus"></div>
   </div>
 </div>
 
@@ -276,7 +277,8 @@ function render(){
     var typ=p.kind==='per_shot'?'Per throw':'One-time';
     var actions='';
     if(p.status==='invoiced') actions+='<button class="btn sm" data-resend="'+p.id+'">Resend</button> ';
-    if(p.status!=='paid'&&p.status!=='canceled') actions+='<button class="btn sm danger" data-cancel="'+p.id+'">Cancel</button>';
+    if(p.status!=='paid'&&p.status!=='canceled'&&p.status!=='refunded') actions+='<button class="btn sm danger" data-cancel="'+p.id+'">Cancel</button>';
+    if(p.status==='paid') actions+='<button class="btn sm danger" data-refund="'+p.id+'" data-amt="'+p.computed_cents+'" data-who="'+esc(p.donor_name)+'">Refund</button>';
     var tr=document.createElement('tr');
     tr.innerHTML='<td class="wrap">'+esc(p.donor_name)+(p.anonymous?' <span style="color:var(--dim)">(anon)</span>':'')+'<br><span style="color:var(--dim);font-size:.76rem">'+esc(p.donor_email)+'</span></td>'+
       '<td>'+esc(p.target_name)+'</td><td>'+typ+'<br><span style="color:var(--dim);font-size:.76rem">'+esc(p.description)+'</span></td>'+
@@ -285,6 +287,7 @@ function render(){
   });
   Array.prototype.forEach.call(tb.querySelectorAll('[data-resend]'),function(b){ b.addEventListener('click',function(){ doResend(b.getAttribute('data-resend'),b); }); });
   Array.prototype.forEach.call(tb.querySelectorAll('[data-cancel]'),function(b){ b.addEventListener('click',function(){ doCancel(b.getAttribute('data-cancel')); }); });
+  Array.prototype.forEach.call(tb.querySelectorAll('[data-refund]'),function(b){ b.addEventListener('click',function(){ doRefund(b.getAttribute('data-refund'),parseInt(b.getAttribute('data-amt'),10)||0,b.getAttribute('data-who')||'',b); }); });
 }
 
 function blockDemo(el){ if(state.demo){ setStatus(el,'Disabled in demo preview.','err'); return true; } return false; }
@@ -318,7 +321,17 @@ $('syncBtn').addEventListener('click',function(){
 });
 $('refreshBtn').addEventListener('click',function(){ loadConfig().catch(function(){}); });
 function doResend(id,btn){ if(blockDemo($('sendStatus'))) return; btn.disabled=true; api('resend',{id:id}).then(function(){ setStatus($('sendStatus'),'Pay-link re-sent ✓','ok'); btn.disabled=false; }).catch(function(){ setStatus($('sendStatus'),'Resend failed.','err'); btn.disabled=false; }); }
-function doCancel(id){ if(blockDemo($('sendStatus'))) return; if(!confirm('Cancel this donation/pledge? (For one already paid, use a refund in Stripe.)')) return; api('cancel',{id:id}).then(function(){ return loadConfig(); }).then(function(){ setStatus($('sendStatus'),'Canceled.','ok'); }).catch(function(){ setStatus($('sendStatus'),'Cancel failed.','err'); }); }
+function doRefund(id,cents,who,btn){
+  var st=$('pledgeStatus'); if(blockDemo(st)) return;
+  if(!confirm('Refund '+money(cents)+(who?' to '+who:'')+'?\n\nThe money goes back to their card and comes off the totals. They get a refund email. This cannot be undone.')) return;
+  btn.disabled=true; setStatus(st,'Refunding…','');
+  api('refund',{id:id}).then(function(d){
+    if(d&&d.ok){ return loadConfig().then(function(){ setStatus($('pledgeStatus'),'Refunded '+money(d.refunded_cents)+'.','ok'); }); }
+    var msg=(d&&d.message)||(d&&d.error==='already_refunded'?'Already refunded.':'Refund failed'+(d&&d.detail?': '+d.detail:'.'));
+    btn.disabled=false; setStatus(st,msg,'err');
+  }).catch(function(){ btn.disabled=false; setStatus(st,'Refund failed. Reload and check before trying again.','err'); });
+}
+function doCancel(id){ if(blockDemo($('sendStatus'))) return; if(!confirm('Cancel this pledge? (For one already paid, use Refund.)')) return; api('cancel',{id:id}).then(function(){ return loadConfig(); }).then(function(){ setStatus($('sendStatus'),'Canceled.','ok'); }).catch(function(){ setStatus($('sendStatus'),'Cancel failed.','err'); }); }
 
 /* ── demo ── */
 var DEMO={ ok:true,

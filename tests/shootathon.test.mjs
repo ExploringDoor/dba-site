@@ -229,5 +229,56 @@ await test('set_event rejects a malformed event date (stored blank)', async () =
   assert.equal(fake.doc(EVENT_PATH).event_date, '');
 });
 
+group('admin refund of a paid donation');
+async function paidOrgGift() {
+  fake.reset(); seedEvent();
+  const id = (await call(pledge, { method: 'POST', body: { ...okFlatOrg } })).body.id;
+  const sid = fake.doc('pledges/' + id).stripe_session_id;
+  fake.stripe.pay(sid, { last4: '4242' });
+  await deliverWebhook(id, sid);
+  assert.equal(fake.doc('pledges/' + id).status, 'paid');
+  return { id, sid };
+}
+await test('refund: money back in full, off the totals and the wall, donor emailed', async () => {
+  const { id } = await paidOrgGift();
+  const r = await call(shootathon, { method: 'POST', headers: ADMIN, body: { action: 'refund', id } });
+  assert.equal(r.statusCode, 200); assert.equal(r.body.refunded_cents, 10000);
+  assert.equal(fake.state.stripe.refunds.length, 1); assert.equal(fake.state.stripe.refunds[0].amount, 10000);
+  const d = fake.doc('pledges/' + id);
+  assert.equal(d.status, 'refunded'); assert.equal(d.amount_refunded_cents, 10000);
+  const snap = (await call(pledge, {})).body;
+  assert.equal(snap.org.raised_cents, 0); assert.equal(snap.supporter_count, 0);
+  assert.ok(fake.mailsTo('sam@x.com').some((m) => /refunded/i.test(m.subject)), 'refund email sent');
+  const cfg = (await call(shootathon, { method: 'POST', headers: ADMIN, body: { action: 'config' } })).body;
+  assert.equal(cfg.totals.raised_cents, 0); assert.equal(cfg.totals.refunded_cents, 10000); assert.equal(cfg.totals.pledges, 0);
+});
+await test('refund: a second click is refused, Stripe is called once', async () => {
+  const { id } = await paidOrgGift();
+  await call(shootathon, { method: 'POST', headers: ADMIN, body: { action: 'refund', id } });
+  const again = await call(shootathon, { method: 'POST', headers: ADMIN, body: { action: 'refund', id } });
+  assert.equal(again.statusCode, 400); assert.equal(again.body.error, 'already_refunded');
+  assert.equal(fake.state.stripe.refunds.length, 1);
+});
+await test('refund: a late webhook replay does not flip it back to paid', async () => {
+  const { id, sid } = await paidOrgGift();
+  await call(shootathon, { method: 'POST', headers: ADMIN, body: { action: 'refund', id } });
+  const wh = await deliverWebhook(id, sid);
+  assert.equal(wh.statusCode, 200);
+  assert.equal(fake.doc('pledges/' + id).status, 'refunded');
+  assert.equal((await call(pledge, {})).body.org.raised_cents, 0);
+});
+await test('refund: an unpaid pledge cannot be refunded', async () => {
+  fake.reset(); seedEvent();
+  const id = (await call(pledge, { method: 'POST', body: { ...okPer } })).body.id;
+  const r = await call(shootathon, { method: 'POST', headers: ADMIN, body: { action: 'refund', id } });
+  assert.equal(r.statusCode, 400); assert.equal(r.body.error, 'not_paid');
+  assert.equal(fake.state.stripe.refunds.length, 0);
+});
+await test('refund: needs the admin passcode', async () => {
+  const { id } = await paidOrgGift();
+  assert.equal((await call(shootathon, { method: 'POST', body: { action: 'refund', id } })).statusCode, 401);
+  assert.equal(fake.state.stripe.refunds.length, 0);
+});
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);
