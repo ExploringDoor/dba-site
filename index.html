@@ -341,7 +341,7 @@ body.flyer-open{overflow:hidden}
 </div>
 <div class="page-wrap">
 
-<div class="announce">🏀 Fall Clinics — six Sundays at the Kobe Bryant Gymnasium. Registration is now open! <a href="clinics.html#register">Register now →</a></div>
+<div class="announce">🏀 Fall Clinics 2026 have wrapped — thank you to everyone who came out! 2027 camps &amp; clinics coming soon. <a href="mailto:aceshoops@gmail.com">Email us to be notified →</a></div>
 
 <nav class="nav">
   <a href="index.html" class="nav-brand"><div class="logo-mark"><div class="logo-main">DOWNER</div><div class="logo-line"></div><div class="logo-sub">BASKETBALL ACADEMY</div></div></a>
@@ -387,9 +387,9 @@ body.flyer-open{overflow:hidden}
 
 <!-- REGISTER CTA -->
 <div style="text-align:center;padding:48px 24px;background:var(--bg2);border-top:1px solid var(--glass-b);border-bottom:1px solid var(--glass-b)">
-  <p style="font-family:'DM Serif Display',serif;font-size:1.4rem;color:var(--txt);margin-bottom:8px">Fall Clinics</p>
-  <p style="font-size:1rem;color:var(--txt-m);margin-bottom:20px">Six Sundays at the Kobe Bryant Gym, Sep 27 – Nov 1. Registration is now open.</p>
-  <a href="clinics.html#register" class="btn btn-m btn-lg">Register for Fall Clinics →</a>
+  <p style="font-family:'DM Serif Display',serif;font-size:1.4rem;color:var(--txt);margin-bottom:8px">Fall Clinics 2026</p>
+  <p style="font-size:1rem;color:var(--txt-m);margin-bottom:20px">Our six-Sunday fall series at the Kobe Bryant Gym has wrapped — thank you! 2027 camps &amp; clinics coming soon.</p>
+  <a href="mailto:aceshoops@gmail.com" class="btn btn-m btn-lg">Email us to be notified →</a>
 </div>
 
 <!-- PHOTO STRIP 1 -->
@@ -431,11 +431,11 @@ body.flyer-open{overflow:hidden}
     <div class="prog-card sr" style="order:-1;border-color:rgba(139,26,43,.45);box-shadow:0 8px 32px rgba(139,26,43,.12)">
       <div class="prog-img"><img loading="lazy" decoding="async" src="img/coach-player.jpg" alt="Young player working on skills at a clinic" style="object-position:center center"></div>
       <div class="prog-body">
-        <div class="prog-badge" style="display:flex;align-items:center;gap:8px">Fall · Clinics <span style="background:var(--pink);color:#fff;padding:2px 8px;border-radius:4px;font-size:.55rem;letter-spacing:1px">NEW!</span></div>
+        <div class="prog-badge" style="display:flex;align-items:center;gap:8px">Fall · Clinics</div>
         <div class="prog-name">Fall Clinics 2026</div>
-        <p class="prog-desc">Six Sundays, Sep 27 – Nov 1, 11:00 AM – 12:15 PM. Boys &amp; girls ages 6–14. Kobe Bryant Gymnasium, LMHS, Ardmore, PA.</p>
-        <p style="font-family:'Outfit',sans-serif;font-size:1.1rem;font-weight:300;color:var(--pink);margin-bottom:16px">$35/session · $164 all 6</p>
-        <a href="clinics.html#register" class="prog-cta">Register Now →</a>
+        <p class="prog-desc">Our six-Sunday fall series (Sep 27 – Nov 1) at the Kobe Bryant Gymnasium has wrapped — thank you to everyone who came out! Boys &amp; girls ages 6–14.</p>
+        <p style="font-family:'Outfit',sans-serif;font-size:1.1rem;font-weight:300;color:var(--pink);margin-bottom:16px">2027 dates coming soon</p>
+        <a href="mailto:aceshoops@gmail.com" class="prog-cta">Notify me for 2027 →</a>
       </div>
     </div>
   </div>
@@ -672,6 +672,9 @@ document.getElementById('contactForm').addEventListener('submit',function(e){
 /* Fall Clinics pop-up: shown once per browsing session, and ONLY once the flyer image actually
    loads — so a missing/blocked image can never trap a visitor behind a blank modal. */
 (function(){
+  /* Fall Clinics pop-up DISABLED — clinics ended Nov 1, 2026.
+     To bring it back next year: delete the `return;` line just below, and refresh img/popup/flyer.jpg. */
+  return;
   var KEY='dba_flyer_seen';
   var pop=document.getElementById('flyerPop'); if(!pop) return;
   try{ if(sessionStorage.getItem(KEY)==='1') return; }catch(e){}
