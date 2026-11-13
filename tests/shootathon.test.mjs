@@ -13,6 +13,7 @@ import pledge from '../api/pledge.js';
 import shootathon from '../api/shootathon.js';
 import webhook from '../api/webhook-stripe.js';
 import { SITE_TAG } from '../api/_site.js';
+import { hit, clientIp, emailKey, HOUR } from '../api/_ratelimit.js';
 
 fake.install();
 
@@ -359,6 +360,60 @@ await test('receipt re-sends for a paid gift only', async () => {
   fake.reset(); seedEvent();
   const open = (await call(pledge, { method: 'POST', body: { ...okPer } })).body.id;
   assert.equal((await adm({ action: 'receipt', id: open })).body.error, 'not_paid');
+});
+
+// ════════════════════════════════════════════════════════════════════════
+group('abuse limits — per caller and per inbox (api/_ratelimit.js)');
+const fromIp = (ip, body) => call(pledge, { method: 'POST', headers: { 'x-real-ip': ip }, body });
+await test('a family pledging for three players from one home is not blocked, and each gets its email', async () => {
+  fake.reset(); seedEvent();
+  for (const slug of ['jimmy-d', 'sara-k', 'jimmy-d']) assert.equal((await fromIp('203.0.113.7', { ...okPer, target_slug: slug })).statusCode, 200);
+  assert.equal(fake.mailsTo('pat@x.com').length, 3);
+});
+await test('one inbox gets at most 12 pledges a day; +tags and Gmail dots are the same inbox', async () => {
+  fake.reset(); seedEvent();
+  for (let i = 0; i < 12; i++) assert.equal((await fromIp('203.0.113.' + i, { ...okPer, donor_email: 'vic.tim+' + i + '@gmail.com' })).statusCode, 200);
+  const r = await fromIp('203.0.113.99', { ...okPer, donor_email: 'victim@gmail.com' });
+  assert.equal(r.statusCode, 429); assert.equal(r.body.error, 'too_many');
+  assert.equal(fake.docs('pledges').length, 12, 'the blocked pledge was never written');
+  assert.equal(fake.mails().length, 12, 'and never emailed');
+});
+await test('one caller gets at most 30 an hour, whatever addresses they type', async () => {
+  fake.reset(); seedEvent();
+  for (let i = 0; i < 30; i++) assert.equal((await fromIp('198.51.100.4', { ...okPer, donor_email: 'p' + i + '@x.com' })).statusCode, 200);
+  assert.equal((await fromIp('198.51.100.4', { ...okPer, donor_email: 'new@x.com' })).statusCode, 429);
+  assert.equal((await fromIp('198.51.100.5', { ...okPer, donor_email: 'new@x.com' })).statusCode, 200, 'a different caller is unaffected');
+});
+await test('the caller address comes from the platform header, not a forwarded-for the caller could pad', () => {
+  assert.equal(clientIp({ headers: { 'x-real-ip': '203.0.113.7', 'x-forwarded-for': '1.2.3.4, 203.0.113.7' } }), '203.0.113.7');
+  assert.equal(clientIp({ headers: { 'x-forwarded-for': '1.2.3.4, 203.0.113.7' } }), '203.0.113.7');
+  assert.equal(clientIp({ headers: { 'cf-connecting-ip': '1.2.3.4' } }), '');
+  assert.equal(clientIp({ headers: {} }), '');
+  assert.equal(emailKey(' Vic.Tim+spam@GMail.com '), 'victim@gmail.com');
+  assert.equal(emailKey('a.b+c@x.com'), 'a.b@x.com');
+});
+await test('a burst of parallel requests on one key cannot all slip through', async () => {
+  fake.reset();
+  const out = await Promise.all(Array.from({ length: 25 }, () => hit('t-burst', 'k', 5, HOUR)));
+  assert.ok(out.filter((r) => r.ok).length <= 5);
+});
+await test('if the database is down the limiter still counts in memory and never throws', async () => {
+  fake.reset(); fake.state.opts.fail.firestore = 503;
+  for (let i = 0; i < 3; i++) assert.equal((await hit('t-mem', 'k', 3, HOUR)).ok, true);
+  assert.equal((await hit('t-mem', 'k', 3, HOUR)).ok, false);
+  fake.reset();
+});
+
+group('supporter wall text');
+await test('links, control characters and line breaks never reach the wall', () => {
+  const r = normalizePledge({ ...okPer, donor_name: 'Al\u0000 ‮B', message: 'Go team!\n\nvisit http://spam.example/x now www.bad.example' });
+  assert.ok(r.ok); assert.equal(r.pledge.donor_name, 'Al B'); assert.equal(r.pledge.message, 'Go team! visit now');
+});
+await test('a name that is only a link is refused', () => assert.equal(normalizePledge({ ...okPer, donor_name: 'https://spam.example' }).error, 'missing_name'));
+await test('one endless word as a name is cut short on the wall', async () => {
+  fake.reset(); seedEvent();
+  await fromIp('203.0.113.7', { ...okPer, donor_name: 'x'.repeat(120) });
+  assert.equal((await call(pledge, {})).body.recent[0].name.length, 24);
 });
 
 console.log(`\n${pass} passed, ${fail} failed`);

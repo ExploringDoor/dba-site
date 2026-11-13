@@ -63,6 +63,13 @@ export function intOrNull(v) {
   return null;
 }
 function clampInt(v, min, max) { return Math.max(min, Math.min(max, v)); }
+// Free text a stranger typed that ends up on the public supporter wall: no markup characters,
+// no control or invisible characters, no line breaks, one space between words.
+function wallText(v, n) {
+  return stripTags(clip(v, n)).replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202f\u2060-\u206f\ufeff]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+// The wall is not a place to post links.
+function noLinks(s) { return s.replace(/\b(?:https?:\/\/|www\.)\S+/gi, '').replace(/\s+/g, ' ').trim(); }
 
 // AUTHORITATIVE charge for a pledge given a player's made-throw count, in cents.
 //   flat     → the one-time donation (clamped to its bounds)
@@ -109,7 +116,7 @@ export function normalizePledge(body) {
   // A per-made-throw pledge must sponsor a specific PLAYER (only players shoot).
   if (kind === 'per_shot' && target_type !== 'player') return { ok: false, error: 'per_shot_needs_player' };
 
-  const donor_name = stripTags(clip(b.donor_name, 120)).trim();
+  const donor_name = noLinks(wallText(b.donor_name, 120));
   const donor_email = clip(b.donor_email, 200).trim().toLowerCase();
   if (!donor_name) return { ok: false, error: 'missing_name' };
   if (!validEmail(donor_email)) return { ok: false, error: 'bad_email' };
@@ -121,7 +128,7 @@ export function normalizePledge(body) {
     target_slug,
     donor_name,
     donor_email,
-    message: stripTags(clip(b.message, 280)).trim(),
+    message: noLinks(wallText(b.message, 280)),
     anonymous: b.anonymous ? true : false,
     cover_fee: b.cover_fee ? true : false,
   };

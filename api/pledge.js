@@ -15,6 +15,7 @@ import { SITE_TAG } from './_site.js';
 import { fbConfigured, fbAdminConfigured, fsGet, fsCreate, fsQuery, fsPatch, fsPatchVerified } from './_firestore.js';
 import { SHOOTATHON, normalizePledge, pledgeDescription, computePledgeCents, coverFeeCents } from './_shootathon.js';
 import { sendMail, buildPledgeEmail, emailConfigured, ADMIN_EMAIL } from './_email.js';
+import { clientIp, emailKey, firstBlocked, HOUR, DAY } from './_ratelimit.js';
 
 const PROVIDER = (process.env.PAYMENT_PROVIDER || '').toLowerCase();
 function stripeReady() { return !!process.env.STRIPE_SECRET_KEY; }
@@ -45,7 +46,8 @@ function targetName(event, type, slug) {
 function firstNameLastInitial(name) {
   const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
   if (!parts.length) return 'A supporter';
-  return parts.length === 1 ? parts[0] : `${parts[0]} ${parts[parts.length - 1][0].toUpperCase()}.`;
+  const first = parts[0].slice(0, 24);   // the wall shows a first name, never one endless run of text
+  return parts.length === 1 ? first : `${first} ${parts[parts.length - 1][0].toUpperCase()}.`;
 }
 // Normalize legacy records (player_slug) onto the target_type/target_slug model used everywhere now.
 function targetOf(p) {
@@ -215,8 +217,18 @@ async function handlePost(req, res) {
   if (pledge.target_type === 'player' && !findPlayer(event, pledge.target_slug)) return res.status(400).json({ error: 'unknown_player' });
   if (pledge.target_type === 'team' && !findTeam(event, pledge.target_slug)) return res.status(400).json({ error: 'unknown_team' });
 
-  const ip = String(req.headers['x-real-ip'] || (req.headers['x-forwarded-for'] || '').split(',')[0] || '').trim().slice(0, 60);
+  const ip = clientIp(req);
   const now = new Date().toISOString();
+
+  // Every accepted POST writes a pledge (which shows on the public supporter wall) and a
+  // per-throw pledge also emails the address given, so cap both the caller and the inbox.
+  // Generous on purpose: a family sponsoring several players, or a gym full of families on
+  // one wifi on event day, stays well under these.
+  const over = await firstBlocked([
+    ['pledge-ip', ip, 30, HOUR],
+    ['pledge-email', emailKey(pledge.donor_email), 12, DAY],
+  ]);
+  if (over) { res.setHeader('Retry-After', String(over.retryAfterSec)); return res.status(429).json({ error: 'too_many' }); }
 
   // ── ONE-TIME DONATION → pay now ──
   if (pledge.kind === 'flat') {

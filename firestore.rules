@@ -30,6 +30,12 @@ service cloud.firestore {
       allow read, write: if isSuper();
     }
 
+    // Rate limit counters for the public forms (api/_ratelimit.js): hashed keys and a count.
+    // Admin-only; only the server reads and writes them.
+    match /ratelimits/{id} {
+      allow read, write: if isSuper();
+    }
+
     // The admins collection: readable only by an admin (used by the rules themselves).
     match /admins/{uid} {
       allow read: if isSuper();
