@@ -6,3 +6,9 @@ scratch-tmp/
 CLAUDE.md
 README-CLINICS.md
 CLINIC-SETUP.md
+
+# Firebase CLI files: needed in the repo, never served.
+/firestore.rules
+/storage.rules
+/firebase.json
+/.firebaserc
